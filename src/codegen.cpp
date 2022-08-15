@@ -33,14 +33,36 @@ namespace X {
 
         switch (node->getType()) {
             case OpType::POST_INC: {
-                auto value = builder.CreateAdd(expr, llvm::ConstantInt::getSigned(llvm::Type::getInt64Ty(context), 1));
+                llvm::Value *value;
+                switch (expr->getType()->getTypeID()) {
+                    case llvm::Type::TypeID::IntegerTyID:
+                        value = builder.CreateAdd(expr, llvm::ConstantInt::getSigned(llvm::Type::getInt64Ty(context), 1));
+                        break;
+                    case llvm::Type::TypeID::FloatTyID:
+                        value = builder.CreateFAdd(expr, llvm::ConstantFP::get(llvm::Type::getFloatTy(context), 1));
+                        break;
+                    default:
+                        throw CodegenException("invalid type");
+                }
+
                 auto name = dynamic_cast<VarNode *>(node->getExpr())->getName(); // todo
                 auto var = getVar(name);
                 builder.CreateStore(value, var);
                 return expr;
             }
             case OpType::POST_DEC: {
-                auto value = builder.CreateSub(expr, llvm::ConstantInt::getSigned(llvm::Type::getInt64Ty(context), 1));
+                llvm::Value *value;
+                switch (expr->getType()->getTypeID()) {
+                    case llvm::Type::TypeID::IntegerTyID:
+                        value = builder.CreateSub(expr, llvm::ConstantInt::getSigned(llvm::Type::getInt64Ty(context), 1));
+                        break;
+                    case llvm::Type::TypeID::FloatTyID:
+                        value = builder.CreateFSub(expr, llvm::ConstantFP::get(llvm::Type::getFloatTy(context), 1));
+                        break;
+                    default:
+                        throw CodegenException("invalid type");
+                }
+
                 auto name = dynamic_cast<VarNode *>(node->getExpr())->getName(); // todo
                 auto var = getVar(name);
                 builder.CreateStore(value, var);
@@ -62,42 +84,52 @@ namespace X {
             throw CodegenException("binary arg is empty");
         }
 
-        switch (node->getType()) {
-            case OpType::PLUS:
-                return builder.CreateAdd(lhs, rhs);
-            case OpType::MINUS:
-                return builder.CreateSub(lhs, rhs);
-            case OpType::MUL:
-                return builder.CreateMul(lhs, rhs);
-            case OpType::DIV:
-                if (lhs->getType()->isIntegerTy()) {
-                    lhs = builder.CreateSIToFP(lhs, llvm::Type::getFloatTy(context));
-                }
-                if (rhs->getType()->isIntegerTy()) {
-                    rhs = builder.CreateSIToFP(rhs, llvm::Type::getFloatTy(context));
-                }
-                return builder.CreateFDiv(lhs, rhs);
-            case OpType::POW:
-                return nullptr;
-            case OpType::OR:
-                return nullptr;
-            case OpType::AND:
-                return nullptr;
-            case OpType::EQUAL:
-                return builder.CreateICmpEQ(lhs, rhs);
-            case OpType::NOT_EQUAL:
-                return builder.CreateICmpNE(lhs, rhs);
-            case OpType::SMALLER:
-                return builder.CreateICmpSLT(lhs, rhs);
-            case OpType::SMALLER_OR_EQUAL:
-                return builder.CreateICmpSLE(lhs, rhs);
-            case OpType::GREATER:
-                return builder.CreateICmpSGT(lhs, rhs);
-            case OpType::GREATER_OR_EQUAL:
-                return builder.CreateICmpSGE(lhs, rhs);
-            default:
-                throw CodegenException("invalid op type");
+        if (node->getType() == OpType::DIV) {
+            std::tie(lhs, rhs) = forceUpcast(lhs, rhs);
+        } else {
+            std::tie(lhs, rhs) = upcast(lhs, rhs);
         }
+
+        using binaryExprGenerator = std::function<llvm::Value *(llvm::Value *, llvm::Value *)>;
+
+        // todo maybe refactor to switches
+        static std::map<llvm::Type::TypeID, std::map<OpType, binaryExprGenerator>> binaryExprGeneratorMap{
+            {llvm::Type::TypeID::IntegerTyID, {
+                {OpType::PLUS,             [this](llvm::Value *lhs, llvm::Value *rhs) { return builder.CreateAdd(lhs, rhs); }},
+                {OpType::MINUS,            [this](llvm::Value *lhs, llvm::Value *rhs) { return builder.CreateSub(lhs, rhs); }},
+                {OpType::MUL,              [this](llvm::Value *lhs, llvm::Value *rhs) { return builder.CreateMul(lhs, rhs); }},
+                {OpType::EQUAL,            [this](llvm::Value *lhs, llvm::Value *rhs) { return builder.CreateICmpEQ(lhs, rhs); }},
+                {OpType::NOT_EQUAL,        [this](llvm::Value *lhs, llvm::Value *rhs) { return builder.CreateICmpNE(lhs, rhs); }},
+                {OpType::SMALLER,          [this](llvm::Value *lhs, llvm::Value *rhs) { return builder.CreateICmpSLT(lhs, rhs); }},
+                {OpType::SMALLER_OR_EQUAL, [this](llvm::Value *lhs, llvm::Value *rhs) { return builder.CreateICmpSLE(lhs, rhs); }},
+                {OpType::GREATER,          [this](llvm::Value *lhs, llvm::Value *rhs) { return builder.CreateICmpSGT(lhs, rhs); }},
+                {OpType::GREATER_OR_EQUAL, [this](llvm::Value *lhs, llvm::Value *rhs) { return builder.CreateICmpSGE(lhs, rhs); }}
+            }},
+            {llvm::Type::TypeID::FloatTyID, {
+                {OpType::PLUS,             [this](llvm::Value *lhs, llvm::Value *rhs) { return builder.CreateFAdd(lhs, rhs); }},
+                {OpType::MINUS,            [this](llvm::Value *lhs, llvm::Value *rhs) { return builder.CreateFSub(lhs, rhs); }},
+                {OpType::MUL,              [this](llvm::Value *lhs, llvm::Value *rhs) { return builder.CreateFMul(lhs, rhs); }},
+                {OpType::DIV,              [this](llvm::Value *lhs, llvm::Value *rhs) { return builder.CreateFDiv(lhs, rhs); }},
+                {OpType::EQUAL,            [this](llvm::Value *lhs, llvm::Value *rhs) { return builder.CreateFCmpOEQ(lhs, rhs); }},
+                {OpType::NOT_EQUAL,        [this](llvm::Value *lhs, llvm::Value *rhs) { return builder.CreateFCmpONE(lhs, rhs); }},
+                {OpType::SMALLER,          [this](llvm::Value *lhs, llvm::Value *rhs) { return builder.CreateFCmpOLT(lhs, rhs); }},
+                {OpType::SMALLER_OR_EQUAL, [this](llvm::Value *lhs, llvm::Value *rhs) { return builder.CreateFCmpOLE(lhs, rhs); }},
+                {OpType::GREATER,          [this](llvm::Value *lhs, llvm::Value *rhs) { return builder.CreateFCmpOGT(lhs, rhs); }},
+                {OpType::GREATER_OR_EQUAL, [this](llvm::Value *lhs, llvm::Value *rhs) { return builder.CreateFCmpOGE(lhs, rhs); }}
+            }}
+        };
+
+        auto typeGeneratorMap = binaryExprGeneratorMap.find(lhs->getType()->getTypeID());
+        if (typeGeneratorMap == binaryExprGeneratorMap.end()) {
+            throw CodegenException("invalid type");
+        }
+
+        auto exprGenerator = typeGeneratorMap->second.find(node->getType());
+        if (exprGenerator == typeGeneratorMap->second.end()) {
+            throw CodegenException("invalid op type");
+        }
+
+        return exprGenerator->second(lhs, rhs);
     }
 
     llvm::Value *Codegen::gen(DeclareNode *node) {
@@ -302,5 +334,29 @@ namespace X {
             throw CodegenException("var not found: " + name);
         }
         return var;
+    }
+
+    std::pair<llvm::Value *, llvm::Value *> Codegen::upcast(llvm::Value *a, llvm::Value *b) {
+        if (a->getType()->isFloatTy() && b->getType()->isIntegerTy()) {
+            return {a, builder.CreateSIToFP(b, llvm::Type::getFloatTy(context))};
+        }
+
+        if (a->getType()->isIntegerTy() && b->getType()->isFloatTy()) {
+            return {builder.CreateSIToFP(a, llvm::Type::getFloatTy(context)), b};
+        }
+
+        return {a, b};
+    }
+
+    std::pair<llvm::Value *, llvm::Value *> Codegen::forceUpcast(llvm::Value *a, llvm::Value *b) {
+        if (a->getType()->isIntegerTy()) {
+            a = builder.CreateSIToFP(a, llvm::Type::getFloatTy(context));
+        }
+
+        if (b->getType()->isIntegerTy()) {
+            b = builder.CreateSIToFP(b, llvm::Type::getFloatTy(context));
+        }
+
+        return {a, b};
     }
 }
