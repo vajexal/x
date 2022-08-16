@@ -247,21 +247,7 @@ namespace X {
             namedValues[arg.getName().str()] = alloca;
         }
 
-        if (node->getReturnType() != Type::VOID) {
-            retval = builder.CreateAlloca(retType, nullptr, ".retval");
-        }
-
-        endBB = llvm::BasicBlock::Create(context, "end");
-
         node->getBody()->gen(*this);
-
-        fn->getBasicBlockList().push_back(endBB);
-        builder.SetInsertPoint(endBB);
-        if (node->getReturnType() != Type::VOID) {
-            builder.CreateRet(builder.CreateLoad(retType, retval));
-        } else {
-            builder.CreateRetVoid();
-        }
 
         return fn;
     }
@@ -286,7 +272,7 @@ namespace X {
 
     llvm::Value *Codegen::gen(ReturnNode *node) {
         if (!node->getVal()) {
-            builder.CreateBr(endBB);
+            builder.CreateRetVoid();
             return nullptr;
         }
 
@@ -295,9 +281,7 @@ namespace X {
             throw CodegenException("return value is empty");
         }
 
-        builder.CreateStore(value, retval);
-        builder.CreateBr(endBB);
-
+        builder.CreateRet(value);
         return nullptr;
     }
 

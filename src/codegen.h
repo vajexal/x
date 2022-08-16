@@ -17,8 +17,6 @@ namespace X {
         llvm::IRBuilder<> &builder;
         llvm::Module &module;
         std::map<std::string, llvm::AllocaInst *> namedValues;
-        llvm::BasicBlock *endBB;
-        llvm::AllocaInst *retval;
 
     public:
         Codegen(llvm::LLVMContext &context, llvm::IRBuilder<> &builder, llvm::Module &module) : context(context), builder(builder), module(module) {}
