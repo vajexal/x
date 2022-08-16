@@ -161,6 +161,19 @@ namespace X {
         if (!cond) {
             throw CodegenException("if cond is empty");
         }
+        if (!cond->getType()->isIntegerTy(1)) {
+            switch (cond->getType()->getTypeID()) {
+                case llvm::Type::TypeID::IntegerTyID:
+                    cond = builder.CreateICmpNE(cond, llvm::ConstantInt::getSigned(llvm::Type::getInt64Ty(context), 0));
+                    break;
+                case llvm::Type::TypeID::FloatTyID:
+                    cond = builder.CreateFCmpONE(cond, llvm::ConstantFP::get(llvm::Type::getFloatTy(context), 0));
+                    break;
+                default:
+                    throw CodegenException("invalid cond type in if expr");
+            }
+        }
+
         auto parentFunction = builder.GetInsertBlock()->getParent();
         auto thenBB = llvm::BasicBlock::Create(context, "then", parentFunction);
         auto elseBB = llvm::BasicBlock::Create(context, "else");
