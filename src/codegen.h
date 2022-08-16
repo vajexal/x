@@ -2,6 +2,7 @@
 #define X_CODEGEN_H
 
 #include <map>
+#include <stack>
 
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/IRBuilder.h"
@@ -12,11 +13,19 @@
 #include "ast.h"
 
 namespace X {
+    struct Loop {
+        llvm::BasicBlock *start;
+        llvm::BasicBlock *end;
+
+        Loop(llvm::BasicBlock *start, llvm::BasicBlock *end) : start(start), end(end) {}
+    };
+
     class Codegen {
         llvm::LLVMContext &context;
         llvm::IRBuilder<> &builder;
         llvm::Module &module;
         std::map<std::string, llvm::AllocaInst *> namedValues;
+        std::stack<Loop> loops;
 
     public:
         Codegen(llvm::LLVMContext &context, llvm::IRBuilder<> &builder, llvm::Module &module) : context(context), builder(builder), module(module) {}

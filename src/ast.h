@@ -47,6 +47,7 @@ namespace X {
     public:
         virtual void print(AstPrinter &astPrinter, int level = 0) = 0;
         virtual llvm::Value *gen(Codegen &codegen) = 0;
+
         virtual bool isTerminate() {
             return false;
         }
@@ -332,18 +333,26 @@ namespace X {
     public:
         void print(AstPrinter &astPrinter, int level = 0);
         llvm::Value *gen(Codegen &codegen);
+
+        bool isTerminate() override {
+            return true;
+        };
     };
 
     class ContinueNode : public Node {
     public:
         void print(AstPrinter &astPrinter, int level = 0);
         llvm::Value *gen(Codegen &codegen);
+
+        bool isTerminate() override {
+            return true;
+        };
     };
 
-    class CommentNode: public Node {
+    class CommentNode : public Node {
         std::string comment;
     public:
-        CommentNode(const std::string &comment): comment(comment) {}
+        CommentNode(const std::string &comment) : comment(comment) {}
 
         void print(AstPrinter &astPrinter, int level = 0);
         llvm::Value *gen(Codegen &codegen);

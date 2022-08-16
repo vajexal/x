@@ -215,6 +215,8 @@ namespace X {
         auto loopBB = llvm::BasicBlock::Create(context, "loop");
         auto loopEndBB = llvm::BasicBlock::Create(context, "loopEnd");
 
+        loops.emplace(loopStartBB, loopEndBB);
+
         builder.CreateBr(loopStartBB);
         parentFunction->getBasicBlockList().push_back(loopStartBB);
         builder.SetInsertPoint(loopStartBB);
@@ -232,6 +234,8 @@ namespace X {
 
         parentFunction->getBasicBlockList().push_back(loopEndBB);
         builder.SetInsertPoint(loopEndBB);
+
+        loops.pop();
 
         return nullptr;
     }
@@ -299,10 +303,24 @@ namespace X {
     }
 
     llvm::Value *Codegen::gen(BreakNode *node) {
+        if (loops.empty()) {
+            throw CodegenException("using break outside of loop");
+        }
+
+        auto loop = loops.top();
+        builder.CreateBr(loop.end);
+
         return nullptr;
     }
 
     llvm::Value *Codegen::gen(ContinueNode *node) {
+        if (loops.empty()) {
+            throw CodegenException("using continue outside of loop");
+        }
+
+        auto loop = loops.top();
+        builder.CreateBr(loop.start);
+
         return nullptr;
     }
 
