@@ -50,6 +50,7 @@ namespace X {
     private:
         llvm::Type *mapType(Type type);
         llvm::AllocaInst *getVar(std::string &name);
+        llvm::AllocaInst *createAlloca(llvm::Type *type, const std::string &name);
 
         std::pair<llvm::Value *, llvm::Value *> upcast(llvm::Value *a, llvm::Value *b);
         std::pair<llvm::Value *, llvm::Value *> forceUpcast(llvm::Value *a, llvm::Value *b);

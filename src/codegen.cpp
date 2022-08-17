@@ -135,7 +135,7 @@ namespace X {
     llvm::Value *Codegen::gen(DeclareNode *node) {
         auto type = mapType(node->getType());
         auto name = node->getName();
-        auto stackVar = builder.CreateAlloca(type, nullptr, name);
+        auto stackVar = createAlloca(type, name);
         auto value = node->getExpr()->gen(*this);
         builder.CreateStore(value, stackVar);
         namedValues[name] = stackVar;
@@ -259,7 +259,8 @@ namespace X {
 
         namedValues.clear();
         for (auto &arg: fn->args()) {
-            auto alloca = builder.CreateAlloca(arg.getType(), nullptr, arg.getName());
+            auto name = arg.getName().str();
+            auto alloca = createAlloca(arg.getType(), name);
             builder.CreateStore(&arg, alloca);
             namedValues[arg.getName().str()] = alloca;
         }
@@ -349,6 +350,12 @@ namespace X {
             throw CodegenException("var not found: " + name);
         }
         return var;
+    }
+
+    llvm::AllocaInst *Codegen::createAlloca(llvm::Type *type, const std::string &name) {
+        auto fn = builder.GetInsertBlock()->getParent();
+        llvm::IRBuilder<> tmpBuilder(&fn->getEntryBlock(), fn->getEntryBlock().begin());
+        return tmpBuilder.CreateAlloca(type, nullptr, name);
     }
 
     std::pair<llvm::Value *, llvm::Value *> Codegen::upcast(llvm::Value *a, llvm::Value *b) {
