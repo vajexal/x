@@ -14,6 +14,6 @@ add_definitions(${LLVM_DEFINITIONS_LIST})
 include_directories(.)
 include_directories(./src)
 
-add_executable(x main.cpp lexer.cpp parser.tab.cc src/ast.cpp src/driver.cpp src/codegen.cpp src/ast_printer.cpp)
+add_executable(x main.cpp lexer.cpp parser.tab.cc src/ast.cpp src/driver.cpp src/codegen.cpp src/ast_printer.cpp src/runtime.cpp)
 
 target_link_libraries(x LLVM)

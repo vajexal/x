@@ -12,16 +12,18 @@
 #include "driver.h"
 #include "parser.tab.hh"
 #include "codegen.h"
+#include "runtime.h"
 #include "ast_printer.h"
 
 int main(int argc, char *argv[]) {
     if (argc < 2) {
-        std::cerr << "missing input file\n";
+        std::cerr << "missing input file" << std::endl;
+        return 1;
     }
 
     std::ifstream fin(argv[1]);
     if (!fin) {
-        std::cerr << "couldn't open the file\n";
+        std::cerr << "couldn't open the file" << std::endl;
         return 1;
     }
     std::stringstream buffer;
@@ -38,6 +40,7 @@ int main(int argc, char *argv[]) {
     llvm::IRBuilder<> builder(context);
     auto module = std::make_unique<llvm::Module>("Module", context);
     X::Codegen codegen(context, builder, *module.get());
+    X::Runtime runtime;
     X::AstPrinter astPrinter;
 
     driver.result->print(astPrinter);
@@ -45,15 +48,15 @@ int main(int argc, char *argv[]) {
     llvm::InitializeNativeTarget();
     llvm::InitializeNativeTargetAsmPrinter();
 
+    runtime.addDeclarations(context, *module.get());
+
     codegen.gen(driver.result);
 
     llvm::verifyModule(*module.get(), &llvm::errs());
     module->print(llvm::outs(), nullptr);
 
-    auto func = module->getFunction("main");
-
     std::string errStr;
-    llvm::ExecutionEngine *EE = llvm::EngineBuilder(std::move(module))
+    llvm::ExecutionEngine *engine = llvm::EngineBuilder(std::move(module))
             .setErrorStr(&errStr)
             .create();
 
@@ -62,9 +65,16 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    auto fn = reinterpret_cast<int (*)()>(EE->getFunctionAddress(func->getName().str()));
+    engine->DisableSymbolSearching();
 
-    std::cout << "Result: " << fn() << std::endl;
+    runtime.addGlobalMappings(*engine);
 
-    return 0;
+    auto mainFn = engine->FindFunctionNamed("main");
+    if (!mainFn) {
+        std::cerr << "main function not found" << std::endl;
+        return 1;
+    }
+    auto fn = reinterpret_cast<int (*)()>(engine->getFunctionAddress(mainFn->getName().str()));
+
+    return fn();
 }
