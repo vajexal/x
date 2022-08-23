@@ -31,6 +31,12 @@ namespace X {
         void printNode(BreakNode *node, int level);
         void printNode(ContinueNode *node, int level);
         void printNode(CommentNode *node, int level);
+        void printNode(ClassNode *node, int level);
+        void printNode(ClassMembersNode *node, int level);
+        void printNode(FetchPropNode *node, int level);
+        void printNode(MethodCallNode *node, int level);
+        void printNode(AssignPropNode *node, int level);
+        void printNode(NewNode *node, int level);
     };
 
     class AstPrinterException : public std::exception {

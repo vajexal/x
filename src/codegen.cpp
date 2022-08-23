@@ -16,12 +16,12 @@ namespace X {
     llvm::Value *Codegen::gen(ScalarNode *node) {
         auto value = node->getValue();
 
-        switch (node->getType()) {
-            case Type::INT:
+        switch (node->getType().getTypeID()) {
+            case Type::TypeID::INT:
                 return llvm::ConstantInt::getSigned(llvm::Type::getInt64Ty(context), std::get<int>(value));
-            case Type::FLOAT:
+            case Type::TypeID::FLOAT:
                 return llvm::ConstantFP::get(llvm::Type::getFloatTy(context), std::get<float>(value));
-            case Type::BOOL:
+            case Type::TypeID::BOOL:
                 return llvm::ConstantInt::get(llvm::Type::getInt1Ty(context), std::get<bool>(value));
             default:
                 throw CodegenException("invalid scalar type");
@@ -46,7 +46,7 @@ namespace X {
                 }
 
                 auto name = dynamic_cast<VarNode *>(node->getExpr())->getName(); // todo
-                auto var = getVar(name);
+                auto [type, var] = getVar(name);
                 builder.CreateStore(value, var);
                 return expr;
             }
@@ -64,7 +64,7 @@ namespace X {
                 }
 
                 auto name = dynamic_cast<VarNode *>(node->getExpr())->getName(); // todo
-                auto var = getVar(name);
+                auto [type, var] = getVar(name);
                 builder.CreateStore(value, var);
                 return expr;
             }
@@ -144,7 +144,7 @@ namespace X {
 
     llvm::Value *Codegen::gen(AssignNode *node) {
         auto name = node->getName();
-        auto var = getVar(name);
+        auto [type, var] = getVar(name);
         auto value = node->getExpr()->gen(*this);
         builder.CreateStore(value, var);
         return nullptr;
@@ -152,8 +152,8 @@ namespace X {
 
     llvm::Value *Codegen::gen(VarNode *node) {
         auto name = node->getName();
-        auto var = getVar(name);
-        return builder.CreateLoad(var->getAllocatedType(), var, name);
+        auto [type, var] = getVar(name);
+        return builder.CreateLoad(type, var, name);
     }
 
     llvm::Value *Codegen::gen(IfNode *node) {
@@ -241,33 +241,9 @@ namespace X {
     }
 
     llvm::Value *Codegen::gen(FnNode *node) {
-        std::vector<llvm::Type *> paramTypes;
-        auto args = node->getArgs();
-        for (auto &arg: args) {
-            auto argType = mapType(arg->getType());
-            paramTypes.push_back(argType);
-        }
-        auto retType = mapType(node->getReturnType());
-        auto fnType = llvm::FunctionType::get(retType, paramTypes, false);
-        auto fn = llvm::Function::Create(fnType, llvm::Function::ExternalLinkage, node->getName(), module);
-        for (auto i = 0; i < fn->arg_size(); i++) {
-            fn->getArg(i)->setName(args[i]->getName());
-        }
+        genFn(node->getName(), node->getArgs(), node->getReturnType(), node->getBody());
 
-        auto bb = llvm::BasicBlock::Create(context, "entry", fn);
-        builder.SetInsertPoint(bb);
-
-        namedValues.clear();
-        for (auto &arg: fn->args()) {
-            auto name = arg.getName().str();
-            auto alloca = createAlloca(arg.getType(), name);
-            builder.CreateStore(&arg, alloca);
-            namedValues[arg.getName().str()] = alloca;
-        }
-
-        node->getBody()->gen(*this);
-
-        return fn;
+        return nullptr;
     }
 
     llvm::Value *Codegen::gen(FnCallNode *node) {
@@ -329,27 +305,148 @@ namespace X {
         return nullptr;
     }
 
-    llvm::Type *Codegen::mapType(Type type) {
-        switch (type) {
-            case Type::INT:
+    llvm::Value *Codegen::gen(ClassNode *node) {
+        auto members = node->getMembers();
+        std::vector<llvm::Type *> props;
+        props.reserve(members.getProps().size());
+        ClassDecl classDecl;
+
+        for (uint64_t i = 0; i < members.getProps().size(); i++) {
+            auto prop = members.getProps()[i];
+            auto type = mapType(prop->getType());
+            props.push_back(type);
+            classDecl.props[prop->getName()] = {type, i};
+        }
+
+        auto name = node->getName();
+        auto klass = llvm::StructType::create(context, props, name); // todo mangle name
+        classDecl.type = klass;
+        classes[name] = classDecl;
+
+        for (auto &fn: members.getFuncs()) {
+            auto fnName = name + "_" + fn->getName(); // todo mangle
+            genFn(fnName, fn->getArgs(), fn->getReturnType(), fn->getBody(), std::move(Type(name)));
+        }
+
+        return nullptr;
+    }
+
+    llvm::Value *Codegen::gen(ClassMembersNode *node) {
+        // everything is done in ClassNode
+        return nullptr;
+    }
+
+    llvm::Value *Codegen::gen(FetchPropNode *node) {
+        auto obj = node->getObj()->gen(*this);
+        auto propName = node->getName();
+        auto [type, ptr] = getProp(obj, propName);
+        return builder.CreateLoad(type, ptr, propName);
+    }
+
+    llvm::Value *Codegen::gen(MethodCallNode *node) {
+        auto obj = node->getObj()->gen(*this);
+        auto methodName = node->getName();
+        auto type = deref(obj->getType());
+        if (!type->isStructTy()) {
+            throw CodegenException("invalid method call operand");
+        }
+
+        auto className = type->getStructName();
+        auto classDecl = getClass(className.str());
+        auto name = className.str() + "_" + methodName; // todo mangle
+        llvm::Function *callee = module.getFunction(name);
+        if (!callee) {
+            throw CodegenException("method is not found: " + methodName);
+        }
+        if (callee->arg_size() != (node->getArgs().size() + 1)) { // + this
+            throw CodegenException("callee args mismatch");
+        }
+
+        std::vector<llvm::Value *> args;
+        args.reserve(node->getArgs().size() + 1);
+        args.push_back(obj);
+        for (auto &arg: node->getArgs()) {
+            args.push_back(arg->gen(*this));
+        }
+
+        return builder.CreateCall(callee, args);
+    }
+
+    llvm::Value *Codegen::gen(AssignPropNode *node) {
+        auto obj = node->getObj()->gen(*this);
+        auto value = node->getExpr()->gen(*this);
+        auto [type, ptr] = getProp(obj, node->getName());
+        builder.CreateStore(value, ptr);
+        return nullptr;
+    }
+
+    llvm::Value *Codegen::gen(NewNode *node) {
+        auto classDecl = getClass(node->getName());
+        return builder.CreateAlloca(classDecl.type);
+    }
+
+    llvm::Type *Codegen::mapType(const Type &type) {
+        switch (type.getTypeID()) {
+            case Type::TypeID::INT:
                 return llvm::Type::getInt64Ty(context);
-            case Type::FLOAT:
-                return llvm::Type::getFloatTy(context);
-            case Type::BOOL:
-                return llvm::Type::getInt1Ty(context);
-            case Type::VOID:
-                return llvm::Type::getVoidTy(context);
+            case Type::TypeID::FLOAT:
+                return llvm::Type::getInt64Ty(context);
+            case Type::TypeID::BOOL:
+                return llvm::Type::getInt64Ty(context);
+            case Type::TypeID::VOID:
+                return llvm::Type::getInt64Ty(context);
+            case Type::TypeID::CLASS: {
+                auto className = type.getClassName().value();
+                auto classDecl = getClass(className);
+                return classDecl.type->getPointerTo();
+            }
             default:
                 throw CodegenException("invalid type");
         }
     }
 
-    llvm::AllocaInst *Codegen::getVar(std::string &name) {
+    std::pair<llvm::Type *, llvm::Value *> Codegen::getVar(std::string &name) {
         auto var = namedValues[name];
-        if (!var) {
-            throw CodegenException("var not found: " + name);
+        if (var) {
+            return {var->getAllocatedType(), var};
         }
-        return var;
+
+        if (that) {
+            auto classType = deref(that->getType());
+            auto classDecl = getClass(classType->getStructName().str());
+            auto prop = classDecl.props.find(name);
+            if (prop != classDecl.props.end()) {
+                auto ptr = builder.CreateStructGEP(classDecl.type, that, prop->second.pos);
+                return {prop->second.type, ptr};
+            }
+        }
+
+        throw CodegenException("var not found: " + name);
+    }
+
+    std::pair<llvm::Type *, llvm::Value *> Codegen::getProp(llvm::Value *obj, std::string &name) {
+        auto type = deref(obj->getType());
+        if (!type->isStructTy()) {
+            throw CodegenException("invalid obj operand");
+        }
+
+        auto className = type->getStructName();
+        auto classDecl = getClass(className.str());
+        auto prop = classDecl.props.find(name);
+        if (prop == classDecl.props.end()) {
+            throw CodegenException("prop not found: " + name);
+        }
+
+        auto ptr = builder.CreateStructGEP(classDecl.type, obj, prop->second.pos);
+        return {prop->second.type, ptr};
+    }
+
+    const ClassDecl &Codegen::getClass(const std::string &name) const {
+        auto classDecl = classes.find(name); // todo mangle
+        if (classDecl == classes.end()) {
+            throw CodegenException("class not found: " + name);
+        }
+        return classDecl->second;
     }
 
     llvm::AllocaInst *Codegen::createAlloca(llvm::Type *type, const std::string &name) {
@@ -380,5 +477,55 @@ namespace X {
         }
 
         return {a, b};
+    }
+
+    llvm::Type *Codegen::deref(llvm::Type *type) {
+        if (!type->isPointerTy()) {
+            return type;
+        }
+
+        return type->getPointerElementType();
+    }
+
+    void Codegen::genFn(const std::string &name, const std::vector<ArgNode *> &args, const Type &returnType, StatementListNode *body, std::optional<Type> thisType) {
+        size_t paramsOffset = thisType ? 1 : 0; // this is special
+        std::vector<llvm::Type *> paramTypes;
+        paramTypes.reserve(args.size() + paramsOffset);
+        if (thisType) {
+            paramTypes.push_back(mapType(thisType.value()));
+        }
+        for (auto &arg: args) {
+            paramTypes.push_back(mapType(arg->getType()));
+        }
+
+        auto retType = mapType(returnType);
+        auto fnType = llvm::FunctionType::get(retType, paramTypes, false);
+        auto fn = llvm::Function::Create(fnType, llvm::Function::ExternalLinkage, name, module);
+        if (thisType) {
+            fn->getArg(0)->setName("this");
+        }
+        for (auto i = 0; i < args.size(); i++) {
+            fn->getArg(i + paramsOffset)->setName(args[i]->getName());
+        }
+
+        auto bb = llvm::BasicBlock::Create(context, "entry", fn);
+        builder.SetInsertPoint(bb);
+
+        if (thisType) {
+            that = fn->getArg(0);
+        }
+
+        namedValues.clear(); // todo
+        for (auto i = paramsOffset; i < fn->arg_size(); i++) {
+            auto arg = fn->getArg(i);
+            auto argName = arg->getName().str();
+            auto alloca = createAlloca(arg->getType(), argName);
+            builder.CreateStore(arg, alloca);
+            namedValues[argName] = alloca;
+        }
+
+        body->gen(*this);
+
+        that = nullptr;
     }
 }

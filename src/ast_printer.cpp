@@ -91,7 +91,9 @@ namespace X {
     void AstPrinter::printNode(ReturnNode *node, int level) {
         std::cout << "return" << std::endl;
 
-        node->getVal()->print(*this, level + 1);
+        if (node->getVal()) {
+            node->getVal()->print(*this, level + 1);
+        }
     }
 
     void AstPrinter::printNode(BreakNode *node, int level) {
@@ -104,5 +106,48 @@ namespace X {
 
     void AstPrinter::printNode(CommentNode *node, int level) {
         std::cout << "// " << node->getComment() << std::endl;
+    }
+
+    void AstPrinter::printNode(ClassNode *node, int level) {
+        std::cout << "class " << node->getName() << std::endl;
+
+        node->getMembers().print(*this, level + 1);
+    }
+
+    void AstPrinter::printNode(ClassMembersNode *node, int level) {
+        for (auto &prop: node->getProps()) {
+            prop->print(*this, level);
+        }
+
+        for (auto &fn: node->getFuncs()) {
+            fn->print(*this, level);
+        }
+    }
+
+    void AstPrinter::printNode(FetchPropNode *node, int level) {
+        std::cout << '.' << node->getName() << std::endl;
+
+        node->getObj()->print(*this, level + 1);
+    }
+
+    void AstPrinter::printNode(MethodCallNode *node, int level) {
+        std::cout << '.' << node->getName() << "()" << std::endl;
+
+        node->getObj()->print(*this, level + 1);
+
+        for (auto &arg: node->getArgs()) {
+            arg->print(*this, level + 1);
+        }
+    }
+
+    void AstPrinter::printNode(AssignPropNode *node, int level) {
+        std::cout << '.' << node->getName() << " =" << std::endl;
+
+        node->getObj()->print(*this, level + 1);
+        node->getExpr()->print(*this, level + 1);
+    }
+
+    void AstPrinter::printNode(NewNode *node, int level) {
+        std::cout << "new " << node->getName() << std::endl;
     }
 }

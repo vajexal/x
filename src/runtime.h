@@ -9,14 +9,12 @@
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 
 namespace X {
-    void _runtime_print(int x);
-
     class Runtime {
         std::map<std::string, llvm::Function *> functions;
 
     public:
         void addDeclarations(llvm::LLVMContext &context, llvm::Module &module);
-        void addGlobalMappings(llvm::ExecutionEngine &engine);
+        void addDefinitions(llvm::ExecutionEngine &engine);
     };
 }
 

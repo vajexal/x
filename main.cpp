@@ -67,7 +67,7 @@ int main(int argc, char *argv[]) {
 
     engine->DisableSymbolSearching();
 
-    runtime.addGlobalMappings(*engine);
+    runtime.addDefinitions(*engine);
 
     auto mainFn = engine->FindFunctionNamed("main");
     if (!mainFn) {

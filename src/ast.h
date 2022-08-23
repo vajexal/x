@@ -4,6 +4,7 @@
 #include <iostream>
 #include <vector>
 #include <variant>
+#include <optional>
 
 #include "llvm/IR/Value.h"
 
@@ -31,11 +32,29 @@ namespace X {
 
     std::ostream &operator<<(std::ostream &out, OpType type);
 
-    enum class Type {
-        INT,
-        FLOAT,
-        BOOL,
-        VOID
+    class Type {
+    public:
+        enum class TypeID {
+            INT,
+            FLOAT,
+            BOOL,
+            VOID,
+            CLASS
+        };
+    private:
+        TypeID id;
+        std::optional<std::string> className;
+
+    public:
+        explicit Type(TypeID typeID) : id(typeID) {
+            if (typeID == TypeID::CLASS) {
+                throw std::invalid_argument("invalid type for scalar");
+            }
+        }
+        explicit Type(const std::string &className) : id(TypeID::CLASS), className(className) {}
+
+        const TypeID &getTypeID() const { return id; }
+        const std::optional<std::string> &getClassName() const { return className; }
     };
 
     std::ostream &operator<<(std::ostream &out, Type type);
@@ -152,7 +171,7 @@ namespace X {
         void print(AstPrinter &astPrinter, int level = 0);
         llvm::Value *gen(Codegen &codegen);
 
-        Type getType() const {
+        const Type &getType() const {
             return type;
         }
 
@@ -252,7 +271,7 @@ namespace X {
         void print(AstPrinter &astPrinter, int level = 0);
         llvm::Value *gen(Codegen &codegen);
 
-        Type getType() const {
+        const Type &getType() const {
             return type;
         }
 
@@ -351,6 +370,7 @@ namespace X {
 
     class CommentNode : public Node {
         std::string comment;
+
     public:
         CommentNode(const std::string &comment) : comment(comment) {}
 
@@ -360,6 +380,103 @@ namespace X {
         const std::string &getComment() const {
             return comment;
         }
+    };
+
+    class ClassMembersNode : public Node {
+        std::vector<DeclareNode *> props;
+        std::vector<FnNode *> funcs;
+
+    public:
+        void print(AstPrinter &astPrinter, int level = 0);
+        llvm::Value *gen(Codegen &codegen);
+
+        void addProp(DeclareNode *prop) {
+            props.push_back(prop);
+        }
+
+        void addFn(FnNode *fn) {
+            funcs.push_back(fn);
+        }
+
+        const std::vector<DeclareNode *> &getProps() const {
+            return props;
+        }
+
+        const std::vector<FnNode *> &getFuncs() const {
+            return funcs;
+        }
+    };
+
+    class ClassNode : public Node {
+        std::string name;
+        ClassMembersNode members;
+
+    public:
+        ClassNode(const std::string &name, const ClassMembersNode &members) : name(name), members(members) {}
+
+        void print(AstPrinter &astPrinter, int level = 0);
+        llvm::Value *gen(Codegen &codegen);
+
+        const std::string &getName() const { return name; }
+        ClassMembersNode &getMembers() { return members; }
+    };
+
+    class FetchPropNode : public ExprNode {
+        VarNode *obj;
+        std::string &name;
+
+    public:
+        FetchPropNode(VarNode *obj, std::string &name) : obj(obj), name(name) {}
+
+        void print(AstPrinter &astPrinter, int level = 0);
+        llvm::Value *gen(Codegen &codegen);
+
+        VarNode *getObj() const { return obj; }
+        const std::string &getName() const { return name; }
+    };
+
+    class MethodCallNode : public ExprNode {
+        VarNode *obj;
+        std::string name;
+        std::vector<ExprNode *> &args;
+
+    public:
+        MethodCallNode(VarNode *obj, std::string &name, std::vector<ExprNode *> &args) : obj(obj), name(name), args(args) {}
+
+        void print(AstPrinter &astPrinter, int level = 0);
+        llvm::Value *gen(Codegen &codegen);
+
+        VarNode *getObj() const { return obj; }
+        std::string getName() const { return name; }
+        const std::vector<ExprNode *> &getArgs() const { return args; }
+    };
+
+    class AssignPropNode : public Node {
+        VarNode *obj;
+        std::string &name;
+        ExprNode *expr;
+
+    public:
+        AssignPropNode(VarNode *obj, std::string &name, ExprNode *expr) : obj(obj), name(name), expr(expr) {}
+
+        void print(AstPrinter &astPrinter, int level = 0);
+        llvm::Value *gen(Codegen &codegen);
+
+        VarNode *getObj() const { return obj; }
+        std::string &getName() const { return name; }
+        ExprNode *getExpr() const { return expr; }
+    };
+
+    class NewNode : public ExprNode {
+        std::string name;
+
+    public:
+        NewNode(std::string name) : name(name) {}
+
+        void print(AstPrinter &astPrinter, int level = 0);
+        llvm::Value *gen(Codegen &codegen);
+
+        std::string getName() const { return name; }
     };
 }
 

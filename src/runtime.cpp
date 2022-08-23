@@ -3,7 +3,7 @@
 #include "runtime.h"
 
 namespace X {
-    void _runtime_print(int x) {
+    void _runtime_print(uint64_t x) {
         std::cout << x << std::endl;
     }
 
@@ -15,7 +15,7 @@ namespace X {
         functions["abort"] = llvm::dyn_cast<llvm::Function>(module.getOrInsertFunction("abort", abortFnType).getCallee());
     }
 
-    void Runtime::addGlobalMappings(llvm::ExecutionEngine &engine) {
+    void Runtime::addDefinitions(llvm::ExecutionEngine &engine) {
         engine.addGlobalMapping(functions["print"], reinterpret_cast<void *>(_runtime_print));
         engine.addGlobalMapping(functions["abort"], reinterpret_cast<void *>(std::abort));
     }

@@ -9,6 +9,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/DerivedTypes.h"
 
 #include "ast.h"
 
@@ -20,12 +21,26 @@ namespace X {
         Loop(llvm::BasicBlock *start, llvm::BasicBlock *end) : start(start), end(end) {}
     };
 
+    struct Prop {
+        llvm::Type *type;
+        uint64_t pos;
+    };
+
+    struct ClassDecl {
+        llvm::StructType *type;
+        std::map<std::string, Prop> props;
+    };
+
     class Codegen {
         llvm::LLVMContext &context;
         llvm::IRBuilder<> &builder;
         llvm::Module &module;
+
         std::map<std::string, llvm::AllocaInst *> namedValues;
         std::stack<Loop> loops;
+
+        llvm::Value *that;
+        std::map<std::string, ClassDecl> classes;
 
     public:
         Codegen(llvm::LLVMContext &context, llvm::IRBuilder<> &builder, llvm::Module &module) : context(context), builder(builder), module(module) {}
@@ -46,14 +61,25 @@ namespace X {
         llvm::Value *gen(BreakNode *node);
         llvm::Value *gen(ContinueNode *node);
         llvm::Value *gen(CommentNode *node);
+        llvm::Value *gen(ClassNode *node);
+        llvm::Value *gen(ClassMembersNode *node);
+        llvm::Value *gen(FetchPropNode *node);
+        llvm::Value *gen(MethodCallNode *node);
+        llvm::Value *gen(AssignPropNode *node);
+        llvm::Value *gen(NewNode *node);
 
     private:
-        llvm::Type *mapType(Type type);
-        llvm::AllocaInst *getVar(std::string &name);
+        llvm::Type *mapType(const Type &type);
+        std::pair<llvm::Type *, llvm::Value *> getVar(std::string &name);
+        std::pair<llvm::Type *, llvm::Value *> getProp(llvm::Value *obj, std::string &name);
+        const ClassDecl &getClass(const std::string &name) const;
         llvm::AllocaInst *createAlloca(llvm::Type *type, const std::string &name);
 
         std::pair<llvm::Value *, llvm::Value *> upcast(llvm::Value *a, llvm::Value *b);
         std::pair<llvm::Value *, llvm::Value *> forceUpcast(llvm::Value *a, llvm::Value *b);
+        llvm::Type *deref(llvm::Type *type);
+
+        void genFn(const std::string &name, const std::vector<ArgNode *> &args, const Type &returnType, StatementListNode *body, std::optional<Type> thisType = std::nullopt);
     };
 
     class CodegenException : public std::exception {

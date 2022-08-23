@@ -10,7 +10,7 @@ yy::parser::symbol_type yylex(Driver &driver) {
     const char *yypmatch[YYMAXNMATCH * 2];
     size_t yynmatch;
 
-    while (*driver.s == ' ' || *driver.s == '\n' || *driver.s == '\t') {
+    while (*driver.s == ' ' || *driver.s == '\t' || *driver.s == '\n') {
         driver.s++;
     }
 
@@ -30,6 +30,7 @@ yy::parser::symbol_type yylex(Driver &driver) {
       "bool" { return yy::parser::make_BOOL_TYPE(); }
       "void" { return yy::parser::make_VOID_TYPE(); }
       "fn" { return yy::parser::make_FN(); }
+      "var" { return yy::parser::make_VAR(); }
       "case" { return yy::parser::make_CASE(); }
       "default" { return yy::parser::make_DEFAULT(); }
       "if" { return yy::parser::make_IF(); }
@@ -38,6 +39,8 @@ yy::parser::symbol_type yylex(Driver &driver) {
       "continue" { return yy::parser::make_CONTINUE(); }
       "break" { return yy::parser::make_BREAK(); }
       "return" { return yy::parser::make_RETURN(); }
+      "class" { return yy::parser::make_CLASS(); }
+      "new" { return yy::parser::make_NEW(); }
 
       [_a-zA-Z][_a-zA-Z0-9]* { return yy::parser::make_IDENTIFIER(std::string(yypmatch[0], yypmatch[1] - yypmatch[0])); }
 

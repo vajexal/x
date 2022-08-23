@@ -40,6 +40,7 @@
 %token BOOL_TYPE "bool"
 %token VOID_TYPE "void"
 %token FN "fn"
+%token VAR "var"
 %token <std::string> IDENTIFIER
 %token CASE "case"
 %token DEFAULT "default"
@@ -64,11 +65,14 @@
 %token <float> FLOAT
 %token <bool> BOOL
 %token <std::string> STRING
+%token CLASS "class"
+%token NEW "new"
 
 %nterm <StatementListNode *> statement_list
 %nterm <Node *> statement
 %nterm <ExprNode *> expr
-%nterm <Type> type
+%nterm <Type *> type
+%nterm <DeclareNode *> var_decl
 %nterm <VarNode *> identifier
 %nterm <ScalarNode *> scalar
 %nterm <std::vector<ExprNode *> *> call_arg_list
@@ -79,11 +83,13 @@
 %nterm <std::vector<ArgNode *> *> decl_arg_list
 %nterm <std::vector<ArgNode *> *> non_empty_decl_arg_list
 %nterm <ArgNode *> decl_arg
+%nterm <ClassNode *> class_decl
+%nterm <ClassMembersNode *> class_members_list
 
 %%
 
 start:
-	statement_list { driver.result = $1; }
+    statement_list { driver.result = $1; }
 ;
 
 statement_list:
@@ -93,8 +99,9 @@ statement_list:
 
 statement:
 expr { $$ = $1; }
-| type IDENTIFIER '=' expr { $$ = new DeclareNode($1, $2, $4); }
+| var_decl { $$ = $1; }
 | IDENTIFIER '=' expr { $$ = new AssignNode($1, $3); }
+| identifier '.' IDENTIFIER '=' expr { $$ = new AssignPropNode($1, $3, $5); }
 | if_statement { $$ = $1; }
 | while_statement { $$ = $1; }
 | fn_decl { $$ = $1; }
@@ -102,6 +109,7 @@ expr { $$ = $1; }
 | CONTINUE { $$ = new ContinueNode; }
 | RETURN expr { $$ = new ReturnNode($2); }
 | COMMENT { $$ = new CommentNode($1); }
+| class_decl { $$ = $1; }
 ;
 
 expr:
@@ -124,13 +132,21 @@ identifier INC { $$ = new UnaryNode(OpType::POST_INC, $1); }
 | scalar { $$ = $1; }
 | identifier { $$ = $1; }
 | IDENTIFIER '(' call_arg_list ')' { $$ = new FnCallNode($1, *$3); }
+| identifier '.' IDENTIFIER { $$ = new FetchPropNode($1, $3); }
+| identifier '.' IDENTIFIER '(' call_arg_list ')' { $$ = new MethodCallNode($1, $3, *$5); }
+| NEW IDENTIFIER { $$ = new NewNode($2); }
 ;
 
 type:
-INT_TYPE { $$ = Type::INT; }
-| FLOAT_TYPE { $$ = Type::FLOAT; }
-| BOOL_TYPE { $$ = Type::BOOL; }
-| VOID_TYPE { $$ = Type::VOID; }
+INT_TYPE { $$ = new Type(Type::TypeID::INT); }
+| FLOAT_TYPE { $$ = new Type(Type::TypeID::FLOAT); }
+| BOOL_TYPE { $$ = new Type(Type::TypeID::BOOL); }
+| VOID_TYPE { $$ = new Type(Type::TypeID::VOID); }
+| IDENTIFIER { $$ = new Type($1); }
+;
+
+var_decl:
+VAR IDENTIFIER type '=' expr { $$ = new DeclareNode(*$3, $2, $5); }
 ;
 
 identifier:
@@ -138,9 +154,9 @@ IDENTIFIER { $$ = new VarNode($1); }
 ;
 
 scalar:
-INT { $$ = new ScalarNode(Type::INT, $1); }
-| FLOAT { $$ = new ScalarNode(Type::FLOAT, $1); }
-| BOOL { $$ = new ScalarNode(Type::BOOL, $1); }
+INT { $$ = new ScalarNode(std::move(Type(Type::TypeID::INT)), $1); }
+| FLOAT { $$ = new ScalarNode(std::move(Type(Type::TypeID::FLOAT)), $1); }
+| BOOL { $$ = new ScalarNode(std::move(Type(Type::TypeID::BOOL)), $1); }
 ;
 
 call_arg_list:
@@ -163,7 +179,7 @@ WHILE expr '{' statement_list '}' { $$ = new WhileNode($2, $4); }
 ;
 
 fn_decl:
-FN IDENTIFIER '(' decl_arg_list ')' type '{' statement_list '}' { $$ = new FnNode($2, *$4, $6, $8); }
+FN IDENTIFIER '(' decl_arg_list ')' type '{' statement_list '}' { $$ = new FnNode($2, *$4, *$6, $8); }
 ;
 
 decl_arg_list:
@@ -177,7 +193,17 @@ decl_arg { $$ = new std::vector<ArgNode *>; $$->push_back($1); }
 ;
 
 decl_arg:
-type IDENTIFIER { $$ = new ArgNode($1, $2); }
+type IDENTIFIER { $$ = new ArgNode(*$1, $2); }
+;
+
+class_decl:
+CLASS IDENTIFIER '{' class_members_list '}' { $$ = new ClassNode($2, *$4); }
+;
+
+class_members_list:
+%empty { $$ = new ClassMembersNode; }
+| class_members_list var_decl { $1->addProp($2); $$ = $1; }
+| class_members_list fn_decl { $1->addFn($2); $$ = $1; }
 ;
 
 %%

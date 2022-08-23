@@ -27,11 +27,12 @@ namespace X {
     }
 
     std::ostream &operator<<(std::ostream &out, const Type type) {
-        switch (type) {
-            case Type::INT: return out << "int";
-            case Type::FLOAT: return out << "float";
-            case Type::BOOL: return out << "bool";
-            case Type::VOID: return out << "void";
+        switch (type.getTypeID()) {
+            case Type::TypeID::INT: return out << "int";
+            case Type::TypeID::FLOAT: return out << "float";
+            case Type::TypeID::BOOL: return out << "bool";
+            case Type::TypeID::VOID: return out << "void";
+            case Type::TypeID::CLASS: return out << "class " << type.getClassName().value();
         }
 
         return out;
@@ -54,6 +55,12 @@ namespace X {
     void BreakNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<BreakNode>(this, level); }
     void ContinueNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<ContinueNode>(this, level); }
     void CommentNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<CommentNode>(this, level); }
+    void ClassNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<ClassNode>(this, level); }
+    void ClassMembersNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<ClassMembersNode>(this, level); }
+    void FetchPropNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<FetchPropNode>(this, level); }
+    void MethodCallNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<MethodCallNode>(this, level); }
+    void AssignPropNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<AssignPropNode>(this, level); }
+    void NewNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<NewNode>(this, level); }
 
     llvm::Value *ExprNode::gen(Codegen &codegen) { return codegen.gen(this); }
     llvm::Value *ScalarNode::gen(Codegen &codegen) { return codegen.gen(this); }
@@ -72,5 +79,10 @@ namespace X {
     llvm::Value *BreakNode::gen(Codegen &codegen) { return codegen.gen(this); }
     llvm::Value *ContinueNode::gen(Codegen &codegen) { return codegen.gen(this); }
     llvm::Value *CommentNode::gen(Codegen &codegen) { return codegen.gen(this); }
+    llvm::Value *ClassNode::gen(Codegen &codegen) { return codegen.gen(this); }
+    llvm::Value *ClassMembersNode::gen(Codegen &codegen) { return codegen.gen(this); }
+    llvm::Value *FetchPropNode::gen(Codegen &codegen) { return codegen.gen(this); }
+    llvm::Value *MethodCallNode::gen(Codegen &codegen) { return codegen.gen(this); }
+    llvm::Value *AssignPropNode::gen(Codegen &codegen) { return codegen.gen(this); }
+    llvm::Value *NewNode::gen(Codegen &codegen) { return codegen.gen(this); }
 }
-
