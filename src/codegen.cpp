@@ -318,14 +318,14 @@ namespace X {
             classDecl.props[prop->getName()] = {type, i};
         }
 
-        auto name = node->getName();
-        auto klass = llvm::StructType::create(context, props, name); // todo mangle name
+        auto name = mangler.mangleClass(node->getName());
+        auto klass = llvm::StructType::create(context, props, name);
         classDecl.type = klass;
         classes[name] = classDecl;
 
         for (auto &fn: members.getFuncs()) {
-            auto fnName = name + "_" + fn->getName(); // todo mangle
-            genFn(fnName, fn->getArgs(), fn->getReturnType(), fn->getBody(), std::move(Type(name)));
+            auto fnName = mangler.mangleMethod(name, fn->getName());
+            genFn(fnName, fn->getArgs(), fn->getReturnType(), fn->getBody(), std::move(Type(node->getName())));
         }
 
         return nullptr;
@@ -353,7 +353,7 @@ namespace X {
 
         auto className = type->getStructName();
         auto classDecl = getClass(className.str());
-        auto name = className.str() + "_" + methodName; // todo mangle
+        auto name = mangler.mangleMethod(className.str(), methodName);
         llvm::Function *callee = module.getFunction(name);
         if (!callee) {
             throw CodegenException("method is not found: " + methodName);
@@ -381,7 +381,7 @@ namespace X {
     }
 
     llvm::Value *Codegen::gen(NewNode *node) {
-        auto classDecl = getClass(node->getName());
+        auto classDecl = getClass(mangler.mangleClass(node->getName()));
         return builder.CreateAlloca(classDecl.type);
     }
 
@@ -397,7 +397,7 @@ namespace X {
                 return llvm::Type::getInt64Ty(context);
             case Type::TypeID::CLASS: {
                 auto className = type.getClassName().value();
-                auto classDecl = getClass(className);
+                auto classDecl = getClass(mangler.mangleClass(className));
                 return classDecl.type->getPointerTo();
             }
             default:
@@ -441,10 +441,10 @@ namespace X {
         return {prop->second.type, ptr};
     }
 
-    const ClassDecl &Codegen::getClass(const std::string &name) const {
-        auto classDecl = classes.find(name); // todo mangle
+    const ClassDecl &Codegen::getClass(const std::string &mangledName) const {
+        auto classDecl = classes.find(mangledName);
         if (classDecl == classes.end()) {
-            throw CodegenException("class not found: " + name);
+            throw CodegenException("class not found: " + mangler.unmangleName(mangledName));
         }
         return classDecl->second;
     }

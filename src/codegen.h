@@ -12,6 +12,7 @@
 #include "llvm/IR/DerivedTypes.h"
 
 #include "ast.h"
+#include "mangler.h"
 
 namespace X {
     struct Loop {
@@ -35,6 +36,7 @@ namespace X {
         llvm::LLVMContext &context;
         llvm::IRBuilder<> &builder;
         llvm::Module &module;
+        Mangler mangler;
 
         std::map<std::string, llvm::AllocaInst *> namedValues;
         std::stack<Loop> loops;
@@ -72,7 +74,7 @@ namespace X {
         llvm::Type *mapType(const Type &type);
         std::pair<llvm::Type *, llvm::Value *> getVar(std::string &name);
         std::pair<llvm::Type *, llvm::Value *> getProp(llvm::Value *obj, std::string &name);
-        const ClassDecl &getClass(const std::string &name) const;
+        const ClassDecl &getClass(const std::string &mangledName) const;
         llvm::AllocaInst *createAlloca(llvm::Type *type, const std::string &name);
 
         std::pair<llvm::Value *, llvm::Value *> upcast(llvm::Value *a, llvm::Value *b);
