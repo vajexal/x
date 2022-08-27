@@ -1,3 +1,7 @@
+#include <optional>
+
+#include "llvm/IR/GlobalValue.h"
+
 #include "codegen.h"
 
 namespace X {
@@ -306,6 +310,8 @@ namespace X {
     }
 
     llvm::Value *Codegen::gen(ClassNode *node) {
+        auto name = node->getName();
+        auto mangledName = mangler.mangleClass(name);
         auto members = node->getMembers();
         std::vector<llvm::Type *> props;
         props.reserve(members.getProps().size());
@@ -313,25 +319,47 @@ namespace X {
 
         for (uint64_t i = 0; i < members.getProps().size(); i++) {
             auto prop = members.getProps()[i];
+            auto propName = prop->getName();
             auto type = mapType(prop->getType());
-            props.push_back(type);
-            classDecl.props[prop->getName()] = {type, i};
+            if (prop->getIsStatic()) {
+                auto mangledPropName = mangler.mangleStaticProp(mangledName, propName);
+                auto global = llvm::cast<llvm::GlobalVariable>(module.getOrInsertGlobal(mangledPropName, type));
+                global->setInitializer(getDefaultValue(prop->getType()));
+                classDecl.staticProps[propName] = global;
+            } else {
+                props.push_back(type);
+                classDecl.props[propName] = {type, i};
+            }
         }
 
-        auto name = mangler.mangleClass(node->getName());
-        auto klass = llvm::StructType::create(context, props, name);
+        auto klass = llvm::StructType::create(context, props, mangledName);
         classDecl.type = klass;
-        classes[name] = classDecl;
+        classes[mangledName] = std::move(classDecl);
+        self = &classes[mangledName];
 
-        for (auto &fn: members.getFuncs()) {
-            auto fnName = mangler.mangleMethod(name, fn->getName());
-            genFn(fnName, fn->getArgs(), fn->getReturnType(), fn->getBody(), std::move(Type(node->getName())));
+        for (auto &method: members.getMethods()) {
+            auto fn = method->getFn();
+            auto fnName = mangler.mangleMethod(mangledName, fn->getName());
+            std::optional<Type> thisType = method->getIsStatic() ? std::nullopt : std::optional<Type>(std::move(Type(name)));
+            genFn(fnName, fn->getArgs(), fn->getReturnType(), fn->getBody(), thisType);
         }
+
+        self = nullptr;
 
         return nullptr;
     }
 
     llvm::Value *Codegen::gen(ClassMembersNode *node) {
+        // everything is done in ClassNode
+        return nullptr;
+    }
+
+    llvm::Value *Codegen::gen(PropDeclNode *node) {
+        // everything is done in ClassNode
+        return nullptr;
+    }
+
+    llvm::Value *Codegen::gen(MethodDeclNode *node) {
         // everything is done in ClassNode
         return nullptr;
     }
@@ -343,6 +371,11 @@ namespace X {
         return builder.CreateLoad(type, ptr, propName);
     }
 
+    llvm::Value *Codegen::gen(FetchStaticPropNode *node) {
+        auto [type, ptr] = getStaticProp(node->getClassName(), node->getPropName());
+        return builder.CreateLoad(type, ptr, node->getPropName());
+    }
+
     llvm::Value *Codegen::gen(MethodCallNode *node) {
         auto obj = node->getObj()->gen(*this);
         auto methodName = node->getName();
@@ -352,19 +385,39 @@ namespace X {
         }
 
         auto className = type->getStructName();
-        auto classDecl = getClass(className.str());
         auto name = mangler.mangleMethod(className.str(), methodName);
         llvm::Function *callee = module.getFunction(name);
         if (!callee) {
             throw CodegenException("method is not found: " + methodName);
         }
-        if (callee->arg_size() != (node->getArgs().size() + 1)) { // + this
+        if (callee->arg_size() != (node->getArgs().size() + 1)) {
             throw CodegenException("callee args mismatch");
         }
 
         std::vector<llvm::Value *> args;
         args.reserve(node->getArgs().size() + 1);
         args.push_back(obj);
+        for (auto &arg: node->getArgs()) {
+            args.push_back(arg->gen(*this));
+        }
+
+        return builder.CreateCall(callee, args);
+    }
+
+    llvm::Value *Codegen::gen(StaticMethodCallNode *node) {
+        const auto &methodName = node->getMethodName();
+        auto className = mangler.mangleClass(node->getClassName());
+        auto name = mangler.mangleMethod(className, methodName);
+        llvm::Function *callee = module.getFunction(name);
+        if (!callee) {
+            throw CodegenException("method is not found: " + methodName);
+        }
+        if (callee->arg_size() != node->getArgs().size()) {
+            throw CodegenException("callee args mismatch");
+        }
+
+        std::vector<llvm::Value *> args;
+        args.reserve(node->getArgs().size());
         for (auto &arg: node->getArgs()) {
             args.push_back(arg->gen(*this));
         }
@@ -380,12 +433,19 @@ namespace X {
         return nullptr;
     }
 
+    llvm::Value *Codegen::gen(AssignStaticPropNode *node) {
+        auto value = node->getExpr()->gen(*this);
+        auto [type, ptr] = getStaticProp(node->getClassName(), node->getPropName());
+        builder.CreateStore(value, ptr);
+        return nullptr;
+    }
+
     llvm::Value *Codegen::gen(NewNode *node) {
         auto classDecl = getClass(mangler.mangleClass(node->getName()));
         return builder.CreateAlloca(classDecl.type);
     }
 
-    llvm::Type *Codegen::mapType(const Type &type) {
+    llvm::Type *Codegen::mapType(const Type &type) const {
         switch (type.getTypeID()) {
             case Type::TypeID::INT:
                 return llvm::Type::getInt64Ty(context);
@@ -405,10 +465,23 @@ namespace X {
         }
     }
 
-    std::pair<llvm::Type *, llvm::Value *> Codegen::getVar(std::string &name) {
-        auto var = namedValues[name];
-        if (var) {
-            return {var->getAllocatedType(), var};
+    llvm::Constant *Codegen::getDefaultValue(const Type &type) const {
+        switch (type.getTypeID()) {
+            case Type::TypeID::INT:
+                return llvm::ConstantInt::getSigned(llvm::Type::getInt64Ty(context), 0);
+            case Type::TypeID::FLOAT:
+                return llvm::ConstantFP::get(llvm::Type::getFloatTy(context), 0);
+            case Type::TypeID::BOOL:
+                return llvm::ConstantInt::get(llvm::Type::getInt1Ty(context), 0);
+            default:
+                throw CodegenException("invalid type");
+        }
+    }
+
+    std::pair<llvm::Type *, llvm::Value *> Codegen::getVar(std::string &name) const {
+        auto var = namedValues.find(name);
+        if (var != namedValues.end()) {
+            return {var->second->getAllocatedType(), var->second};
         }
 
         if (that) {
@@ -421,10 +494,17 @@ namespace X {
             }
         }
 
+        if (self) {
+            auto prop = self->staticProps.find(name);
+            if (prop != self->staticProps.end()) {
+                return {prop->second->getType(), prop->second};
+            }
+        }
+
         throw CodegenException("var not found: " + name);
     }
 
-    std::pair<llvm::Type *, llvm::Value *> Codegen::getProp(llvm::Value *obj, std::string &name) {
+    std::pair<llvm::Type *, llvm::Value *> Codegen::getProp(llvm::Value *obj, const std::string &name) const {
         auto type = deref(obj->getType());
         if (!type->isStructTy()) {
             throw CodegenException("invalid obj operand");
@@ -441,6 +521,17 @@ namespace X {
         return {prop->second.type, ptr};
     }
 
+    std::pair<llvm::Type *, llvm::Value *> Codegen::getStaticProp(const std::string &className, const std::string &propName) const {
+        auto mangledClassName = mangler.mangleClass(className);
+        auto classDecl = getClass(mangledClassName);
+        auto prop = classDecl.staticProps.find(propName);
+        if (prop == classDecl.staticProps.end()) {
+            throw CodegenException("prop not found: " + propName);
+        }
+
+        return {prop->second->getType()->getPointerElementType(), prop->second};
+    }
+
     const ClassDecl &Codegen::getClass(const std::string &mangledName) const {
         auto classDecl = classes.find(mangledName);
         if (classDecl == classes.end()) {
@@ -449,13 +540,13 @@ namespace X {
         return classDecl->second;
     }
 
-    llvm::AllocaInst *Codegen::createAlloca(llvm::Type *type, const std::string &name) {
+    llvm::AllocaInst *Codegen::createAlloca(llvm::Type *type, const std::string &name) const {
         auto fn = builder.GetInsertBlock()->getParent();
         llvm::IRBuilder<> tmpBuilder(&fn->getEntryBlock(), fn->getEntryBlock().begin());
         return tmpBuilder.CreateAlloca(type, nullptr, name);
     }
 
-    std::pair<llvm::Value *, llvm::Value *> Codegen::upcast(llvm::Value *a, llvm::Value *b) {
+    std::pair<llvm::Value *, llvm::Value *> Codegen::upcast(llvm::Value *a, llvm::Value *b) const {
         if (a->getType()->isFloatTy() && b->getType()->isIntegerTy()) {
             return {a, builder.CreateSIToFP(b, llvm::Type::getFloatTy(context))};
         }
@@ -467,7 +558,7 @@ namespace X {
         return {a, b};
     }
 
-    std::pair<llvm::Value *, llvm::Value *> Codegen::forceUpcast(llvm::Value *a, llvm::Value *b) {
+    std::pair<llvm::Value *, llvm::Value *> Codegen::forceUpcast(llvm::Value *a, llvm::Value *b) const {
         if (a->getType()->isIntegerTy()) {
             a = builder.CreateSIToFP(a, llvm::Type::getFloatTy(context));
         }
@@ -479,7 +570,7 @@ namespace X {
         return {a, b};
     }
 
-    llvm::Type *Codegen::deref(llvm::Type *type) {
+    llvm::Type *Codegen::deref(llvm::Type *type) const {
         if (!type->isPointerTy()) {
             return type;
         }

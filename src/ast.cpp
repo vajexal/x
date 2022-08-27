@@ -57,9 +57,14 @@ namespace X {
     void CommentNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<CommentNode>(this, level); }
     void ClassNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<ClassNode>(this, level); }
     void ClassMembersNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<ClassMembersNode>(this, level); }
+    void PropDeclNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<PropDeclNode>(this, level); }
+    void MethodDeclNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<MethodDeclNode>(this, level); }
     void FetchPropNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<FetchPropNode>(this, level); }
+    void FetchStaticPropNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<FetchStaticPropNode>(this, level); }
     void MethodCallNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<MethodCallNode>(this, level); }
+    void StaticMethodCallNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<StaticMethodCallNode>(this, level); }
     void AssignPropNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<AssignPropNode>(this, level); }
+    void AssignStaticPropNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<AssignStaticPropNode>(this, level); }
     void NewNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<NewNode>(this, level); }
 
     llvm::Value *ExprNode::gen(Codegen &codegen) { return codegen.gen(this); }
@@ -81,8 +86,13 @@ namespace X {
     llvm::Value *CommentNode::gen(Codegen &codegen) { return codegen.gen(this); }
     llvm::Value *ClassNode::gen(Codegen &codegen) { return codegen.gen(this); }
     llvm::Value *ClassMembersNode::gen(Codegen &codegen) { return codegen.gen(this); }
+    llvm::Value *PropDeclNode::gen(Codegen &codegen) { return codegen.gen(this); }
+    llvm::Value *MethodDeclNode::gen(Codegen &codegen) { return codegen.gen(this); }
     llvm::Value *FetchPropNode::gen(Codegen &codegen) { return codegen.gen(this); }
+    llvm::Value *FetchStaticPropNode::gen(Codegen &codegen) { return codegen.gen(this); }
     llvm::Value *MethodCallNode::gen(Codegen &codegen) { return codegen.gen(this); }
+    llvm::Value *StaticMethodCallNode::gen(Codegen &codegen) { return codegen.gen(this); }
     llvm::Value *AssignPropNode::gen(Codegen &codegen) { return codegen.gen(this); }
+    llvm::Value *AssignStaticPropNode::gen(Codegen &codegen) { return codegen.gen(this); }
     llvm::Value *NewNode::gen(Codegen &codegen) { return codegen.gen(this); }
 }

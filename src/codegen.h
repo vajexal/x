@@ -10,6 +10,8 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/Constant.h"
 
 #include "ast.h"
 #include "mangler.h"
@@ -30,6 +32,7 @@ namespace X {
     struct ClassDecl {
         llvm::StructType *type;
         std::map<std::string, Prop> props;
+        std::map<std::string, llvm::GlobalVariable *> staticProps;
     };
 
     class Codegen {
@@ -42,6 +45,7 @@ namespace X {
         std::stack<Loop> loops;
 
         llvm::Value *that;
+        ClassDecl *self; // current class in static context
         std::map<std::string, ClassDecl> classes;
 
     public:
@@ -65,21 +69,28 @@ namespace X {
         llvm::Value *gen(CommentNode *node);
         llvm::Value *gen(ClassNode *node);
         llvm::Value *gen(ClassMembersNode *node);
+        llvm::Value *gen(PropDeclNode *node);
+        llvm::Value *gen(MethodDeclNode *node);
         llvm::Value *gen(FetchPropNode *node);
+        llvm::Value *gen(FetchStaticPropNode *node);
         llvm::Value *gen(MethodCallNode *node);
+        llvm::Value *gen(StaticMethodCallNode *node);
         llvm::Value *gen(AssignPropNode *node);
+        llvm::Value *gen(AssignStaticPropNode *node);
         llvm::Value *gen(NewNode *node);
 
     private:
-        llvm::Type *mapType(const Type &type);
-        std::pair<llvm::Type *, llvm::Value *> getVar(std::string &name);
-        std::pair<llvm::Type *, llvm::Value *> getProp(llvm::Value *obj, std::string &name);
+        llvm::Type *mapType(const Type &type) const;
+        llvm::Constant *getDefaultValue(const Type &type) const;
+        std::pair<llvm::Type *, llvm::Value *> getVar(std::string &name) const;
+        std::pair<llvm::Type *, llvm::Value *> getProp(llvm::Value *obj, const std::string &name) const;
+        std::pair<llvm::Type *, llvm::Value *> getStaticProp(const std::string &className, const std::string &propName) const;
         const ClassDecl &getClass(const std::string &mangledName) const;
-        llvm::AllocaInst *createAlloca(llvm::Type *type, const std::string &name);
+        llvm::AllocaInst *createAlloca(llvm::Type *type, const std::string &name) const;
 
-        std::pair<llvm::Value *, llvm::Value *> upcast(llvm::Value *a, llvm::Value *b);
-        std::pair<llvm::Value *, llvm::Value *> forceUpcast(llvm::Value *a, llvm::Value *b);
-        llvm::Type *deref(llvm::Type *type);
+        std::pair<llvm::Value *, llvm::Value *> upcast(llvm::Value *a, llvm::Value *b) const;
+        std::pair<llvm::Value *, llvm::Value *> forceUpcast(llvm::Value *a, llvm::Value *b) const;
+        llvm::Type *deref(llvm::Type *type) const;
 
         void genFn(const std::string &name, const std::vector<ArgNode *> &args, const Type &returnType, StatementListNode *body, std::optional<Type> thisType = std::nullopt);
     };

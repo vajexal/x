@@ -17,6 +17,10 @@ namespace X {
         const std::string mangleMethod(const std::string &mangledClassName, const std::string &methodName) const {
             return std::move(mangledClassName + "_" + methodName);
         }
+
+        const std::string mangleStaticProp(const std::string &mangledClassName, const std::string &propName) const {
+            return std::move(mangledClassName + "_" + propName);
+        }
     };
 }
 

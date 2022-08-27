@@ -67,6 +67,8 @@
 %token <std::string> STRING
 %token CLASS "class"
 %token NEW "new"
+%token STATIC "static"
+%token SCOPE "::"
 
 %nterm <StatementListNode *> statement_list
 %nterm <Node *> statement
@@ -85,6 +87,8 @@
 %nterm <ArgNode *> decl_arg
 %nterm <ClassNode *> class_decl
 %nterm <ClassMembersNode *> class_members_list
+%nterm <PropDeclNode *> prop_decl
+%nterm <MethodDeclNode *> method_decl
 
 %%
 
@@ -102,6 +106,7 @@ expr { $$ = $1; }
 | var_decl { $$ = $1; }
 | IDENTIFIER '=' expr { $$ = new AssignNode($1, $3); }
 | identifier '.' IDENTIFIER '=' expr { $$ = new AssignPropNode($1, $3, $5); }
+| IDENTIFIER SCOPE IDENTIFIER '=' expr { $$ = new AssignStaticPropNode($1, $3, $5); }
 | if_statement { $$ = $1; }
 | while_statement { $$ = $1; }
 | fn_decl { $$ = $1; }
@@ -134,6 +139,8 @@ identifier INC { $$ = new UnaryNode(OpType::POST_INC, $1); }
 | IDENTIFIER '(' call_arg_list ')' { $$ = new FnCallNode($1, *$3); }
 | identifier '.' IDENTIFIER { $$ = new FetchPropNode($1, $3); }
 | identifier '.' IDENTIFIER '(' call_arg_list ')' { $$ = new MethodCallNode($1, $3, *$5); }
+| IDENTIFIER SCOPE IDENTIFIER { $$ = new FetchStaticPropNode($1, $3); }
+| IDENTIFIER SCOPE IDENTIFIER '(' call_arg_list ')' { $$ = new StaticMethodCallNode($1, $3, *$5); }
 | NEW IDENTIFIER { $$ = new NewNode($2); }
 ;
 
@@ -202,8 +209,18 @@ CLASS IDENTIFIER '{' class_members_list '}' { $$ = new ClassNode($2, *$4); }
 
 class_members_list:
 %empty { $$ = new ClassMembersNode; }
-| class_members_list var_decl { $1->addProp($2); $$ = $1; }
-| class_members_list fn_decl { $1->addFn($2); $$ = $1; }
+| class_members_list prop_decl { $1->addProp($2); $$ = $1; }
+| class_members_list method_decl { $1->addMethod($2); $$ = $1; }
+;
+
+prop_decl:
+type IDENTIFIER { $$ = new PropDeclNode(*$1, $2); }
+| STATIC type IDENTIFIER { $$ = new PropDeclNode(*$2, $3, true); }
+;
+
+method_decl:
+fn_decl { $$ = new MethodDeclNode($1); }
+| STATIC fn_decl { $$ = new MethodDeclNode($2, true); }
 ;
 
 %%

@@ -35,13 +35,13 @@ namespace X {
     }
 
     void AstPrinter::printNode(DeclareNode *node, int level) {
-        std::cout << "declare " << node->getType() << " " << node->getName() << std::endl;
+        std::cout << "var " << node->getType() << " " << node->getName() << " = " << std::endl;
 
         node->getExpr()->print(*this, level + 1);
     }
 
     void AstPrinter::printNode(AssignNode *node, int level) {
-        std::cout << "assign " << node->getName() << std::endl;
+        std::cout << node->getName() << " =" << std::endl;
 
         node->getExpr()->print(*this, level + 1);
     }
@@ -119,15 +119,35 @@ namespace X {
             prop->print(*this, level);
         }
 
-        for (auto &fn: node->getFuncs()) {
-            fn->print(*this, level);
+        for (auto &method: node->getMethods()) {
+            method->print(*this, level);
         }
+    }
+
+    void AstPrinter::printNode(PropDeclNode *node, int level) {
+        if (node->getIsStatic()) {
+            std::cout << "static ";
+        }
+
+        std::cout << node->getType() << " " << node->getName() << std::endl;
+    }
+
+    void AstPrinter::printNode(MethodDeclNode *node, int level) {
+        if (node->getIsStatic()) {
+            std::cout << "static ";
+        }
+
+        node->getFn()->print(*this, level);
     }
 
     void AstPrinter::printNode(FetchPropNode *node, int level) {
         std::cout << '.' << node->getName() << std::endl;
 
         node->getObj()->print(*this, level + 1);
+    }
+
+    void AstPrinter::printNode(FetchStaticPropNode *node, int level) {
+        std::cout << node->getClassName() << "::" << node->getPropName() << std::endl;
     }
 
     void AstPrinter::printNode(MethodCallNode *node, int level) {
@@ -140,10 +160,24 @@ namespace X {
         }
     }
 
+    void AstPrinter::printNode(StaticMethodCallNode *node, int level) {
+        std::cout << node->getClassName() << "::" << node->getMethodName() << "()" << std::endl;
+
+        for (auto &arg: node->getArgs()) {
+            arg->print(*this, level + 1);
+        }
+    }
+
     void AstPrinter::printNode(AssignPropNode *node, int level) {
         std::cout << '.' << node->getName() << " =" << std::endl;
 
         node->getObj()->print(*this, level + 1);
+        node->getExpr()->print(*this, level + 1);
+    }
+
+    void AstPrinter::printNode(AssignStaticPropNode *node, int level) {
+        std::cout << node->getClassName() << "::" << node->getPropName() << " =" << std::endl;
+
         node->getExpr()->print(*this, level + 1);
     }
 

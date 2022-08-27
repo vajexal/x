@@ -41,6 +41,8 @@ yy::parser::symbol_type yylex(Driver &driver) {
       "return" { return yy::parser::make_RETURN(); }
       "class" { return yy::parser::make_CLASS(); }
       "new" { return yy::parser::make_NEW(); }
+      "static" { return yy::parser::make_STATIC(); }
+      "::" { return yy::parser::make_SCOPE(); }
 
       [_a-zA-Z][_a-zA-Z0-9]* { return yy::parser::make_IDENTIFIER(std::string(yypmatch[0], yypmatch[1] - yypmatch[0])); }
 

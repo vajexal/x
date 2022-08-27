@@ -60,6 +60,7 @@ namespace X {
     std::ostream &operator<<(std::ostream &out, Type type);
 
     class AstPrinter;
+
     class Codegen;
 
     class Node {
@@ -382,29 +383,48 @@ namespace X {
         }
     };
 
+    class PropDeclNode : public Node {
+        Type type;
+        std::string name;
+        bool isStatic;
+
+    public:
+        PropDeclNode(const Type &type, const std::string &name, bool isStatic = false) : type(type), name(name), isStatic(isStatic) {}
+
+        void print(AstPrinter &astPrinter, int level = 0);
+        llvm::Value *gen(Codegen &codegen);
+
+        const Type &getType() const { return type; }
+        const std::string &getName() const { return name; }
+        bool getIsStatic() const { return isStatic; }
+    };
+
+    class MethodDeclNode : public Node {
+        FnNode *fn;
+        bool isStatic;
+
+    public:
+        MethodDeclNode(FnNode *fn, bool isStatic = false) : fn(fn), isStatic(isStatic) {}
+
+        void print(AstPrinter &astPrinter, int level = 0);
+        llvm::Value *gen(Codegen &codegen);
+
+        FnNode *getFn() const { return fn; }
+        bool getIsStatic() const { return isStatic; }
+    };
+
     class ClassMembersNode : public Node {
-        std::vector<DeclareNode *> props;
-        std::vector<FnNode *> funcs;
+        std::vector<PropDeclNode *> props;
+        std::vector<MethodDeclNode *> methods;
 
     public:
         void print(AstPrinter &astPrinter, int level = 0);
         llvm::Value *gen(Codegen &codegen);
 
-        void addProp(DeclareNode *prop) {
-            props.push_back(prop);
-        }
-
-        void addFn(FnNode *fn) {
-            funcs.push_back(fn);
-        }
-
-        const std::vector<DeclareNode *> &getProps() const {
-            return props;
-        }
-
-        const std::vector<FnNode *> &getFuncs() const {
-            return funcs;
-        }
+        void addProp(PropDeclNode *prop) { props.push_back(prop); }
+        void addMethod(MethodDeclNode *fn) { methods.push_back(fn); }
+        const std::vector<PropDeclNode *> &getProps() const { return props; }
+        const std::vector<MethodDeclNode *> &getMethods() const { return methods; }
     };
 
     class ClassNode : public Node {
@@ -423,16 +443,30 @@ namespace X {
 
     class FetchPropNode : public ExprNode {
         VarNode *obj;
-        std::string &name;
+        std::string name;
 
     public:
-        FetchPropNode(VarNode *obj, std::string &name) : obj(obj), name(name) {}
+        FetchPropNode(VarNode *obj, const std::string &name) : obj(obj), name(name) {}
 
         void print(AstPrinter &astPrinter, int level = 0);
         llvm::Value *gen(Codegen &codegen);
 
         VarNode *getObj() const { return obj; }
         const std::string &getName() const { return name; }
+    };
+
+    class FetchStaticPropNode : public ExprNode {
+        std::string className;
+        std::string propName;
+
+    public:
+        FetchStaticPropNode(const std::string &className, const std::string &propName) : className(className), propName(propName) {}
+
+        void print(AstPrinter &astPrinter, int level = 0);
+        llvm::Value *gen(Codegen &codegen);
+
+        const std::string &getClassName() const { return className; }
+        const std::string &getPropName() const { return propName; }
     };
 
     class MethodCallNode : public ExprNode {
@@ -451,6 +485,23 @@ namespace X {
         const std::vector<ExprNode *> &getArgs() const { return args; }
     };
 
+    class StaticMethodCallNode : public ExprNode {
+        std::string className;
+        std::string methodName;
+        std::vector<ExprNode *> &args;
+
+    public:
+        StaticMethodCallNode(const std::string &className, const std::string &methodName, std::vector<ExprNode *> &args) : className(className), methodName(methodName),
+                                                                                                                           args(args) {}
+
+        void print(AstPrinter &astPrinter, int level = 0);
+        llvm::Value *gen(Codegen &codegen);
+
+        const std::string &getClassName() const { return className; }
+        const std::string &getMethodName() const { return methodName; }
+        const std::vector<ExprNode *> &getArgs() const { return args; }
+    };
+
     class AssignPropNode : public Node {
         VarNode *obj;
         std::string &name;
@@ -464,6 +515,22 @@ namespace X {
 
         VarNode *getObj() const { return obj; }
         std::string &getName() const { return name; }
+        ExprNode *getExpr() const { return expr; }
+    };
+
+    class AssignStaticPropNode : public Node {
+        std::string className;
+        std::string propName;
+        ExprNode *expr;
+
+    public:
+        AssignStaticPropNode(const std::string &className, const std::string &propName, ExprNode *expr) : className(className), propName(propName), expr(expr) {}
+
+        void print(AstPrinter &astPrinter, int level = 0);
+        llvm::Value *gen(Codegen &codegen);
+
+        const std::string &getClassName() const { return className; }
+        const std::string &getPropName() const { return propName; }
         ExprNode *getExpr() const { return expr; }
     };
 
