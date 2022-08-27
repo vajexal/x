@@ -349,21 +349,6 @@ namespace X {
         return nullptr;
     }
 
-    llvm::Value *Codegen::gen(ClassMembersNode *node) {
-        // everything is done in ClassNode
-        return nullptr;
-    }
-
-    llvm::Value *Codegen::gen(PropDeclNode *node) {
-        // everything is done in ClassNode
-        return nullptr;
-    }
-
-    llvm::Value *Codegen::gen(MethodDeclNode *node) {
-        // everything is done in ClassNode
-        return nullptr;
-    }
-
     llvm::Value *Codegen::gen(FetchPropNode *node) {
         auto obj = node->getObj()->gen(*this);
         auto propName = node->getName();

@@ -68,9 +68,6 @@ namespace X {
         llvm::Value *gen(ContinueNode *node);
         llvm::Value *gen(CommentNode *node);
         llvm::Value *gen(ClassNode *node);
-        llvm::Value *gen(ClassMembersNode *node);
-        llvm::Value *gen(PropDeclNode *node);
-        llvm::Value *gen(MethodDeclNode *node);
         llvm::Value *gen(FetchPropNode *node);
         llvm::Value *gen(FetchStaticPropNode *node);
         llvm::Value *gen(MethodCallNode *node);
