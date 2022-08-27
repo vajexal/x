@@ -3,7 +3,7 @@
 #include "codegen.h"
 
 namespace X {
-    std::ostream &operator<<(std::ostream &out, const OpType type) {
+    std::ostream &operator<<(std::ostream &out, OpType type) {
         switch (type) {
             case OpType::POST_INC: return out << "++";
             case OpType::POST_DEC: return out << "--";
@@ -26,13 +26,22 @@ namespace X {
         return out;
     }
 
-    std::ostream &operator<<(std::ostream &out, const Type type) {
+    std::ostream &operator<<(std::ostream &out, const Type &type) {
         switch (type.getTypeID()) {
             case Type::TypeID::INT: return out << "int";
             case Type::TypeID::FLOAT: return out << "float";
             case Type::TypeID::BOOL: return out << "bool";
             case Type::TypeID::VOID: return out << "void";
             case Type::TypeID::CLASS: return out << "class " << type.getClassName().value();
+        }
+
+        return out;
+    }
+
+    std::ostream &operator<<(std::ostream &out, AccessModifier accessModifier) {
+        switch (accessModifier) {
+            case AccessModifier::PUBLIC: return out << "public";
+            case AccessModifier::PRIVATE: return out << "private";
         }
 
         return out;

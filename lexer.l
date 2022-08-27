@@ -43,6 +43,8 @@ yy::parser::symbol_type yylex(Driver &driver) {
       "new" { return yy::parser::make_NEW(); }
       "static" { return yy::parser::make_STATIC(); }
       "::" { return yy::parser::make_SCOPE(); }
+      "public" { return yy::parser::make_PUBLIC(); }
+      "private" { return yy::parser::make_PRIVATE(); }
 
       [_a-zA-Z][_a-zA-Z0-9]* { return yy::parser::make_IDENTIFIER(std::string(yypmatch[0], yypmatch[1] - yypmatch[0])); }
 

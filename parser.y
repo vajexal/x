@@ -69,6 +69,8 @@
 %token NEW "new"
 %token STATIC "static"
 %token SCOPE "::"
+%token PUBLIC "public"
+%token PRIVATE "private"
 
 %nterm <StatementListNode *> statement_list
 %nterm <Node *> statement
@@ -89,6 +91,8 @@
 %nterm <ClassMembersNode *> class_members_list
 %nterm <PropDeclNode *> prop_decl
 %nterm <MethodDeclNode *> method_decl
+%nterm <AccessModifier> access_modifier
+%nterm <bool> optional_static
 
 %%
 
@@ -214,13 +218,22 @@ class_members_list:
 ;
 
 prop_decl:
-type IDENTIFIER { $$ = new PropDeclNode(*$1, $2); }
-| STATIC type IDENTIFIER { $$ = new PropDeclNode(*$2, $3, true); }
+access_modifier optional_static type IDENTIFIER { $$ = new PropDeclNode(*$3, $4, $1, $2); }
 ;
 
 method_decl:
-fn_decl { $$ = new MethodDeclNode($1); }
-| STATIC fn_decl { $$ = new MethodDeclNode($2, true); }
+access_modifier optional_static fn_decl { $$ = new MethodDeclNode($3, $1, $2); }
+;
+
+access_modifier:
+%empty { $$ = AccessModifier::PUBLIC; }
+| PUBLIC { $$ = AccessModifier::PUBLIC; }
+| PRIVATE { $$ = AccessModifier::PRIVATE; }
+;
+
+optional_static:
+%empty { $$ = false; }
+| STATIC { $$ = true; }
 ;
 
 %%

@@ -325,10 +325,10 @@ namespace X {
                 auto mangledPropName = mangler.mangleStaticProp(mangledName, propName);
                 auto global = llvm::cast<llvm::GlobalVariable>(module.getOrInsertGlobal(mangledPropName, type));
                 global->setInitializer(getDefaultValue(prop->getType()));
-                classDecl.staticProps[propName] = global;
+                classDecl.staticProps[propName] = {global, prop->getAccessModifier()};
             } else {
                 props.push_back(type);
-                classDecl.props[propName] = {type, i};
+                classDecl.props[propName] = {type, i, prop->getAccessModifier()};
             }
         }
 
@@ -342,6 +342,7 @@ namespace X {
             auto fnName = mangler.mangleMethod(mangledName, fn->getName());
             std::optional<Type> thisType = method->getIsStatic() ? std::nullopt : std::optional<Type>(std::move(Type(name)));
             genFn(fnName, fn->getArgs(), fn->getReturnType(), fn->getBody(), thisType);
+            classes[mangledName].methods[fn->getName()] = {method->getAccessModifier()};
         }
 
         self = nullptr;
@@ -375,6 +376,10 @@ namespace X {
         if (!callee) {
             throw CodegenException("method is not found: " + methodName);
         }
+        auto methodAccessModifier = getMethodAccessModifier(className.str(), methodName);
+        if (methodAccessModifier != AccessModifier::PUBLIC && !that) {
+            throw CodegenException("cannot access private method: " + methodName);
+        }
         if (callee->arg_size() != (node->getArgs().size() + 1)) {
             throw CodegenException("callee args mismatch");
         }
@@ -396,6 +401,10 @@ namespace X {
         llvm::Function *callee = module.getFunction(name);
         if (!callee) {
             throw CodegenException("method is not found: " + methodName);
+        }
+        auto methodAccessModifier = getMethodAccessModifier(className, methodName);
+        if (methodAccessModifier != AccessModifier::PUBLIC && !that) {
+            throw CodegenException("cannot access private method: " + methodName);
         }
         if (callee->arg_size() != node->getArgs().size()) {
             throw CodegenException("callee args mismatch");
@@ -482,7 +491,7 @@ namespace X {
         if (self) {
             auto prop = self->staticProps.find(name);
             if (prop != self->staticProps.end()) {
-                return {prop->second->getType(), prop->second};
+                return {prop->second.var->getType(), prop->second.var};
             }
         }
 
@@ -501,6 +510,9 @@ namespace X {
         if (prop == classDecl.props.end()) {
             throw CodegenException("prop not found: " + name);
         }
+        if (prop->second.accessModifier != AccessModifier::PUBLIC && !that) {
+            throw CodegenException("cannot access private property: " + name);
+        }
 
         auto ptr = builder.CreateStructGEP(classDecl.type, obj, prop->second.pos);
         return {prop->second.type, ptr};
@@ -513,8 +525,11 @@ namespace X {
         if (prop == classDecl.staticProps.end()) {
             throw CodegenException("prop not found: " + propName);
         }
+        if (prop->second.accessModifier != AccessModifier::PUBLIC && !self) {
+            throw CodegenException("cannot access private property: " + propName);
+        }
 
-        return {prop->second->getType()->getPointerElementType(), prop->second};
+        return {prop->second.var->getType()->getPointerElementType(), prop->second.var};
     }
 
     const ClassDecl &Codegen::getClass(const std::string &mangledName) const {
@@ -529,6 +544,15 @@ namespace X {
         auto fn = builder.GetInsertBlock()->getParent();
         llvm::IRBuilder<> tmpBuilder(&fn->getEntryBlock(), fn->getEntryBlock().begin());
         return tmpBuilder.CreateAlloca(type, nullptr, name);
+    }
+
+    AccessModifier Codegen::getMethodAccessModifier(const std::string &mangledClassName, const std::string &methodName) const {
+        auto classDecl = getClass(mangledClassName);
+        auto method = classDecl.methods.find(methodName);
+        if (method == classDecl.methods.end()) {
+            throw CodegenException("method not found: " + methodName);
+        }
+        return method->second.accessModifier;
     }
 
     std::pair<llvm::Value *, llvm::Value *> Codegen::upcast(llvm::Value *a, llvm::Value *b) const {

@@ -35,7 +35,7 @@ namespace X {
     }
 
     void AstPrinter::printNode(DeclareNode *node, int level) {
-        std::cout << "var " << node->getType() << " " << node->getName() << " = " << std::endl;
+        std::cout << "var " << node->getType() << ' ' << node->getName() << " = " << std::endl;
 
         node->getExpr()->print(*this, level + 1);
     }
@@ -68,7 +68,7 @@ namespace X {
     }
 
     void AstPrinter::printNode(ArgNode *node, int level) {
-        std::cout << "arg " << node->getType() << " " << node->getName() << std::endl;
+        std::cout << "arg " << node->getType() << ' ' << node->getName() << std::endl;
     }
 
     void AstPrinter::printNode(FnNode *node, int level) {
@@ -125,14 +125,18 @@ namespace X {
     }
 
     void AstPrinter::printNode(PropDeclNode *node, int level) {
+        std::cout << node->getAccessModifier() << ' ';
+
         if (node->getIsStatic()) {
             std::cout << "static ";
         }
 
-        std::cout << node->getType() << " " << node->getName() << std::endl;
+        std::cout << node->getType() << ' ' << node->getName() << std::endl;
     }
 
     void AstPrinter::printNode(MethodDeclNode *node, int level) {
+        std::cout << node->getAccessModifier() << ' ';
+
         if (node->getIsStatic()) {
             std::cout << "static ";
         }

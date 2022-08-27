@@ -27,12 +27,23 @@ namespace X {
     struct Prop {
         llvm::Type *type;
         uint64_t pos;
+        AccessModifier accessModifier;
+    };
+
+    struct StaticProp {
+        llvm::GlobalVariable *var;
+        AccessModifier accessModifier;
+    };
+
+    struct Method {
+        AccessModifier accessModifier;
     };
 
     struct ClassDecl {
         llvm::StructType *type;
         std::map<std::string, Prop> props;
-        std::map<std::string, llvm::GlobalVariable *> staticProps;
+        std::map<std::string, StaticProp> staticProps;
+        std::map<std::string, Method> methods;
     };
 
     class Codegen {
@@ -84,6 +95,7 @@ namespace X {
         std::pair<llvm::Type *, llvm::Value *> getStaticProp(const std::string &className, const std::string &propName) const;
         const ClassDecl &getClass(const std::string &mangledName) const;
         llvm::AllocaInst *createAlloca(llvm::Type *type, const std::string &name) const;
+        AccessModifier getMethodAccessModifier(const std::string &mangledClassName, const std::string &methodName) const;
 
         std::pair<llvm::Value *, llvm::Value *> upcast(llvm::Value *a, llvm::Value *b) const;
         std::pair<llvm::Value *, llvm::Value *> forceUpcast(llvm::Value *a, llvm::Value *b) const;

@@ -57,7 +57,14 @@ namespace X {
         const std::optional<std::string> &getClassName() const { return className; }
     };
 
-    std::ostream &operator<<(std::ostream &out, Type type);
+    std::ostream &operator<<(std::ostream &out, const Type &type);
+
+    enum class AccessModifier {
+        PUBLIC,
+        PRIVATE
+    };
+
+    std::ostream &operator<<(std::ostream &out, AccessModifier accessModifier);
 
     class AstPrinter;
 
@@ -386,31 +393,37 @@ namespace X {
     class PropDeclNode : public Node {
         Type type;
         std::string name;
+        AccessModifier accessModifier;
         bool isStatic;
 
     public:
-        PropDeclNode(const Type &type, const std::string &name, bool isStatic = false) : type(type), name(name), isStatic(isStatic) {}
+        PropDeclNode(const Type &type, const std::string &name, AccessModifier accessModifier = AccessModifier::PUBLIC, bool isStatic = false) : type(type), name(name),
+                                                                                                                                                 accessModifier(accessModifier),
+                                                                                                                                                 isStatic(isStatic) {}
 
         void print(AstPrinter &astPrinter, int level = 0);
         llvm::Value *gen(Codegen &codegen);
 
         const Type &getType() const { return type; }
         const std::string &getName() const { return name; }
+        AccessModifier getAccessModifier() const { return accessModifier; }
         bool getIsStatic() const { return isStatic; }
     };
 
     class MethodDeclNode : public Node {
         FnNode *fn;
+        AccessModifier accessModifier;
         bool isStatic;
 
     public:
-        MethodDeclNode(FnNode *fn, bool isStatic = false) : fn(fn), isStatic(isStatic) {}
+        MethodDeclNode(FnNode *fn, AccessModifier accessModifier = AccessModifier::PUBLIC, bool isStatic = false) : fn(fn), accessModifier(accessModifier), isStatic(isStatic) {}
 
         void print(AstPrinter &astPrinter, int level = 0);
         llvm::Value *gen(Codegen &codegen);
 
         FnNode *getFn() const { return fn; }
         bool getIsStatic() const { return isStatic; }
+        AccessModifier getAccessModifier() const { return accessModifier; }
     };
 
     class ClassMembersNode : public Node {
@@ -504,17 +517,17 @@ namespace X {
 
     class AssignPropNode : public Node {
         VarNode *obj;
-        std::string &name;
+        std::string name;
         ExprNode *expr;
 
     public:
-        AssignPropNode(VarNode *obj, std::string &name, ExprNode *expr) : obj(obj), name(name), expr(expr) {}
+        AssignPropNode(VarNode *obj, const std::string &name, ExprNode *expr) : obj(obj), name(name), expr(expr) {}
 
         void print(AstPrinter &astPrinter, int level = 0);
         llvm::Value *gen(Codegen &codegen);
 
         VarNode *getObj() const { return obj; }
-        std::string &getName() const { return name; }
+        const std::string &getName() const { return name; }
         ExprNode *getExpr() const { return expr; }
     };
 
