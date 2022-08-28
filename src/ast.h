@@ -12,6 +12,8 @@ namespace X {
     using ScalarValue = std::variant<int, float, bool>;
 
     enum class OpType {
+        PRE_INC,
+        PRE_DEC,
         POST_INC,
         POST_DEC,
         OR,

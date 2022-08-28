@@ -143,7 +143,9 @@ expr { $$ = $1; }
 ;
 
 expr:
-identifier INC { $$ = new UnaryNode(OpType::POST_INC, $1); }
+INC identifier { $$ = new UnaryNode(OpType::PRE_INC, $2); }
+| DEC identifier { $$ = new UnaryNode(OpType::PRE_DEC, $2); }
+| identifier INC { $$ = new UnaryNode(OpType::POST_INC, $1); }
 | identifier DEC { $$ = new UnaryNode(OpType::POST_DEC, $1); }
 | expr OR expr { $$ = new BinaryNode(OpType::OR, $1, $3); }
 | expr AND expr { $$ = new BinaryNode(OpType::AND, $1, $3); }

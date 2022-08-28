@@ -33,35 +33,25 @@ namespace X {
     }
 
     llvm::Value *Codegen::gen(UnaryNode *node) {
+        auto opType = node->getType();
         auto expr = node->getExpr()->gen(*this);
 
-        switch (node->getType()) {
-            case OpType::POST_INC: {
-                llvm::Value *value;
-                switch (expr->getType()->getTypeID()) {
-                    case llvm::Type::TypeID::IntegerTyID:
-                        value = builder.CreateAdd(expr, llvm::ConstantInt::getSigned(llvm::Type::getInt64Ty(context), 1));
-                        break;
-                    case llvm::Type::TypeID::FloatTyID:
-                        value = builder.CreateFAdd(expr, llvm::ConstantFP::get(llvm::Type::getFloatTy(context), 1));
-                        break;
-                    default:
-                        throw CodegenException("invalid type");
-                }
-
-                auto name = dynamic_cast<VarNode *>(node->getExpr())->getName(); // todo
-                auto [type, var] = getVar(name);
-                builder.CreateStore(value, var);
-                return expr;
-            }
+        switch (opType) {
+            case OpType::PRE_INC:
+            case OpType::PRE_DEC:
+            case OpType::POST_INC:
             case OpType::POST_DEC: {
                 llvm::Value *value;
                 switch (expr->getType()->getTypeID()) {
                     case llvm::Type::TypeID::IntegerTyID:
-                        value = builder.CreateSub(expr, llvm::ConstantInt::getSigned(llvm::Type::getInt64Ty(context), 1));
+                        value = opType == OpType::PRE_INC || opType == OpType::POST_INC ?
+                                builder.CreateAdd(expr, llvm::ConstantInt::getSigned(llvm::Type::getInt64Ty(context), 1)) :
+                                builder.CreateSub(expr, llvm::ConstantInt::getSigned(llvm::Type::getInt64Ty(context), 1));
                         break;
                     case llvm::Type::TypeID::FloatTyID:
-                        value = builder.CreateFSub(expr, llvm::ConstantFP::get(llvm::Type::getFloatTy(context), 1));
+                        value = opType == OpType::PRE_INC || opType == OpType::POST_INC ?
+                                builder.CreateFAdd(expr, llvm::ConstantFP::get(llvm::Type::getFloatTy(context), 1)) :
+                                builder.CreateFSub(expr, llvm::ConstantFP::get(llvm::Type::getFloatTy(context), 1));
                         break;
                     default:
                         throw CodegenException("invalid type");
@@ -70,7 +60,8 @@ namespace X {
                 auto name = dynamic_cast<VarNode *>(node->getExpr())->getName(); // todo
                 auto [type, var] = getVar(name);
                 builder.CreateStore(value, var);
-                return expr;
+
+                return opType == OpType::PRE_INC || opType == OpType::PRE_DEC ? value : expr;
             }
             case OpType::NOT:
                 // todo true binary op

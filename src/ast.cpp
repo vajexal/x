@@ -5,8 +5,10 @@
 namespace X {
     std::ostream &operator<<(std::ostream &out, OpType type) {
         switch (type) {
-            case OpType::POST_INC: return out << "++";
-            case OpType::POST_DEC: return out << "--";
+            case OpType::PRE_INC: return out << "++ ";
+            case OpType::PRE_DEC: return out << "-- ";
+            case OpType::POST_INC: return out << " ++";
+            case OpType::POST_DEC: return out << " --";
             case OpType::OR: return out << "||";
             case OpType::AND: return out << "&&";
             case OpType::PLUS: return out << "+";
