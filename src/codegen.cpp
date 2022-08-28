@@ -64,8 +64,8 @@ namespace X {
                 return opType == OpType::PRE_INC || opType == OpType::PRE_DEC ? value : expr;
             }
             case OpType::NOT:
-                // todo true binary op
-                return builder.CreateXor(expr, llvm::ConstantInt::getSigned(llvm::Type::getInt64Ty(context), 1));
+                expr = downcastToBool(expr);
+                return builder.CreateXor(expr, llvm::ConstantInt::getTrue(context));
             default:
                 throw CodegenException("invalid op type");
         }
@@ -156,18 +156,7 @@ namespace X {
         if (!cond) {
             throw CodegenException("if cond is empty");
         }
-        if (!cond->getType()->isIntegerTy(1)) {
-            switch (cond->getType()->getTypeID()) {
-                case llvm::Type::TypeID::IntegerTyID:
-                    cond = builder.CreateICmpNE(cond, llvm::ConstantInt::getSigned(llvm::Type::getInt64Ty(context), 0));
-                    break;
-                case llvm::Type::TypeID::FloatTyID:
-                    cond = builder.CreateFCmpONE(cond, llvm::ConstantFP::get(llvm::Type::getFloatTy(context), 0));
-                    break;
-                default:
-                    throw CodegenException("invalid cond type in if expr");
-            }
-        }
+        cond = downcastToBool(cond);
 
         auto parentFunction = builder.GetInsertBlock()->getParent();
         auto thenBB = llvm::BasicBlock::Create(context, "then", parentFunction);
@@ -568,6 +557,21 @@ namespace X {
         }
 
         return {a, b};
+    }
+
+    llvm::Value *Codegen::downcastToBool(llvm::Value *value) const {
+        if (value->getType()->isIntegerTy(1)) {
+            return value;
+        }
+
+        switch (value->getType()->getTypeID()) {
+            case llvm::Type::TypeID::IntegerTyID:
+                return builder.CreateICmpNE(value, llvm::ConstantInt::getSigned(llvm::Type::getInt64Ty(context), 0));
+            case llvm::Type::TypeID::FloatTyID:
+                return builder.CreateFCmpONE(value, llvm::ConstantFP::get(llvm::Type::getFloatTy(context), 0));
+            default:
+                throw CodegenException("invalid type");
+        }
     }
 
     llvm::Type *Codegen::deref(llvm::Type *type) const {
