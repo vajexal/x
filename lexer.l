@@ -10,7 +10,7 @@ yy::parser::symbol_type yylex(Driver &driver) {
     const char *yypmatch[YYMAXNMATCH * 2];
     size_t yynmatch;
 
-    while (*driver.s == ' ' || *driver.s == '\t' || *driver.s == '\n') {
+    while (*driver.s == ' ' || *driver.s == '\t') {
         driver.s++;
     }
 

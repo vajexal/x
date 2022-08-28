@@ -72,7 +72,9 @@
 %token PUBLIC "public"
 %token PRIVATE "private"
 
+%nterm <StatementListNode *> wrapped_statement_list
 %nterm <StatementListNode *> statement_list
+%nterm <Node *> wrapped_statement
 %nterm <Node *> statement
 %nterm <ExprNode *> expr
 %nterm <Type *> type
@@ -97,12 +99,30 @@
 %%
 
 start:
-    statement_list { driver.result = $1; }
+wrapped_statement_list { driver.result = $1; }
+;
+
+newlines:
+'\n'
+| newlines '\n'
+;
+
+maybe_newlines:
+%empty
+| maybe_newlines '\n'
+;
+
+wrapped_statement_list:
+maybe_newlines statement_list { $$ = $2; }
 ;
 
 statement_list:
 %empty { $$ = new StatementListNode; }
-| statement_list statement { $1->add($2); $$ = $1; }
+| statement_list wrapped_statement { $1->add($2); $$ = $1; }
+;
+
+wrapped_statement:
+statement newlines { $$ = $1; }
 ;
 
 statement:
@@ -116,6 +136,7 @@ expr { $$ = $1; }
 | fn_decl { $$ = $1; }
 | BREAK { $$ = new BreakNode; }
 | CONTINUE { $$ = new ContinueNode; }
+| RETURN { $$ = new ReturnNode; }
 | RETURN expr { $$ = new ReturnNode($2); }
 | COMMENT { $$ = new CommentNode($1); }
 | class_decl { $$ = $1; }
@@ -181,16 +202,16 @@ expr { $$ = new std::vector<ExprNode *>; $$->push_back($1); }
 ;
 
 if_statement:
-IF expr '{' statement_list '}' { $$ = new IfNode($2, $4); }
-| IF expr '{' statement_list '}' ELSE '{' statement_list '}' { $$ = new IfNode($2, $4, $8); }
+IF expr '{' wrapped_statement_list '}' { $$ = new IfNode($2, $4); }
+| IF expr '{' wrapped_statement_list '}' ELSE '{' wrapped_statement_list '}' { $$ = new IfNode($2, $4, $8); }
 ;
 
 while_statement:
-WHILE expr '{' statement_list '}' { $$ = new WhileNode($2, $4); }
+WHILE expr '{' wrapped_statement_list '}' { $$ = new WhileNode($2, $4); }
 ;
 
 fn_decl:
-FN IDENTIFIER '(' decl_arg_list ')' type '{' statement_list '}' { $$ = new FnNode($2, *$4, *$6, $8); }
+FN IDENTIFIER '(' decl_arg_list ')' type '{' wrapped_statement_list '}' { $$ = new FnNode($2, *$4, *$6, $8); }
 ;
 
 decl_arg_list:
@@ -208,11 +229,12 @@ type IDENTIFIER { $$ = new ArgNode(*$1, $2); }
 ;
 
 class_decl:
-CLASS IDENTIFIER '{' class_members_list '}' { $$ = new ClassNode($2, *$4); }
+CLASS IDENTIFIER '{' newlines class_members_list newlines '}' { $$ = new ClassNode($2, *$5); }
 ;
 
 class_members_list:
-%empty { $$ = new ClassMembersNode; }
+prop_decl { $$ = new ClassMembersNode; $$->addProp($1); }
+| method_decl { $$ = new ClassMembersNode; $$->addMethod($1); }
 | class_members_list prop_decl { $1->addProp($2); $$ = $1; }
 | class_members_list method_decl { $1->addMethod($2); $$ = $1; }
 ;

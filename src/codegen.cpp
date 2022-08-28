@@ -444,11 +444,11 @@ namespace X {
             case Type::TypeID::INT:
                 return llvm::Type::getInt64Ty(context);
             case Type::TypeID::FLOAT:
-                return llvm::Type::getInt64Ty(context);
+                return llvm::Type::getFloatTy(context);
             case Type::TypeID::BOOL:
-                return llvm::Type::getInt64Ty(context);
+                return llvm::Type::getInt1Ty(context);
             case Type::TypeID::VOID:
-                return llvm::Type::getInt64Ty(context);
+                return llvm::Type::getVoidTy(context);
             case Type::TypeID::CLASS: {
                 auto className = type.getClassName().value();
                 auto classDecl = getClass(mangler.mangleClass(className));
@@ -625,6 +625,9 @@ namespace X {
         }
 
         body->gen(*this);
+        if (!body->isLastNodeTerminate()) {
+            builder.CreateRetVoid();
+        }
 
         that = nullptr;
     }

@@ -342,18 +342,13 @@ namespace X {
         ExprNode *val;
 
     public:
-        explicit ReturnNode(ExprNode *val) : val(val) {}
+        explicit ReturnNode(ExprNode *val = nullptr) : val(val) {}
 
         void print(AstPrinter &astPrinter, int level = 0);
         llvm::Value *gen(Codegen &codegen);
 
-        bool isTerminate() override {
-            return true;
-        };
-
-        ExprNode *getVal() const {
-            return val;
-        }
+        bool isTerminate() override { return true; };
+        ExprNode *getVal() const { return val; }
     };
 
     class BreakNode : public Node {
