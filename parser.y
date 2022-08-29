@@ -177,7 +177,7 @@ INT_TYPE { $$ = new Type(Type::TypeID::INT); }
 ;
 
 var_decl:
-VAR IDENTIFIER type '=' expr { $$ = new DeclareNode(*$3, $2, $5); }
+type IDENTIFIER '=' expr { $$ = new DeclareNode(*$1, $2, $4); }
 ;
 
 identifier:
