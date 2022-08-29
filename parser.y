@@ -22,7 +22,6 @@
     yy::parser::symbol_type yylex(Driver &driver);
 }
 
-%precedence '='
 %left OR
 %left AND
 %nonassoc EQUAL NOT_EQUAL
@@ -30,9 +29,7 @@
 %left '+' '-'
 %left '*' '/'
 %precedence '!'
-%precedence INC DEC
 %right POW
-%precedence ELSE
 
 %token IMPORT "import"
 %token INT_TYPE "int"
