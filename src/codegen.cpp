@@ -10,7 +10,7 @@ namespace X {
     }
 
     llvm::Value *Codegen::gen(StatementListNode *node) {
-        for (auto &child: node->getChildren()) {
+        for (auto child: node->getChildren()) {
             child->gen(*this);
         }
 
@@ -241,7 +241,7 @@ namespace X {
         }
 
         std::vector<llvm::Value *> args;
-        for (auto &arg: node->getArgs()) {
+        for (auto arg: node->getArgs()) {
             args.push_back(arg->gen(*this));
         }
 
@@ -294,11 +294,11 @@ namespace X {
         auto mangledName = mangler.mangleClass(name);
         auto members = node->getMembers();
         std::vector<llvm::Type *> props;
-        props.reserve(members.getProps().size());
+        props.reserve(members->getProps().size());
         ClassDecl classDecl;
 
-        for (uint64_t i = 0; i < members.getProps().size(); i++) {
-            auto prop = members.getProps()[i];
+        for (uint64_t i = 0; i < members->getProps().size(); i++) {
+            auto prop = members->getProps()[i];
             auto propName = prop->getName();
             auto type = mapType(prop->getType());
             if (prop->getIsStatic()) {
@@ -317,7 +317,7 @@ namespace X {
         classes[mangledName] = std::move(classDecl);
         self = &classes[mangledName];
 
-        for (auto &method: members.getMethods()) {
+        for (auto method: members->getMethods()) {
             auto fn = method->getFn();
             auto fnName = mangler.mangleMethod(mangledName, fn->getName());
             std::optional<Type> thisType = method->getIsStatic() ? std::nullopt : std::optional<Type>(std::move(Type(name)));
@@ -367,7 +367,7 @@ namespace X {
         std::vector<llvm::Value *> args;
         args.reserve(node->getArgs().size() + 1);
         args.push_back(obj);
-        for (auto &arg: node->getArgs()) {
+        for (auto arg: node->getArgs()) {
             args.push_back(arg->gen(*this));
         }
 
@@ -392,7 +392,7 @@ namespace X {
 
         std::vector<llvm::Value *> args;
         args.reserve(node->getArgs().size());
-        for (auto &arg: node->getArgs()) {
+        for (auto arg: node->getArgs()) {
             args.push_back(arg->gen(*this));
         }
 
@@ -430,7 +430,7 @@ namespace X {
             case Type::TypeID::VOID:
                 return llvm::Type::getVoidTy(context);
             case Type::TypeID::CLASS: {
-                auto className = type.getClassName().value();
+                auto className = type.getClassName();
                 auto classDecl = getClass(mangler.mangleClass(className));
                 return classDecl.type->getPointerTo();
             }
@@ -589,7 +589,7 @@ namespace X {
         if (thisType) {
             paramTypes.push_back(mapType(thisType.value()));
         }
-        for (auto &arg: args) {
+        for (auto arg: args) {
             paramTypes.push_back(mapType(arg->getType()));
         }
 

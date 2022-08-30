@@ -48,15 +48,16 @@ namespace X {
         std::optional<std::string> className;
 
     public:
+        Type() : id(TypeID::VOID) {} // need empty constructor for bison variant
         explicit Type(TypeID typeID) : id(typeID) {
             if (typeID == TypeID::CLASS) {
                 throw std::invalid_argument("invalid type for scalar");
             }
         }
-        explicit Type(const std::string &className) : id(TypeID::CLASS), className(className) {}
+        explicit Type(std::string className) : id(TypeID::CLASS), className(std::move(className)) {}
 
-        const TypeID &getTypeID() const { return id; }
-        const std::optional<std::string> &getClassName() const { return className; }
+        TypeID getTypeID() const { return id; }
+        const std::string &getClassName() const { return className.value(); }
     };
 
     std::ostream &operator<<(std::ostream &out, const Type &type);
@@ -74,6 +75,8 @@ namespace X {
 
     class Node {
     public:
+        virtual ~Node() = default;
+
         virtual void print(AstPrinter &astPrinter, int level = 0) = 0;
         virtual llvm::Value *gen(Codegen &codegen) = 0;
 
@@ -81,9 +84,6 @@ namespace X {
     };
 
     class ExprNode : public Node {
-    public:
-        void print(AstPrinter &astPrinter, int level = 0) override;
-        llvm::Value *gen(Codegen &codegen) override;
     };
 
     class ScalarNode : public ExprNode {
@@ -91,12 +91,12 @@ namespace X {
         ScalarValue value;
 
     public:
-        ScalarNode(Type type, const ScalarValue &value) : type(type), value(value) {}
+        ScalarNode(Type type, const ScalarValue &value) : type(std::move(type)), value(value) {}
 
         void print(AstPrinter &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen &codegen) override;
 
-        Type getType() const { return type; }
+        const Type &getType() const { return type; }
         const ScalarValue &getValue() const { return value; }
     };
 
@@ -104,12 +104,18 @@ namespace X {
         std::vector<Node *> children;
 
     public:
+        ~StatementListNode() {
+            for (auto child: children) {
+                delete child;
+            }
+        }
+
         void print(AstPrinter &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen &codegen) override;
 
         void add(Node *node) { children.push_back(node); }
-        bool isLastNodeTerminate() { return children.back()->isTerminate(); }
-        auto getChildren() { return children; }
+        bool isLastNodeTerminate() const { return children.back()->isTerminate(); }
+        const std::vector<Node *> &getChildren() const { return children; }
     };
 
     class UnaryNode : public ExprNode {
@@ -118,6 +124,9 @@ namespace X {
 
     public:
         UnaryNode(OpType type, ExprNode *expr) : type(type), expr(expr) {}
+        ~UnaryNode() {
+            delete expr;
+        }
 
         void print(AstPrinter &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen &codegen) override;
@@ -133,6 +142,10 @@ namespace X {
 
     public:
         BinaryNode(OpType type, ExprNode *lhs, ExprNode *rhs) : type(type), lhs(lhs), rhs(rhs) {}
+        ~BinaryNode() {
+            delete lhs;
+            delete rhs;
+        }
 
         void print(AstPrinter &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen &codegen) override;
@@ -148,7 +161,10 @@ namespace X {
         ExprNode *expr;
 
     public:
-        DeclareNode(Type type, const std::string &name, ExprNode *expr) : type(type), name(name), expr(expr) {}
+        DeclareNode(Type type, std::string name, ExprNode *expr) : type(std::move(type)), name(std::move(name)), expr(expr) {}
+        ~DeclareNode() {
+            delete expr;
+        }
 
         void print(AstPrinter &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen &codegen) override;
@@ -163,7 +179,10 @@ namespace X {
         ExprNode *expr;
 
     public:
-        AssignNode(const std::string &name, ExprNode *expr) : name(name), expr(expr) {}
+        AssignNode(std::string name, ExprNode *expr) : name(std::move(name)), expr(expr) {}
+        ~AssignNode() {
+            delete expr;
+        }
 
         void print(AstPrinter &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen &codegen) override;
@@ -176,7 +195,7 @@ namespace X {
         std::string name;
 
     public:
-        VarNode(const std::string &name) : name(name) {}
+        VarNode(std::string name) : name(std::move(name)) {}
 
         void print(AstPrinter &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen &codegen) override;
@@ -190,8 +209,12 @@ namespace X {
         StatementListNode *elseNode;
 
     public:
-        IfNode(ExprNode *cond, StatementListNode *thenNode) : cond(cond), thenNode(thenNode) {}
-        IfNode(ExprNode *cond, StatementListNode *thenNode, StatementListNode *elseNode) : cond(cond), thenNode(thenNode), elseNode(elseNode) {}
+        IfNode(ExprNode *cond, StatementListNode *thenNode, StatementListNode *elseNode = nullptr) : cond(cond), thenNode(thenNode), elseNode(elseNode) {}
+        ~IfNode() {
+            delete cond;
+            delete thenNode;
+            delete elseNode;
+        }
 
         void print(AstPrinter &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen &codegen) override;
@@ -207,6 +230,10 @@ namespace X {
 
     public:
         WhileNode(ExprNode *cond, StatementListNode *body) : cond(cond), body(body) {}
+        ~WhileNode() {
+            delete cond;
+            delete body;
+        }
 
         void print(AstPrinter &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen &codegen) override;
@@ -220,7 +247,7 @@ namespace X {
         std::string name;
 
     public:
-        ArgNode(Type type, const std::string &name) : type(type), name(name) {}
+        ArgNode(Type type, std::string name) : type(std::move(type)), name(std::move(name)) {}
 
         void print(AstPrinter &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen &codegen) override;
@@ -236,16 +263,23 @@ namespace X {
         StatementListNode *body;
 
     public:
-        FnNode(const std::string &name, const std::vector<ArgNode *> &args, Type returnType, StatementListNode *body) : name(name), args(args),
-                                                                                                                        returnType(returnType),
-                                                                                                                        body(body) {}
+        FnNode(std::string name, std::vector<ArgNode *> args, Type returnType, StatementListNode *body) :
+                name(std::move(name)), args(std::move(args)), returnType(std::move(returnType)), body(body) {}
+
+        ~FnNode() {
+            for (auto arg: args) {
+                delete arg;
+            }
+
+            delete body;
+        }
 
         void print(AstPrinter &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen &codegen) override;
 
         const std::string &getName() const { return name; }
         const std::vector<ArgNode *> &getArgs() const { return args; }
-        Type getReturnType() const { return returnType; }
+        const Type &getReturnType() const { return returnType; }
         StatementListNode *getBody() const { return body; }
     };
 
@@ -254,7 +288,12 @@ namespace X {
         std::vector<ExprNode *> args;
 
     public:
-        FnCallNode(const std::string &name, const std::vector<ExprNode *> &args) : name(name), args(args) {}
+        FnCallNode(std::string name, std::vector<ExprNode *> args) : name(std::move(name)), args(std::move(args)) {}
+        ~FnCallNode() {
+            for (auto expr: args) {
+                delete expr;
+            }
+        }
 
         void print(AstPrinter &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen &codegen) override;
@@ -268,6 +307,9 @@ namespace X {
 
     public:
         explicit ReturnNode(ExprNode *val = nullptr) : val(val) {}
+        ~ReturnNode() {
+            delete val;
+        }
 
         void print(AstPrinter &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen &codegen) override;
@@ -296,7 +338,7 @@ namespace X {
         std::string comment;
 
     public:
-        CommentNode(const std::string &comment) : comment(comment) {}
+        CommentNode(std::string comment) : comment(std::move(comment)) {}
 
         void print(AstPrinter &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen &codegen) override;
@@ -311,9 +353,8 @@ namespace X {
         bool isStatic;
 
     public:
-        PropDeclNode(const Type &type, const std::string &name, AccessModifier accessModifier = AccessModifier::PUBLIC, bool isStatic = false) : type(type), name(name),
-                                                                                                                                                 accessModifier(accessModifier),
-                                                                                                                                                 isStatic(isStatic) {}
+        PropDeclNode(Type type, std::string name, AccessModifier accessModifier = AccessModifier::PUBLIC, bool isStatic = false) :
+                type(std::move(type)), name(std::move(name)), accessModifier(accessModifier), isStatic(isStatic) {}
 
         void print(AstPrinter &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen &codegen) override;
@@ -331,6 +372,9 @@ namespace X {
 
     public:
         MethodDeclNode(FnNode *fn, AccessModifier accessModifier = AccessModifier::PUBLIC, bool isStatic = false) : fn(fn), accessModifier(accessModifier), isStatic(isStatic) {}
+        ~MethodDeclNode() {
+            delete fn;
+        }
 
         void print(AstPrinter &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen &codegen) override;
@@ -345,6 +389,15 @@ namespace X {
         std::vector<MethodDeclNode *> methods;
 
     public:
+        ~ClassMembersNode() {
+            for (auto prop: props) {
+                delete prop;
+            }
+            for (auto method: methods) {
+                delete method;
+            }
+        }
+
         void print(AstPrinter &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen &codegen) override;
 
@@ -356,16 +409,19 @@ namespace X {
 
     class ClassNode : public Node {
         std::string name;
-        ClassMembersNode members;
+        ClassMembersNode *members;
 
     public:
-        ClassNode(const std::string &name, const ClassMembersNode &members) : name(name), members(members) {}
+        ClassNode(std::string name, ClassMembersNode *members) : name(std::move(name)), members(members) {}
+        ~ClassNode() {
+            delete members;
+        }
 
         void print(AstPrinter &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen &codegen) override;
 
         const std::string &getName() const { return name; }
-        ClassMembersNode &getMembers() { return members; }
+        ClassMembersNode *getMembers() { return members; }
     };
 
     class FetchPropNode : public ExprNode {
@@ -373,7 +429,10 @@ namespace X {
         std::string name;
 
     public:
-        FetchPropNode(VarNode *obj, const std::string &name) : obj(obj), name(name) {}
+        FetchPropNode(VarNode *obj, std::string name) : obj(obj), name(std::move(name)) {}
+        ~FetchPropNode() {
+            delete obj;
+        }
 
         void print(AstPrinter &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen &codegen) override;
@@ -387,7 +446,7 @@ namespace X {
         std::string propName;
 
     public:
-        FetchStaticPropNode(const std::string &className, const std::string &propName) : className(className), propName(propName) {}
+        FetchStaticPropNode(std::string className, std::string propName) : className(std::move(className)), propName(std::move(propName)) {}
 
         void print(AstPrinter &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen &codegen) override;
@@ -399,27 +458,40 @@ namespace X {
     class MethodCallNode : public ExprNode {
         VarNode *obj;
         std::string name;
-        std::vector<ExprNode *> &args;
+        std::vector<ExprNode *> args;
 
     public:
-        MethodCallNode(VarNode *obj, std::string &name, std::vector<ExprNode *> &args) : obj(obj), name(name), args(args) {}
+        MethodCallNode(VarNode *obj, std::string name, std::vector<ExprNode *> args) : obj(obj), name(std::move(name)), args(std::move(args)) {}
+        ~MethodCallNode() {
+            delete obj;
+
+            for (auto expr: args) {
+                delete expr;
+            }
+        }
 
         void print(AstPrinter &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen &codegen) override;
 
         VarNode *getObj() const { return obj; }
-        std::string getName() const { return name; }
+        const std::string &getName() const { return name; }
         const std::vector<ExprNode *> &getArgs() const { return args; }
     };
 
     class StaticMethodCallNode : public ExprNode {
         std::string className;
         std::string methodName;
-        std::vector<ExprNode *> &args;
+        std::vector<ExprNode *> args;
 
     public:
-        StaticMethodCallNode(const std::string &className, const std::string &methodName, std::vector<ExprNode *> &args) : className(className), methodName(methodName),
-                                                                                                                           args(args) {}
+        StaticMethodCallNode(std::string className, std::string methodName, std::vector<ExprNode *> args) :
+                className(std::move(className)), methodName(std::move(methodName)), args(std::move(args)) {}
+
+        ~StaticMethodCallNode() {
+            for (auto expr: args) {
+                delete expr;
+            }
+        }
 
         void print(AstPrinter &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen &codegen) override;
@@ -435,7 +507,11 @@ namespace X {
         ExprNode *expr;
 
     public:
-        AssignPropNode(VarNode *obj, const std::string &name, ExprNode *expr) : obj(obj), name(name), expr(expr) {}
+        AssignPropNode(VarNode *obj, std::string name, ExprNode *expr) : obj(obj), name(std::move(name)), expr(expr) {}
+        ~AssignPropNode() {
+            delete obj;
+            delete expr;
+        }
 
         void print(AstPrinter &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen &codegen) override;
@@ -451,7 +527,12 @@ namespace X {
         ExprNode *expr;
 
     public:
-        AssignStaticPropNode(const std::string &className, const std::string &propName, ExprNode *expr) : className(className), propName(propName), expr(expr) {}
+        AssignStaticPropNode(std::string className, std::string propName, ExprNode *expr) :
+                className(std::move(className)), propName(std::move(propName)), expr(expr) {}
+
+        ~AssignStaticPropNode() {
+            delete expr;
+        }
 
         void print(AstPrinter &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen &codegen) override;
@@ -465,7 +546,7 @@ namespace X {
         std::string name;
 
     public:
-        NewNode(std::string name) : name(name) {}
+        NewNode(std::string name) : name(std::move(name)) {}
 
         void print(AstPrinter &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen &codegen) override;

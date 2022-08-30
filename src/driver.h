@@ -10,7 +10,10 @@ namespace X {
         const char *s;
 
         Driver(const char *s) : s(s) {}
-        Driver(const std::string &s): s(s.c_str()) {}
+        Driver(const std::string &s) : s(s.c_str()) {}
+        ~Driver() {
+            delete result;
+        }
     };
 }
 

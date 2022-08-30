@@ -74,17 +74,17 @@
 %nterm <Node *> wrapped_statement
 %nterm <Node *> statement
 %nterm <ExprNode *> expr
-%nterm <Type *> type
+%nterm <Type> type
 %nterm <DeclareNode *> var_decl
 %nterm <VarNode *> identifier
 %nterm <ScalarNode *> scalar
-%nterm <std::vector<ExprNode *> *> call_arg_list
-%nterm <std::vector<ExprNode *> *> non_empty_call_arg_list
+%nterm <std::vector<ExprNode *>> call_arg_list
+%nterm <std::vector<ExprNode *>> non_empty_call_arg_list
 %nterm <IfNode *> if_statement
 %nterm <WhileNode *> while_statement
 %nterm <FnNode *> fn_decl
-%nterm <std::vector<ArgNode *> *> decl_arg_list
-%nterm <std::vector<ArgNode *> *> non_empty_decl_arg_list
+%nterm <std::vector<ArgNode *>> decl_arg_list
+%nterm <std::vector<ArgNode *>> non_empty_decl_arg_list
 %nterm <ArgNode *> decl_arg
 %nterm <ClassNode *> class_decl
 %nterm <ClassMembersNode *> class_members_list
@@ -125,9 +125,9 @@ statement newlines { $$ = $1; }
 statement:
 expr { $$ = $1; }
 | var_decl { $$ = $1; }
-| IDENTIFIER '=' expr { $$ = new AssignNode($1, $3); }
-| identifier '.' IDENTIFIER '=' expr { $$ = new AssignPropNode($1, $3, $5); }
-| IDENTIFIER SCOPE IDENTIFIER '=' expr { $$ = new AssignStaticPropNode($1, $3, $5); }
+| IDENTIFIER '=' expr { $$ = new AssignNode(std::move($1), $3); }
+| identifier '.' IDENTIFIER '=' expr { $$ = new AssignPropNode($1, std::move($3), $5); }
+| IDENTIFIER SCOPE IDENTIFIER '=' expr { $$ = new AssignStaticPropNode(std::move($1), std::move($3), $5); }
 | if_statement { $$ = $1; }
 | while_statement { $$ = $1; }
 | fn_decl { $$ = $1; }
@@ -135,7 +135,7 @@ expr { $$ = $1; }
 | CONTINUE { $$ = new ContinueNode; }
 | RETURN { $$ = new ReturnNode; }
 | RETURN expr { $$ = new ReturnNode($2); }
-| COMMENT { $$ = new CommentNode($1); }
+| COMMENT { $$ = new CommentNode(std::move($1)); }
 | class_decl { $$ = $1; }
 ;
 
@@ -160,28 +160,28 @@ INC identifier { $$ = new UnaryNode(OpType::PRE_INC, $2); }
 | expr GREATER_OR_EQUAL expr { $$ = new BinaryNode(OpType::GREATER_OR_EQUAL, $1, $3); }
 | scalar { $$ = $1; }
 | identifier { $$ = $1; }
-| IDENTIFIER '(' call_arg_list ')' { $$ = new FnCallNode($1, *$3); }
-| identifier '.' IDENTIFIER { $$ = new FetchPropNode($1, $3); }
-| identifier '.' IDENTIFIER '(' call_arg_list ')' { $$ = new MethodCallNode($1, $3, *$5); }
-| IDENTIFIER SCOPE IDENTIFIER { $$ = new FetchStaticPropNode($1, $3); }
-| IDENTIFIER SCOPE IDENTIFIER '(' call_arg_list ')' { $$ = new StaticMethodCallNode($1, $3, *$5); }
-| NEW IDENTIFIER { $$ = new NewNode($2); }
+| IDENTIFIER '(' call_arg_list ')' { $$ = new FnCallNode(std::move($1), std::move($3)); }
+| identifier '.' IDENTIFIER { $$ = new FetchPropNode($1, std::move($3)); }
+| identifier '.' IDENTIFIER '(' call_arg_list ')' { $$ = new MethodCallNode($1, std::move($3), std::move($5)); }
+| IDENTIFIER SCOPE IDENTIFIER { $$ = new FetchStaticPropNode(std::move($1), std::move($3)); }
+| IDENTIFIER SCOPE IDENTIFIER '(' call_arg_list ')' { $$ = new StaticMethodCallNode(std::move($1), std::move($3), std::move($5)); }
+| NEW IDENTIFIER { $$ = new NewNode(std::move($2)); }
 ;
 
 type:
-INT_TYPE { $$ = new Type(Type::TypeID::INT); }
-| FLOAT_TYPE { $$ = new Type(Type::TypeID::FLOAT); }
-| BOOL_TYPE { $$ = new Type(Type::TypeID::BOOL); }
-| VOID_TYPE { $$ = new Type(Type::TypeID::VOID); }
-| IDENTIFIER { $$ = new Type($1); }
+INT_TYPE { $$ = Type(Type::TypeID::INT); }
+| FLOAT_TYPE { $$ = Type(Type::TypeID::FLOAT); }
+| BOOL_TYPE { $$ = Type(Type::TypeID::BOOL); }
+| VOID_TYPE { $$ = Type(Type::TypeID::VOID); }
+| IDENTIFIER { $$ = Type(std::move($1)); }
 ;
 
 var_decl:
-type IDENTIFIER '=' expr { $$ = new DeclareNode(*$1, $2, $4); }
+type IDENTIFIER '=' expr { $$ = new DeclareNode(std::move($1), std::move($2), $4); }
 ;
 
 identifier:
-IDENTIFIER { $$ = new VarNode($1); }
+IDENTIFIER { $$ = new VarNode(std::move($1)); }
 ;
 
 scalar:
@@ -191,13 +191,13 @@ INT { $$ = new ScalarNode(std::move(Type(Type::TypeID::INT)), $1); }
 ;
 
 call_arg_list:
-%empty { $$ = new std::vector<ExprNode *>; }
-| non_empty_call_arg_list { $$ = $1; }
+%empty { $$ = std::vector<ExprNode *>(); }
+| non_empty_call_arg_list { $$ = std::move($1); }
 ;
 
 non_empty_call_arg_list:
-expr { $$ = new std::vector<ExprNode *>; $$->push_back($1); }
-| non_empty_call_arg_list ',' expr { $1->push_back($3); $$ = $1; }
+expr { $$ = std::vector<ExprNode *>(); $$.push_back($1); }
+| non_empty_call_arg_list ',' expr { $1.push_back($3); $$ = std::move($1); }
 ;
 
 if_statement:
@@ -210,36 +210,36 @@ WHILE expr '{' wrapped_statement_list '}' { $$ = new WhileNode($2, $4); }
 ;
 
 fn_decl:
-FN IDENTIFIER '(' decl_arg_list ')' type '{' wrapped_statement_list '}' { $$ = new FnNode($2, *$4, *$6, $8); }
+FN IDENTIFIER '(' decl_arg_list ')' type '{' wrapped_statement_list '}' { $$ = new FnNode(std::move($2), std::move($4), std::move($6), $8); }
 ;
 
 decl_arg_list:
-%empty { $$ = new std::vector<ArgNode *>; }
-| non_empty_decl_arg_list { $$ = $1; }
+%empty { $$ = std::vector<ArgNode *>(); }
+| non_empty_decl_arg_list { $$ = std::move($1); }
 ;
 
 non_empty_decl_arg_list:
-decl_arg { $$ = new std::vector<ArgNode *>; $$->push_back($1); }
-| non_empty_decl_arg_list ',' decl_arg { $1->push_back($3); $$ = $1; }
+decl_arg { $$ = std::vector<ArgNode *>(); $$.push_back($1); }
+| non_empty_decl_arg_list ',' decl_arg { $1.push_back($3); $$ = std::move($1); }
 ;
 
 decl_arg:
-type IDENTIFIER { $$ = new ArgNode(*$1, $2); }
+type IDENTIFIER { $$ = new ArgNode(std::move($1), std::move($2)); }
 ;
 
 class_decl:
-CLASS IDENTIFIER '{' newlines class_members_list newlines '}' { $$ = new ClassNode($2, *$5); }
+CLASS IDENTIFIER '{' newlines class_members_list '}' { $$ = new ClassNode(std::move($2), $5); }
 ;
 
 class_members_list:
-prop_decl { $$ = new ClassMembersNode; $$->addProp($1); }
-| method_decl { $$ = new ClassMembersNode; $$->addMethod($1); }
-| class_members_list prop_decl { $1->addProp($2); $$ = $1; }
-| class_members_list method_decl { $1->addMethod($2); $$ = $1; }
+prop_decl newlines { $$ = new ClassMembersNode; $$->addProp($1); }
+| method_decl newlines { $$ = new ClassMembersNode; $$->addMethod($1); }
+| class_members_list prop_decl newlines { $1->addProp($2); $$ = $1; }
+| class_members_list method_decl newlines { $1->addMethod($2); $$ = $1; }
 ;
 
 prop_decl:
-access_modifier optional_static type IDENTIFIER { $$ = new PropDeclNode(*$3, $4, $1, $2); }
+access_modifier optional_static type IDENTIFIER { $$ = new PropDeclNode(std::move($3), std::move($4), $1, $2); }
 ;
 
 method_decl:

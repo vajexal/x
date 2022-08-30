@@ -34,7 +34,7 @@ namespace X {
             case Type::TypeID::FLOAT: return out << "float";
             case Type::TypeID::BOOL: return out << "bool";
             case Type::TypeID::VOID: return out << "void";
-            case Type::TypeID::CLASS: return out << "class " << type.getClassName().value();
+            case Type::TypeID::CLASS: return out << "class " << type.getClassName();
         }
 
         return out;
@@ -49,7 +49,6 @@ namespace X {
         return out;
     }
 
-    void ExprNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<ExprNode>(this, level); }
     void ScalarNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<ScalarNode>(this, level); }
     void StatementListNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<StatementListNode>(this, level); }
     void UnaryNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<UnaryNode>(this, level); }
@@ -78,7 +77,6 @@ namespace X {
     void AssignStaticPropNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<AssignStaticPropNode>(this, level); }
     void NewNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<NewNode>(this, level); }
 
-    llvm::Value *ExprNode::gen(Codegen &codegen) { return codegen.gen(this); }
     llvm::Value *ScalarNode::gen(Codegen &codegen) { return codegen.gen(this); }
     llvm::Value *StatementListNode::gen(Codegen &codegen) { return codegen.gen(this); }
     llvm::Value *UnaryNode::gen(Codegen &codegen) { return codegen.gen(this); }

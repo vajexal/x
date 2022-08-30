@@ -35,7 +35,7 @@ namespace X {
     }
 
     void AstPrinter::printNode(DeclareNode *node, int level) {
-        std::cout << "var " << node->getType() << ' ' << node->getName() << " = " << std::endl;
+        std::cout << node->getType() << ' ' << node->getName() << " = " << std::endl;
 
         node->getExpr()->print(*this, level + 1);
     }
@@ -111,7 +111,7 @@ namespace X {
     void AstPrinter::printNode(ClassNode *node, int level) {
         std::cout << "class " << node->getName() << std::endl;
 
-        node->getMembers().print(*this, level + 1);
+        node->getMembers()->print(*this, level + 1);
     }
 
     void AstPrinter::printNode(ClassMembersNode *node, int level) {
