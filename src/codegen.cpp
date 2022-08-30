@@ -471,7 +471,7 @@ namespace X {
         if (self) {
             auto prop = self->staticProps.find(name);
             if (prop != self->staticProps.end()) {
-                return {prop->second.var->getType(), prop->second.var};
+                return {prop->second.var->getType()->getPointerElementType(), prop->second.var};
             }
         }
 
