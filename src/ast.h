@@ -58,6 +58,9 @@ namespace X {
 
         TypeID getTypeID() const { return id; }
         const std::string &getClassName() const { return className.value(); }
+
+        bool operator==(const Type &other) const;
+        bool operator!=(const Type &other) const;
     };
 
     std::ostream &operator<<(std::ostream &out, const Type &type);
@@ -256,17 +259,38 @@ namespace X {
         const std::string &getName() const { return name; }
     };
 
-    class FnNode : public Node {
+    class FnDeclNode : public Node {
         std::string name;
         std::vector<ArgNode *> args;
         Type returnType;
+
+    public:
+        FnDeclNode(std::string name, std::vector<ArgNode *> args, Type returnType) : name(std::move(name)), args(std::move(args)), returnType(std::move(returnType)) {}
+        ~FnDeclNode() {
+            for (auto arg: args) {
+                delete arg;
+            }
+        }
+
+        void print(AstPrinter &astPrinter, int level = 0) override;
+        llvm::Value *gen(Codegen &codegen) override;
+
+        const std::string &getName() const { return name; }
+        const std::vector<ArgNode *> &getArgs() const { return args; }
+        const Type &getReturnType() const { return returnType; }
+    };
+
+    class FnDefNode : public Node {
+        std::string name;
+        std::vector<ArgNode *> args;
+        Type returnType; // todo FnDeclNode
         StatementListNode *body;
 
     public:
-        FnNode(std::string name, std::vector<ArgNode *> args, Type returnType, StatementListNode *body) :
+        FnDefNode(std::string name, std::vector<ArgNode *> args, Type returnType, StatementListNode *body) :
                 name(std::move(name)), args(std::move(args)), returnType(std::move(returnType)), body(body) {}
 
-        ~FnNode() {
+        ~FnDefNode() {
             for (auto arg: args) {
                 delete arg;
             }
@@ -365,28 +389,28 @@ namespace X {
         bool getIsStatic() const { return isStatic; }
     };
 
-    class MethodDeclNode : public Node {
-        FnNode *fn;
+    class MethodDefNode : public Node {
+        FnDefNode *fnDef;
         AccessModifier accessModifier;
         bool isStatic;
 
     public:
-        MethodDeclNode(FnNode *fn, AccessModifier accessModifier = AccessModifier::PUBLIC, bool isStatic = false) : fn(fn), accessModifier(accessModifier), isStatic(isStatic) {}
-        ~MethodDeclNode() {
-            delete fn;
+        MethodDefNode(FnDefNode *fnDef, AccessModifier accessModifier = AccessModifier::PUBLIC, bool isStatic = false) : fnDef(fnDef), accessModifier(accessModifier), isStatic(isStatic) {}
+        ~MethodDefNode() {
+            delete fnDef;
         }
 
         void print(AstPrinter &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen &codegen) override;
 
-        FnNode *getFn() const { return fn; }
+        FnDefNode *getFnDef() const { return fnDef; }
         bool getIsStatic() const { return isStatic; }
         AccessModifier getAccessModifier() const { return accessModifier; }
     };
 
     class ClassMembersNode : public Node {
         std::vector<PropDeclNode *> props;
-        std::vector<MethodDeclNode *> methods;
+        std::vector<MethodDefNode *> methods;
 
     public:
         ~ClassMembersNode() {
@@ -402,17 +426,20 @@ namespace X {
         llvm::Value *gen(Codegen &codegen) override;
 
         void addProp(PropDeclNode *prop) { props.push_back(prop); }
-        void addMethod(MethodDeclNode *fn) { methods.push_back(fn); }
+        void addMethod(MethodDefNode *fnDef) { methods.push_back(fnDef); }
         const std::vector<PropDeclNode *> &getProps() const { return props; }
-        const std::vector<MethodDeclNode *> &getMethods() const { return methods; }
+        const std::vector<MethodDefNode *> &getMethods() const { return methods; }
     };
 
     class ClassNode : public Node {
         std::string name;
         ClassMembersNode *members;
+        std::vector<std::string> interfaces;
 
     public:
         ClassNode(std::string name, ClassMembersNode *members) : name(std::move(name)), members(members) {}
+        ClassNode(std::string name, ClassMembersNode *members, std::vector<std::string> interfaces) :
+                name(std::move(name)), members(members), interfaces(std::move(interfaces)) {}
         ~ClassNode() {
             delete members;
         }
@@ -422,6 +449,7 @@ namespace X {
 
         const std::string &getName() const { return name; }
         ClassMembersNode *getMembers() { return members; }
+        const std::vector<std::string> &getInterfaces() const { return interfaces; }
     };
 
     class FetchPropNode : public ExprNode {
@@ -551,7 +579,45 @@ namespace X {
         void print(AstPrinter &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen &codegen) override;
 
-        std::string getName() const { return name; }
+        const std::string &getName() const { return name; }
+    };
+
+    class MethodDeclNode : public Node {
+        FnDeclNode *fnDecl;
+        AccessModifier accessModifier;
+        bool isStatic;
+
+    public:
+        MethodDeclNode(FnDeclNode *fnDecl, AccessModifier accessModifier = AccessModifier::PUBLIC, bool isStatic = false) : fnDecl(fnDecl), accessModifier(accessModifier), isStatic(isStatic) {}
+        ~MethodDeclNode() {
+            delete fnDecl;
+        }
+
+        void print(AstPrinter &astPrinter, int level = 0) override;
+        llvm::Value *gen(Codegen &codegen) override;
+
+        FnDeclNode *getFnDecl() const { return fnDecl; }
+        bool getIsStatic() const { return isStatic; }
+        AccessModifier getAccessModifier() const { return accessModifier; }
+    };
+
+    class InterfaceNode : public Node {
+        std::string name;
+        std::vector<MethodDeclNode *> methods;
+
+    public:
+        InterfaceNode(std::string name, std::vector<MethodDeclNode *> methods) : name(std::move(name)), methods(std::move(methods)) {}
+        ~InterfaceNode() {
+            for (auto method: methods) {
+                delete method;
+            }
+        }
+
+        void print(AstPrinter &astPrinter, int level = 0) override;
+        llvm::Value *gen(Codegen &codegen) override;
+
+        const std::string &getName() const { return name; }
+        const std::vector<MethodDeclNode *> &getMethods() const { return methods; }
     };
 }
 

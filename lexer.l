@@ -40,6 +40,8 @@ yy::parser::symbol_type yylex(Driver &driver) {
       "break" { return yy::parser::make_BREAK(); }
       "return" { return yy::parser::make_RETURN(); }
       "class" { return yy::parser::make_CLASS(); }
+      "interface" { return yy::parser::make_INTERFACE(); }
+      "implements" { return yy::parser::make_IMPLEMENTS(); }
       "new" { return yy::parser::make_NEW(); }
       "static" { return yy::parser::make_STATIC(); }
       "::" { return yy::parser::make_SCOPE(); }

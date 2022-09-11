@@ -63,6 +63,8 @@
 %token <bool> BOOL
 %token <std::string> STRING
 %token CLASS "class"
+%token INTERFACE "interface"
+%token IMPLEMENTS "implements"
 %token NEW "new"
 %token STATIC "static"
 %token SCOPE "::"
@@ -82,16 +84,21 @@
 %nterm <std::vector<ExprNode *>> non_empty_call_arg_list
 %nterm <IfNode *> if_statement
 %nterm <WhileNode *> while_statement
-%nterm <FnNode *> fn_decl
+%nterm <FnDeclNode *> fn_def
+%nterm <FnDefNode *> fn_decl
 %nterm <std::vector<ArgNode *>> decl_arg_list
 %nterm <std::vector<ArgNode *>> non_empty_decl_arg_list
 %nterm <ArgNode *> decl_arg
 %nterm <ClassNode *> class_decl
 %nterm <ClassMembersNode *> class_members_list
 %nterm <PropDeclNode *> prop_decl
-%nterm <MethodDeclNode *> method_decl
+%nterm <MethodDefNode *> method_decl
 %nterm <AccessModifier> access_modifier
 %nterm <bool> optional_static
+%nterm <std::vector<std::string>> interfaces_list
+%nterm <InterfaceNode *> interface_decl
+%nterm <std::vector<MethodDeclNode *>> interface_methods_list
+%nterm <MethodDeclNode *> method_def
 
 %%
 
@@ -137,6 +144,7 @@ expr { $$ = $1; }
 | RETURN expr { $$ = new ReturnNode($2); }
 | COMMENT { $$ = new CommentNode(std::move($1)); }
 | class_decl { $$ = $1; }
+| interface_decl { $$ = $1; }
 ;
 
 expr:
@@ -210,7 +218,11 @@ WHILE expr '{' wrapped_statement_list '}' { $$ = new WhileNode($2, $4); }
 ;
 
 fn_decl:
-FN IDENTIFIER '(' decl_arg_list ')' type '{' wrapped_statement_list '}' { $$ = new FnNode(std::move($2), std::move($4), std::move($6), $8); }
+FN IDENTIFIER '(' decl_arg_list ')' type '{' wrapped_statement_list '}' { $$ = new FnDefNode(std::move($2), std::move($4), std::move($6), $8); }
+;
+
+fn_def:
+FN IDENTIFIER '(' decl_arg_list ')' type { $$ = new FnDeclNode(std::move($2), std::move($4), std::move($6)); }
 ;
 
 decl_arg_list:
@@ -229,6 +241,7 @@ type IDENTIFIER { $$ = new ArgNode(std::move($1), std::move($2)); }
 
 class_decl:
 CLASS IDENTIFIER '{' newlines class_members_list '}' { $$ = new ClassNode(std::move($2), $5); }
+| CLASS IDENTIFIER IMPLEMENTS interfaces_list '{' newlines class_members_list '}' { $$ = new ClassNode(std::move($2), $7, std::move($4)); }
 ;
 
 class_members_list:
@@ -243,7 +256,7 @@ access_modifier optional_static type IDENTIFIER { $$ = new PropDeclNode(std::mov
 ;
 
 method_decl:
-access_modifier optional_static fn_decl { $$ = new MethodDeclNode($3, $1, $2); }
+access_modifier optional_static fn_decl { $$ = new MethodDefNode($3, $1, $2); }
 ;
 
 access_modifier:
@@ -255,6 +268,24 @@ access_modifier:
 optional_static:
 %empty { $$ = false; }
 | STATIC { $$ = true; }
+;
+
+interfaces_list:
+IDENTIFIER { $$ = std::vector<std::string>(); $$.push_back(std::move($1)); }
+| interfaces_list ',' IDENTIFIER { $$ = $1; $$.push_back(std::move($3   )); }
+;
+
+interface_decl:
+INTERFACE IDENTIFIER '{' newlines interface_methods_list '}' { $$ = new InterfaceNode(std::move($2), std::move($5)); }
+;
+
+interface_methods_list:
+method_def newlines { $$ = std::vector<MethodDeclNode *>(); $$.push_back($1); }
+| interface_methods_list method_def newlines { $$ = $1; $$.push_back($2); }
+;
+
+method_def:
+access_modifier optional_static fn_def { $$ = new MethodDeclNode($3, $1, $2); }
 ;
 
 %%

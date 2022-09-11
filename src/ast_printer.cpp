@@ -71,7 +71,15 @@ namespace X {
         std::cout << "arg " << node->getType() << ' ' << node->getName() << std::endl;
     }
 
-    void AstPrinter::printNode(FnNode *node, int level) {
+    void AstPrinter::printNode(FnDeclNode *node, int level) {
+        std::cout << "fn " << node->getName() << " -> " << node->getReturnType() << std::endl;
+
+        for (auto &arg: node->getArgs()) {
+            arg->print(*this, level + 1);
+        }
+    }
+
+    void AstPrinter::printNode(FnDefNode *node, int level) {
         std::cout << "fn " << node->getName() << " -> " << node->getReturnType() << std::endl;
 
         for (auto &arg: node->getArgs()) {
@@ -109,7 +117,21 @@ namespace X {
     }
 
     void AstPrinter::printNode(ClassNode *node, int level) {
-        std::cout << "class " << node->getName() << std::endl;
+        std::cout << "class " << node->getName();
+
+        if (!node->getInterfaces().empty()) {
+            std::cout << " implements ";
+
+            const auto &interfaces = node->getInterfaces();
+            for (auto it = interfaces.cbegin(); it != interfaces.cend(); it++) {
+                if (it != interfaces.cbegin()) {
+                    std::cout << ", ";
+                }
+                std::cout << *it;
+            }
+        }
+
+        std::cout << std::endl;
 
         node->getMembers()->print(*this, level + 1);
     }
@@ -134,14 +156,14 @@ namespace X {
         std::cout << node->getType() << ' ' << node->getName() << std::endl;
     }
 
-    void AstPrinter::printNode(MethodDeclNode *node, int level) {
+    void AstPrinter::printNode(MethodDefNode *node, int level) {
         std::cout << node->getAccessModifier() << ' ';
 
         if (node->getIsStatic()) {
             std::cout << "static ";
         }
 
-        node->getFn()->print(*this, level);
+        node->getFnDef()->print(*this, level);
     }
 
     void AstPrinter::printNode(FetchPropNode *node, int level) {
@@ -187,5 +209,23 @@ namespace X {
 
     void AstPrinter::printNode(NewNode *node, int level) {
         std::cout << "new " << node->getName() << std::endl;
+    }
+
+    void AstPrinter::printNode(MethodDeclNode *node, int level) {
+        std::cout << node->getAccessModifier() << ' ';
+
+        if (node->getIsStatic()) {
+            std::cout << "static ";
+        }
+
+        node->getFnDecl()->print(*this, level);
+    }
+
+    void AstPrinter::printNode(InterfaceNode *node, int level) {
+        std::cout << "interface " << node->getName() << std::endl;
+
+        for (auto &method: node->getMethods()) {
+            method->print(*this, level);
+        }
     }
 }

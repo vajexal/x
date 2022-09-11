@@ -1,4 +1,5 @@
 #include <optional>
+#include <fmt/core.h>
 
 #include "llvm/IR/GlobalValue.h"
 
@@ -224,7 +225,13 @@ namespace X {
         return nullptr;
     }
 
-    llvm::Value *Codegen::gen(FnNode *node) {
+    llvm::Value *Codegen::gen(FnDeclNode *node) {
+        genFn(node->getName(), node->getArgs(), node->getReturnType(), nullptr);
+
+        return nullptr;
+    }
+
+    llvm::Value *Codegen::gen(FnDefNode *node) {
         genFn(node->getName(), node->getArgs(), node->getReturnType(), node->getBody());
 
         return nullptr;
@@ -318,7 +325,7 @@ namespace X {
         self = &classes[mangledName];
 
         for (auto method: members->getMethods()) {
-            auto fn = method->getFn();
+            auto fn = method->getFnDef();
             auto fnName = mangler.mangleMethod(mangledName, fn->getName());
             std::optional<Type> thisType = method->getIsStatic() ? std::nullopt : std::optional<Type>(std::move(Type(name)));
             genFn(fnName, fn->getArgs(), fn->getReturnType(), fn->getBody(), thisType);
@@ -326,6 +333,8 @@ namespace X {
         }
 
         self = nullptr;
+
+        checkInterfaces(node);
 
         return nullptr;
     }
@@ -417,6 +426,12 @@ namespace X {
     llvm::Value *Codegen::gen(NewNode *node) {
         auto classDecl = getClass(mangler.mangleClass(node->getName()));
         return builder.CreateAlloca(classDecl.type);
+    }
+
+    llvm::Value *Codegen::gen(InterfaceNode *node) {
+        interfaces[node->getName()] = node;
+
+        return nullptr;
     }
 
     llvm::Type *Codegen::mapType(const Type &type) const {
@@ -603,6 +618,10 @@ namespace X {
             fn->getArg(i + paramsOffset)->setName(args[i]->getName());
         }
 
+        if (!body) {
+            return;
+        }
+
         auto bb = llvm::BasicBlock::Create(context, "entry", fn);
         builder.SetInsertPoint(bb);
 
@@ -625,5 +644,60 @@ namespace X {
         }
 
         that = nullptr;
+    }
+
+    void Codegen::checkInterfaces(ClassNode *classNode) const {
+        auto classMethods = classNode->getMembers()->getMethods();
+
+        for (auto &interfaceName: classNode->getInterfaces()) {
+            auto interface = interfaces.find(interfaceName);
+            if (interface == interfaces.end()) {
+                throw CodegenException(fmt::format("interface {} not found", interfaceName));
+            }
+
+            for (auto interfaceMethod: interface->second->getMethods()) {
+                auto classMethod = std::find_if(classMethods.cbegin(), classMethods.cend(), [interfaceMethod](MethodDefNode *method) {
+                    return method->getFnDef()->getName() == interfaceMethod->getFnDecl()->getName();
+                });
+
+                if (classMethod == classMethods.cend()) {
+                    throw CodegenException(fmt::format("interface method {}::{} must be implemented", interfaceName, interfaceMethod->getFnDecl()->getName()));
+                }
+
+                if (!compareDeclAndDef(interfaceMethod, *classMethod)) {
+                    throw CodegenException(
+                            fmt::format("declaration of {}::{} must be compatible with interface {}", classNode->getName(), (*classMethod)->getFnDef()->getName(), interfaceName));
+                }
+            }
+        }
+    }
+
+    bool Codegen::compareDeclAndDef(MethodDeclNode *declNode, MethodDefNode *defNode) const {
+        if (declNode->getAccessModifier() != defNode->getAccessModifier()) {
+            return false;
+        }
+
+        if (declNode->getIsStatic() != defNode->getIsStatic()) {
+            return false;
+        }
+
+        auto fnDecl = declNode->getFnDecl();
+        auto fnDef = defNode->getFnDef();
+
+        if (fnDecl->getReturnType() != fnDef->getReturnType()) {
+            return false;
+        }
+
+        if (fnDecl->getArgs().size() != fnDef->getArgs().size()) {
+            return false;
+        }
+
+        for (auto i = 0; i < fnDecl->getArgs().size(); i++) {
+            if (fnDecl->getArgs()[i]->getType() != fnDef->getArgs()[i]->getType()) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

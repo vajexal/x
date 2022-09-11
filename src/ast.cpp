@@ -40,6 +40,14 @@ namespace X {
         return out;
     }
 
+    bool Type::operator==(const Type &other) const {
+        return id == other.id && className == other.className;
+    }
+
+    bool Type::operator!=(const Type &other) const {
+        return !(*this == other);
+    }
+
     std::ostream &operator<<(std::ostream &out, AccessModifier accessModifier) {
         switch (accessModifier) {
             case AccessModifier::PUBLIC: return out << "public";
@@ -59,7 +67,8 @@ namespace X {
     void IfNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<IfNode>(this, level); }
     void WhileNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<WhileNode>(this, level); }
     void ArgNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<ArgNode>(this, level); }
-    void FnNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<FnNode>(this, level); }
+    void FnDeclNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<FnDeclNode>(this, level); }
+    void FnDefNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<FnDefNode>(this, level); }
     void FnCallNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<FnCallNode>(this, level); }
     void ReturnNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<ReturnNode>(this, level); }
     void BreakNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<BreakNode>(this, level); }
@@ -68,7 +77,7 @@ namespace X {
     void ClassNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<ClassNode>(this, level); }
     void ClassMembersNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<ClassMembersNode>(this, level); }
     void PropDeclNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<PropDeclNode>(this, level); }
-    void MethodDeclNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<MethodDeclNode>(this, level); }
+    void MethodDefNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<MethodDefNode>(this, level); }
     void FetchPropNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<FetchPropNode>(this, level); }
     void FetchStaticPropNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<FetchStaticPropNode>(this, level); }
     void MethodCallNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<MethodCallNode>(this, level); }
@@ -76,6 +85,8 @@ namespace X {
     void AssignPropNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<AssignPropNode>(this, level); }
     void AssignStaticPropNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<AssignStaticPropNode>(this, level); }
     void NewNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<NewNode>(this, level); }
+    void MethodDeclNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<MethodDeclNode>(this, level); }
+    void InterfaceNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<InterfaceNode>(this, level); }
 
     llvm::Value *ScalarNode::gen(Codegen &codegen) { return codegen.gen(this); }
     llvm::Value *StatementListNode::gen(Codegen &codegen) { return codegen.gen(this); }
@@ -87,7 +98,8 @@ namespace X {
     llvm::Value *IfNode::gen(Codegen &codegen) { return codegen.gen(this); }
     llvm::Value *WhileNode::gen(Codegen &codegen) { return codegen.gen(this); }
     llvm::Value *ArgNode::gen(Codegen &codegen) { return codegen.gen(this); }
-    llvm::Value *FnNode::gen(Codegen &codegen) { return codegen.gen(this); }
+    llvm::Value *FnDeclNode::gen(Codegen &codegen) { return codegen.gen(this); }
+    llvm::Value *FnDefNode::gen(Codegen &codegen) { return codegen.gen(this); }
     llvm::Value *FnCallNode::gen(Codegen &codegen) { return codegen.gen(this); }
     llvm::Value *ReturnNode::gen(Codegen &codegen) { return codegen.gen(this); }
     llvm::Value *BreakNode::gen(Codegen &codegen) { return codegen.gen(this); }
@@ -96,7 +108,7 @@ namespace X {
     llvm::Value *ClassNode::gen(Codegen &codegen) { return codegen.gen(this); }
     llvm::Value *ClassMembersNode::gen(Codegen &codegen) { return codegen.gen(this); }
     llvm::Value *PropDeclNode::gen(Codegen &codegen) { return codegen.gen(this); }
-    llvm::Value *MethodDeclNode::gen(Codegen &codegen) { return codegen.gen(this); }
+    llvm::Value *MethodDefNode::gen(Codegen &codegen) { return codegen.gen(this); }
     llvm::Value *FetchPropNode::gen(Codegen &codegen) { return codegen.gen(this); }
     llvm::Value *FetchStaticPropNode::gen(Codegen &codegen) { return codegen.gen(this); }
     llvm::Value *MethodCallNode::gen(Codegen &codegen) { return codegen.gen(this); }
@@ -104,4 +116,6 @@ namespace X {
     llvm::Value *AssignPropNode::gen(Codegen &codegen) { return codegen.gen(this); }
     llvm::Value *AssignStaticPropNode::gen(Codegen &codegen) { return codegen.gen(this); }
     llvm::Value *NewNode::gen(Codegen &codegen) { return codegen.gen(this); }
+    llvm::Value *MethodDeclNode::gen(Codegen &codegen) { return codegen.gen(this); }
+    llvm::Value *InterfaceNode::gen(Codegen &codegen) { return codegen.gen(this); }
 }

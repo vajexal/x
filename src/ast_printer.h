@@ -25,7 +25,8 @@ namespace X {
         void printNode(IfNode *node, int level);
         void printNode(WhileNode *node, int level);
         void printNode(ArgNode *node, int level);
-        void printNode(FnNode *node, int level);
+        void printNode(FnDeclNode *node, int level);
+        void printNode(FnDefNode *node, int level);
         void printNode(FnCallNode *node, int level);
         void printNode(ReturnNode *node, int level);
         void printNode(BreakNode *node, int level);
@@ -34,7 +35,7 @@ namespace X {
         void printNode(ClassNode *node, int level);
         void printNode(ClassMembersNode *node, int level);
         void printNode(PropDeclNode *node, int level);
-        void printNode(MethodDeclNode *node, int level);
+        void printNode(MethodDefNode *node, int level);
         void printNode(FetchPropNode *node, int level);
         void printNode(FetchStaticPropNode *node, int level);
         void printNode(MethodCallNode *node, int level);
@@ -42,6 +43,8 @@ namespace X {
         void printNode(AssignPropNode *node, int level);
         void printNode(AssignStaticPropNode *node, int level);
         void printNode(NewNode *node, int level);
+        void printNode(MethodDeclNode *node, int level);
+        void printNode(InterfaceNode *node, int level);
     };
 
     class AstPrinterException : public std::exception {

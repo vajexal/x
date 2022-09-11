@@ -58,6 +58,7 @@ namespace X {
         llvm::Value *that;
         ClassDecl *self; // current class in static context
         std::map<std::string, ClassDecl> classes;
+        std::map<std::string, InterfaceNode *> interfaces; // todo remove from codegen
 
     public:
         Codegen(llvm::LLVMContext &context, llvm::IRBuilder<> &builder, llvm::Module &module) : context(context), builder(builder), module(module) {}
@@ -72,7 +73,8 @@ namespace X {
         llvm::Value *gen(VarNode *node);
         llvm::Value *gen(IfNode *node);
         llvm::Value *gen(WhileNode *node);
-        llvm::Value *gen(FnNode *node);
+        llvm::Value *gen(FnDeclNode *node);
+        llvm::Value *gen(FnDefNode *node);
         llvm::Value *gen(FnCallNode *node);
         llvm::Value *gen(ReturnNode *node);
         llvm::Value *gen(BreakNode *node);
@@ -86,6 +88,7 @@ namespace X {
         llvm::Value *gen(AssignPropNode *node);
         llvm::Value *gen(AssignStaticPropNode *node);
         llvm::Value *gen(NewNode *node);
+        llvm::Value *gen(InterfaceNode *node);
 
     private:
         llvm::Type *mapType(const Type &type) const;
@@ -103,6 +106,8 @@ namespace X {
         llvm::Type *deref(llvm::Type *type) const;
 
         void genFn(const std::string &name, const std::vector<ArgNode *> &args, const Type &returnType, StatementListNode *body, std::optional<Type> thisType = std::nullopt);
+        void checkInterfaces(ClassNode *classNode) const; // todo remove from codegen
+        bool compareDeclAndDef(MethodDeclNode *declNode, MethodDefNode *defNode) const;
     };
 
     class CodegenException : public std::exception {

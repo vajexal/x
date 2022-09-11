@@ -6,6 +6,7 @@ set(CMAKE_VERBOSE_MAKEFILE ON)
 set(LLVM_ENABLE_ASSERTIONS ON)
 
 find_package(LLVM REQUIRED CONFIG)
+find_package(fmt REQUIRED CONFIG)
 
 include_directories(${LLVM_INCLUDE_DIRS})
 separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
@@ -16,4 +17,4 @@ include_directories(./src)
 
 add_executable(x main.cpp lexer.cpp parser.tab.cc src/ast.cpp src/codegen.cpp src/ast_printer.cpp src/runtime.cpp)
 
-target_link_libraries(x LLVM)
+target_link_libraries(x LLVM fmt::fmt)
