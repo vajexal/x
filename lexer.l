@@ -29,6 +29,8 @@ yy::parser::symbol_type yylex(Driver &driver) {
       "float" { return yy::parser::make_FLOAT_TYPE(); }
       "bool" { return yy::parser::make_BOOL_TYPE(); }
       "void" { return yy::parser::make_VOID_TYPE(); }
+      "false" { return yy::parser::make_BOOL(false); }
+      "true" { return yy::parser::make_BOOL(true); }
       "fn" { return yy::parser::make_FN(); }
       "var" { return yy::parser::make_VAR(); }
       "case" { return yy::parser::make_CASE(); }
