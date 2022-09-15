@@ -10,7 +10,7 @@ namespace X {
             return std::move("class." + className);
         }
 
-        const std::string unmangleName(const std::string &mangledClassName) const {
+        const std::string unmangleClass(const std::string &mangledClassName) const {
             return std::move(mangledClassName.substr(std::strlen("class.")));
         }
 

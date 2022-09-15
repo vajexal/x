@@ -51,6 +51,7 @@ namespace X {
     std::ostream &operator<<(std::ostream &out, AccessModifier accessModifier) {
         switch (accessModifier) {
             case AccessModifier::PUBLIC: return out << "public";
+            case AccessModifier::PROTECTED: return out << "protected";
             case AccessModifier::PRIVATE: return out << "private";
         }
 

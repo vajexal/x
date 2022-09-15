@@ -65,10 +65,12 @@
 %token CLASS "class"
 %token INTERFACE "interface"
 %token IMPLEMENTS "implements"
+%token EXTENDS "extends"
 %token NEW "new"
 %token STATIC "static"
 %token SCOPE "::"
 %token PUBLIC "public"
+%token PROTECTED "protected"
 %token PRIVATE "private"
 
 %nterm <StatementListNode *> wrapped_statement_list
@@ -90,12 +92,14 @@
 %nterm <std::vector<ArgNode *>> non_empty_decl_arg_list
 %nterm <ArgNode *> decl_arg
 %nterm <ClassNode *> class_decl
+%nterm <std::string> extends
+%nterm <std::vector<std::string>> implements
 %nterm <ClassMembersNode *> class_members_list
 %nterm <PropDeclNode *> prop_decl
 %nterm <MethodDefNode *> method_decl
 %nterm <AccessModifier> access_modifier
 %nterm <bool> optional_static
-%nterm <std::vector<std::string>> interfaces_list
+%nterm <std::vector<std::string>> class_name_list
 %nterm <InterfaceNode *> interface_decl
 %nterm <std::vector<MethodDeclNode *>> interface_methods_list
 %nterm <MethodDeclNode *> method_def
@@ -240,8 +244,17 @@ type IDENTIFIER { $$ = new ArgNode(std::move($1), std::move($2)); }
 ;
 
 class_decl:
-CLASS IDENTIFIER '{' newlines class_members_list '}' { $$ = new ClassNode(std::move($2), $5); }
-| CLASS IDENTIFIER IMPLEMENTS interfaces_list '{' newlines class_members_list '}' { $$ = new ClassNode(std::move($2), $7, std::move($4)); }
+CLASS IDENTIFIER extends implements '{' newlines class_members_list '}' { $$ = new ClassNode(std::move($2), $7, std::move($3), std::move($4)); }
+;
+
+extends:
+%empty { $$ = std::string(); }
+| EXTENDS IDENTIFIER { $$ = $2; }
+;
+
+implements:
+%empty { $$ = std::vector<std::string>(); }
+| IMPLEMENTS class_name_list { $$ = $2; }
 ;
 
 class_members_list:
@@ -262,6 +275,7 @@ access_modifier optional_static fn_decl { $$ = new MethodDefNode($3, $1, $2); }
 access_modifier:
 %empty { $$ = AccessModifier::PUBLIC; }
 | PUBLIC { $$ = AccessModifier::PUBLIC; }
+| PROTECTED { $$ = AccessModifier::PROTECTED; }
 | PRIVATE { $$ = AccessModifier::PRIVATE; }
 ;
 
@@ -270,9 +284,9 @@ optional_static:
 | STATIC { $$ = true; }
 ;
 
-interfaces_list:
+class_name_list:
 IDENTIFIER { $$ = std::vector<std::string>(); $$.push_back(std::move($1)); }
-| interfaces_list ',' IDENTIFIER { $$ = $1; $$.push_back(std::move($3   )); }
+| class_name_list ',' IDENTIFIER { $$ = $1; $$.push_back(std::move($3)); }
 ;
 
 interface_decl:

@@ -119,6 +119,10 @@ namespace X {
     void AstPrinter::printNode(ClassNode *node, int level) {
         std::cout << "class " << node->getName();
 
+        if (!node->getParent().empty()) {
+            std::cout << " extends " << node->getParent();
+        }
+
         if (!node->getInterfaces().empty()) {
             std::cout << " implements ";
 

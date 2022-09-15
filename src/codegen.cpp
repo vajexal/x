@@ -303,9 +303,21 @@ namespace X {
         std::vector<llvm::Type *> props;
         props.reserve(members->getProps().size());
         ClassDecl classDecl;
+        uint64_t propIndex = 0;
 
-        for (uint64_t i = 0; i < members->getProps().size(); i++) {
-            auto prop = members->getProps()[i];
+        if (!node->getParent().empty()) {
+            auto mangledParentName = mangler.mangleClass(node->getParent());
+            auto parentClassDecl = classes.find(mangledParentName);
+            if (parentClassDecl == classes.end()) {
+                throw CodegenException(fmt::format("class {} not found", node->getParent()));
+            }
+
+            props.push_back(parentClassDecl->second.type);
+            propIndex++;
+            classDecl.parent = &parentClassDecl->second;
+        }
+
+        for (auto prop: members->getProps()) {
             auto propName = prop->getName();
             auto type = mapType(prop->getType());
             if (prop->getIsStatic()) {
@@ -315,7 +327,7 @@ namespace X {
                 classDecl.staticProps[propName] = {global, prop->getAccessModifier()};
             } else {
                 props.push_back(type);
-                classDecl.props[propName] = {type, i, prop->getAccessModifier()};
+                classDecl.props[propName] = {type, propIndex++, prop->getAccessModifier()};
             }
         }
 
@@ -353,24 +365,23 @@ namespace X {
 
     llvm::Value *Codegen::gen(MethodCallNode *node) {
         auto obj = node->getObj()->gen(*this);
-        auto methodName = node->getName();
+        auto &methodName = node->getName();
         auto type = deref(obj->getType());
         if (!type->isStructTy()) {
             throw CodegenException("invalid method call operand");
         }
 
-        auto className = type->getStructName();
-        auto name = mangler.mangleMethod(className.str(), methodName);
-        llvm::Function *callee = module.getFunction(name);
+        auto [callee, thisType] = findMethod(llvm::cast<llvm::StructType>(type), methodName);
         if (!callee) {
             throw CodegenException("method is not found: " + methodName);
         }
-        auto methodAccessModifier = getMethodAccessModifier(className.str(), methodName);
-        if (methodAccessModifier != AccessModifier::PUBLIC && !that) {
-            throw CodegenException("cannot access private method: " + methodName);
-        }
+
         if (callee->arg_size() != (node->getArgs().size() + 1)) {
             throw CodegenException("callee args mismatch");
+        }
+
+        if (thisType) {
+            obj = builder.CreateBitCast(obj, thisType->getPointerTo());
         }
 
         std::vector<llvm::Value *> args;
@@ -386,15 +397,12 @@ namespace X {
     llvm::Value *Codegen::gen(StaticMethodCallNode *node) {
         const auto &methodName = node->getMethodName();
         auto className = mangler.mangleClass(node->getClassName());
-        auto name = mangler.mangleMethod(className, methodName);
-        llvm::Function *callee = module.getFunction(name);
+        auto classDecl = getClass(className);
+        auto [callee, thisType] = findMethod(classDecl.type, methodName);
         if (!callee) {
             throw CodegenException("method is not found: " + methodName);
         }
-        auto methodAccessModifier = getMethodAccessModifier(className, methodName);
-        if (methodAccessModifier != AccessModifier::PUBLIC && !that) {
-            throw CodegenException("cannot access private method: " + methodName);
-        }
+
         if (callee->arg_size() != node->getArgs().size()) {
             throw CodegenException("callee args mismatch");
         }
@@ -481,12 +489,35 @@ namespace X {
                 auto ptr = builder.CreateStructGEP(classDecl.type, that, prop->second.pos);
                 return {prop->second.type, ptr};
             }
+
+            auto currentClassDecl = classDecl.parent;
+            while (currentClassDecl) {
+                prop = currentClassDecl->props.find(name);
+                if (prop != currentClassDecl->props.end()) {
+                    if (prop->second.accessModifier == AccessModifier::PRIVATE) {
+                        throw CodegenException("cannot access private property: " + name);
+                    }
+                    auto parent = builder.CreateBitCast(that, currentClassDecl->type->getPointerTo());
+                    auto ptr = builder.CreateStructGEP(currentClassDecl->type, parent, prop->second.pos);
+                    return {prop->second.type, ptr};
+                }
+
+                currentClassDecl = currentClassDecl->parent;
+            }
         }
 
         if (self) {
-            auto prop = self->staticProps.find(name);
-            if (prop != self->staticProps.end()) {
-                return {prop->second.var->getType()->getPointerElementType(), prop->second.var};
+            auto currentClassDecl = self;
+            while (currentClassDecl) {
+                auto prop = currentClassDecl->staticProps.find(name);
+                if (prop != currentClassDecl->staticProps.end()) {
+                    if (currentClassDecl != self && prop->second.accessModifier == AccessModifier::PRIVATE) {
+                        throw CodegenException("cannot access private property: " + name);
+                    }
+                    return {prop->second.var->getType()->getPointerElementType(), prop->second.var};
+                }
+
+                currentClassDecl = currentClassDecl->parent;
             }
         }
 
@@ -501,36 +532,49 @@ namespace X {
 
         auto className = type->getStructName();
         auto classDecl = getClass(className.str());
-        auto prop = classDecl.props.find(name);
-        if (prop == classDecl.props.end()) {
-            throw CodegenException("prop not found: " + name);
-        }
-        if (prop->second.accessModifier != AccessModifier::PUBLIC && !that) {
-            throw CodegenException("cannot access private property: " + name);
+        auto currentClassDecl = &classDecl;
+        while (currentClassDecl) {
+            auto prop = currentClassDecl->props.find(name);
+            if (prop != currentClassDecl->props.end()) {
+                if (!that && prop->second.accessModifier != AccessModifier::PUBLIC) {
+                    throw CodegenException("cannot access private property: " + name);
+                }
+
+                auto currentObj = currentClassDecl == &classDecl ? obj : builder.CreateBitCast(obj, currentClassDecl->type->getPointerTo());
+                auto ptr = builder.CreateStructGEP(currentClassDecl->type, currentObj, prop->second.pos);
+                return {prop->second.type, ptr};
+            }
+
+            currentClassDecl = currentClassDecl->parent;
         }
 
-        auto ptr = builder.CreateStructGEP(classDecl.type, obj, prop->second.pos);
-        return {prop->second.type, ptr};
+        throw CodegenException("prop not found: " + name);
     }
 
     std::pair<llvm::Type *, llvm::Value *> Codegen::getStaticProp(const std::string &className, const std::string &propName) const {
         auto mangledClassName = mangler.mangleClass(className);
         auto classDecl = getClass(mangledClassName);
-        auto prop = classDecl.staticProps.find(propName);
-        if (prop == classDecl.staticProps.end()) {
-            throw CodegenException("prop not found: " + propName);
-        }
-        if (prop->second.accessModifier != AccessModifier::PUBLIC && !self) {
-            throw CodegenException("cannot access private property: " + propName);
+        auto currentClassDecl = &classDecl;
+        while (currentClassDecl) {
+            auto prop = currentClassDecl->staticProps.find(propName);
+            if (prop != currentClassDecl->staticProps.end()) {
+                if (!self && prop->second.accessModifier != AccessModifier::PUBLIC) {
+                    throw CodegenException("cannot access private property: " + propName);
+                }
+
+                return {prop->second.var->getType()->getPointerElementType(), prop->second.var};
+            }
+
+            currentClassDecl = currentClassDecl->parent;
         }
 
-        return {prop->second.var->getType()->getPointerElementType(), prop->second.var};
+        throw CodegenException("prop not found: " + propName);
     }
 
     const ClassDecl &Codegen::getClass(const std::string &mangledName) const {
         auto classDecl = classes.find(mangledName);
         if (classDecl == classes.end()) {
-            throw CodegenException("class not found: " + mangler.unmangleName(mangledName));
+            throw CodegenException("class not found: " + mangler.unmangleClass(mangledName));
         }
         return classDecl->second;
     }
@@ -629,7 +673,7 @@ namespace X {
             that = fn->getArg(0);
         }
 
-        namedValues.clear(); // todo
+        namedValues.clear(); // todo global vars
         for (auto i = paramsOffset; i < fn->arg_size(); i++) {
             auto arg = fn->getArg(i);
             auto argName = arg->getName().str();
@@ -699,5 +743,25 @@ namespace X {
         }
 
         return true;
+    }
+
+    std::pair<llvm::Function *, llvm::Type *> Codegen::findMethod(llvm::StructType *type, const std::string &methodName) const {
+        const ClassDecl *currentClassDecl = &getClass(type->getStructName().str());
+        while (currentClassDecl) {
+            auto className = currentClassDecl->type->getStructName();
+            auto name = mangler.mangleMethod(className.str(), methodName);
+            auto callee = module.getFunction(name);
+            if (callee) {
+                auto methodAccessModifier = getMethodAccessModifier(className.str(), methodName);
+                if (!that && methodAccessModifier != AccessModifier::PUBLIC) {
+                    throw CodegenException("cannot access private method: " + methodName);
+                }
+                return {callee, currentClassDecl->type};
+            }
+
+            currentClassDecl = currentClassDecl->parent;
+        }
+
+        return {nullptr, nullptr};
     }
 }

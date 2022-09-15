@@ -44,6 +44,7 @@ namespace X {
         std::map<std::string, Prop> props;
         std::map<std::string, StaticProp> staticProps;
         std::map<std::string, Method> methods;
+        ClassDecl *parent;
     };
 
     class Codegen {
@@ -108,6 +109,7 @@ namespace X {
         void genFn(const std::string &name, const std::vector<ArgNode *> &args, const Type &returnType, StatementListNode *body, std::optional<Type> thisType = std::nullopt);
         void checkInterfaces(ClassNode *classNode) const; // todo remove from codegen
         bool compareDeclAndDef(MethodDeclNode *declNode, MethodDefNode *defNode) const;
+        std::pair<llvm::Function *, llvm::Type *> findMethod(llvm::StructType *type, const std::string &methodName) const;
     };
 
     class CodegenException : public std::exception {

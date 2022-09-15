@@ -67,6 +67,7 @@ namespace X {
 
     enum class AccessModifier {
         PUBLIC,
+        PROTECTED,
         PRIVATE
     };
 
@@ -434,12 +435,12 @@ namespace X {
     class ClassNode : public Node {
         std::string name;
         ClassMembersNode *members;
+        std::string parent;
         std::vector<std::string> interfaces;
 
     public:
-        ClassNode(std::string name, ClassMembersNode *members) : name(std::move(name)), members(members) {}
-        ClassNode(std::string name, ClassMembersNode *members, std::vector<std::string> interfaces) :
-                name(std::move(name)), members(members), interfaces(std::move(interfaces)) {}
+        ClassNode(std::string name, ClassMembersNode *members, std::string parent, std::vector<std::string> interfaces) :
+                name(std::move(name)), members(members), parent(std::move(parent)), interfaces(std::move(interfaces)) {}
         ~ClassNode() {
             delete members;
         }
@@ -449,6 +450,7 @@ namespace X {
 
         const std::string &getName() const { return name; }
         ClassMembersNode *getMembers() { return members; }
+        const std::string &getParent() const { return parent; }
         const std::vector<std::string> &getInterfaces() const { return interfaces; }
     };
 
