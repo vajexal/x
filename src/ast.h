@@ -390,13 +390,34 @@ namespace X {
         bool getIsStatic() const { return isStatic; }
     };
 
+    class MethodDeclNode : public Node {
+        FnDeclNode *fnDecl;
+        AccessModifier accessModifier;
+        bool isStatic;
+
+    public:
+        MethodDeclNode(FnDeclNode *fnDecl, AccessModifier accessModifier = AccessModifier::PUBLIC, bool isStatic = false) :
+                fnDecl(fnDecl), accessModifier(accessModifier), isStatic(isStatic) {}
+        ~MethodDeclNode() {
+            delete fnDecl;
+        }
+
+        void print(AstPrinter &astPrinter, int level = 0) override;
+        llvm::Value *gen(Codegen &codegen) override;
+
+        FnDeclNode *getFnDecl() const { return fnDecl; }
+        bool getIsStatic() const { return isStatic; }
+        AccessModifier getAccessModifier() const { return accessModifier; }
+    };
+
     class MethodDefNode : public Node {
         FnDefNode *fnDef;
         AccessModifier accessModifier;
         bool isStatic;
 
     public:
-        MethodDefNode(FnDefNode *fnDef, AccessModifier accessModifier = AccessModifier::PUBLIC, bool isStatic = false) : fnDef(fnDef), accessModifier(accessModifier), isStatic(isStatic) {}
+        MethodDefNode(FnDefNode *fnDef, AccessModifier accessModifier = AccessModifier::PUBLIC, bool isStatic = false) :
+                fnDef(fnDef), accessModifier(accessModifier), isStatic(isStatic) {}
         ~MethodDefNode() {
             delete fnDef;
         }
@@ -412,6 +433,7 @@ namespace X {
     class ClassMembersNode : public Node {
         std::vector<PropDeclNode *> props;
         std::vector<MethodDefNode *> methods;
+        std::vector<MethodDeclNode *> abstractMethods;
 
     public:
         ~ClassMembersNode() {
@@ -421,6 +443,9 @@ namespace X {
             for (auto method: methods) {
                 delete method;
             }
+            for (auto method: abstractMethods) {
+                delete method;
+            }
         }
 
         void print(AstPrinter &astPrinter, int level = 0) override;
@@ -428,8 +453,10 @@ namespace X {
 
         void addProp(PropDeclNode *prop) { props.push_back(prop); }
         void addMethod(MethodDefNode *fnDef) { methods.push_back(fnDef); }
+        void addAbstractMethod(MethodDeclNode *fnDecl) { abstractMethods.push_back(fnDecl); }
         const std::vector<PropDeclNode *> &getProps() const { return props; }
         const std::vector<MethodDefNode *> &getMethods() const { return methods; }
+        const std::vector<MethodDeclNode *> &getAbstractMethods() const { return abstractMethods; }
     };
 
     class ClassNode : public Node {
@@ -437,10 +464,11 @@ namespace X {
         ClassMembersNode *members;
         std::string parent;
         std::vector<std::string> interfaces;
+        bool abstract;
 
     public:
-        ClassNode(std::string name, ClassMembersNode *members, std::string parent, std::vector<std::string> interfaces) :
-                name(std::move(name)), members(members), parent(std::move(parent)), interfaces(std::move(interfaces)) {}
+        ClassNode(std::string name, ClassMembersNode *members, std::string parent, std::vector<std::string> interfaces, bool abstract) :
+                name(std::move(name)), members(members), parent(std::move(parent)), interfaces(std::move(interfaces)), abstract(abstract) {}
         ~ClassNode() {
             delete members;
         }
@@ -452,6 +480,7 @@ namespace X {
         ClassMembersNode *getMembers() { return members; }
         const std::string &getParent() const { return parent; }
         const std::vector<std::string> &getInterfaces() const { return interfaces; }
+        bool isAbstract() const { return abstract; }
     };
 
     class FetchPropNode : public ExprNode {
@@ -582,25 +611,6 @@ namespace X {
         llvm::Value *gen(Codegen &codegen) override;
 
         const std::string &getName() const { return name; }
-    };
-
-    class MethodDeclNode : public Node {
-        FnDeclNode *fnDecl;
-        AccessModifier accessModifier;
-        bool isStatic;
-
-    public:
-        MethodDeclNode(FnDeclNode *fnDecl, AccessModifier accessModifier = AccessModifier::PUBLIC, bool isStatic = false) : fnDecl(fnDecl), accessModifier(accessModifier), isStatic(isStatic) {}
-        ~MethodDeclNode() {
-            delete fnDecl;
-        }
-
-        void print(AstPrinter &astPrinter, int level = 0) override;
-        llvm::Value *gen(Codegen &codegen) override;
-
-        FnDeclNode *getFnDecl() const { return fnDecl; }
-        bool getIsStatic() const { return isStatic; }
-        AccessModifier getAccessModifier() const { return accessModifier; }
     };
 
     class InterfaceNode : public Node {

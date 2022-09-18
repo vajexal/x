@@ -117,6 +117,10 @@ namespace X {
     }
 
     void AstPrinter::printNode(ClassNode *node, int level) {
+        if (node->isAbstract()) {
+            std::cout << "abstract ";
+        }
+
         std::cout << "class " << node->getName();
 
         if (!node->getParent().empty()) {
@@ -146,6 +150,11 @@ namespace X {
         }
 
         for (auto &method: node->getMethods()) {
+            method->print(*this, level);
+        }
+
+        for (auto &method: node->getAbstractMethods()) {
+            std::cout << "abstract ";
             method->print(*this, level);
         }
     }

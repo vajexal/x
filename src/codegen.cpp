@@ -305,6 +305,10 @@ namespace X {
         ClassDecl classDecl;
         uint64_t propIndex = 0;
 
+        if (!node->getMembers()->getAbstractMethods().empty() && !node->isAbstract()) {
+            throw CodegenException(fmt::format("class {} must be declared abstract", name));
+        }
+
         if (!node->getParent().empty()) {
             auto mangledParentName = mangler.mangleClass(node->getParent());
             auto parentClassDecl = classes.find(mangledParentName);
@@ -315,6 +319,13 @@ namespace X {
             props.push_back(parentClassDecl->second.type);
             propIndex++;
             classDecl.parent = &parentClassDecl->second;
+
+            // todo refactor this mess
+            if (node->isAbstract()) {
+                for (auto [methodName, methodDeclNode]: parentClassDecl->second.abstractMethods) {
+                    classDecl.abstractMethods[methodName] = methodDeclNode;
+                }
+            }
         }
 
         for (auto prop: members->getProps()) {
@@ -329,6 +340,10 @@ namespace X {
                 props.push_back(type);
                 classDecl.props[propName] = {type, propIndex++, prop->getAccessModifier()};
             }
+        }
+
+        for (auto method: members->getAbstractMethods()) {
+            classDecl.abstractMethods[method->getFnDecl()->getName()] = method;
         }
 
         auto klass = llvm::StructType::create(context, props, mangledName);
@@ -347,6 +362,7 @@ namespace X {
         self = nullptr;
 
         checkInterfaces(node);
+        checkAbstractMethods(node);
 
         return nullptr;
     }
@@ -433,6 +449,10 @@ namespace X {
 
     llvm::Value *Codegen::gen(NewNode *node) {
         auto classDecl = getClass(mangler.mangleClass(node->getName()));
+        if (classDecl.isAbstract()) {
+            throw CodegenException("cannot instantiate abstract class " + node->getName());
+        }
+
         return builder.CreateAlloca(classDecl.type);
     }
 
@@ -703,7 +723,6 @@ namespace X {
                 auto classMethod = std::find_if(classMethods.cbegin(), classMethods.cend(), [interfaceMethod](MethodDefNode *method) {
                     return method->getFnDef()->getName() == interfaceMethod->getFnDecl()->getName();
                 });
-
                 if (classMethod == classMethods.cend()) {
                     throw CodegenException(fmt::format("interface method {}::{} must be implemented", interfaceName, interfaceMethod->getFnDecl()->getName()));
                 }
@@ -712,6 +731,36 @@ namespace X {
                     throw CodegenException(
                             fmt::format("declaration of {}::{} must be compatible with interface {}", classNode->getName(), (*classMethod)->getFnDef()->getName(), interfaceName));
                 }
+            }
+        }
+    }
+
+    void Codegen::checkAbstractMethods(ClassNode *classNode) const {
+        if (classNode->getParent().empty()) {
+            return;
+        }
+
+        auto parentClassDecl = classes.find(mangler.mangleClass(classNode->getParent()));
+        if (parentClassDecl == classes.end()) {
+            throw CodegenException(fmt::format("class {} not found", classNode->getParent()));
+        }
+
+        if (!parentClassDecl->second.isAbstract()) {
+            return;
+        }
+
+        auto classMethods = classNode->getMembers()->getMethods();
+        for (auto [methodName, abstractMethod]: parentClassDecl->second.abstractMethods) {
+            auto classMethod = std::find_if(classMethods.cbegin(), classMethods.cend(), [methodName = methodName](MethodDefNode *method) {
+                return method->getFnDef()->getName() == methodName;
+            });
+            if (classMethod == classMethods.cend()) {
+                throw CodegenException(fmt::format("abstract method {}::{} must be implemented", classNode->getParent(), methodName));
+            }
+
+            if (!compareDeclAndDef(abstractMethod, *classMethod)) {
+                throw CodegenException(
+                        fmt::format("declaration of {}::{} must be compatible with abstract method {}", classNode->getName(), (*classMethod)->getFnDef()->getName(), methodName));
             }
         }
     }
