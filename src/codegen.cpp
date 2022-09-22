@@ -4,6 +4,7 @@
 #include "llvm/IR/GlobalValue.h"
 
 #include "codegen.h"
+#include "runtime.h"
 
 namespace X {
     llvm::Value *Codegen::gen(Node *node) {
@@ -28,6 +29,13 @@ namespace X {
                 return llvm::ConstantFP::get(llvm::Type::getFloatTy(context), std::get<float>(value));
             case Type::TypeID::BOOL:
                 return llvm::ConstantInt::get(llvm::Type::getInt1Ty(context), std::get<bool>(value));
+            case Type::TypeID::STRING: {
+                auto str = createAlloca(llvm::StructType::getTypeByName(context, String::CLASS_NAME));
+                auto stringConstructor = module.getFunction(String::CONSTRUCTOR_FN_NAME);
+                auto dataPtr = builder.CreateGlobalStringPtr(std::get<std::string>(value));
+                builder.CreateCall(stringConstructor, {str, dataPtr});
+                return str;
+            }
             default:
                 throw CodegenException("invalid scalar type");
         }
@@ -130,7 +138,7 @@ namespace X {
 
     llvm::Value *Codegen::gen(DeclareNode *node) {
         auto type = mapType(node->getType());
-        auto name = node->getName();
+        auto &name = node->getName();
         auto stackVar = createAlloca(type, name);
         auto value = node->getExpr()->gen(*this);
         builder.CreateStore(value, stackVar);
@@ -238,8 +246,8 @@ namespace X {
     }
 
     llvm::Value *Codegen::gen(FnCallNode *node) {
-        auto name = node->getName();
-        llvm::Function *callee = module.getFunction(name);
+        auto &name = node->getName();
+        auto callee = module.getFunction(name);
         if (!callee) {
             throw CodegenException("called function is not found: " + name);
         }
@@ -248,6 +256,7 @@ namespace X {
         }
 
         std::vector<llvm::Value *> args;
+        args.reserve(node->getArgs().size());
         for (auto arg: node->getArgs()) {
             args.push_back(arg->gen(*this));
         }
@@ -369,7 +378,7 @@ namespace X {
 
     llvm::Value *Codegen::gen(FetchPropNode *node) {
         auto obj = node->getObj()->gen(*this);
-        auto propName = node->getName();
+        auto &propName = node->getName();
         auto [type, ptr] = getProp(obj, propName);
         return builder.CreateLoad(type, ptr, propName);
     }
@@ -470,10 +479,12 @@ namespace X {
                 return llvm::Type::getFloatTy(context);
             case Type::TypeID::BOOL:
                 return llvm::Type::getInt1Ty(context);
+            case Type::TypeID::STRING:
+                return llvm::StructType::getTypeByName(context, String::CLASS_NAME)->getPointerTo();
             case Type::TypeID::VOID:
                 return llvm::Type::getVoidTy(context);
             case Type::TypeID::CLASS: {
-                auto className = type.getClassName();
+                auto &className = type.getClassName();
                 auto classDecl = getClass(mangler.mangleClass(className));
                 return classDecl.type->getPointerTo();
             }

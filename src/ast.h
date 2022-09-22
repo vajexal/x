@@ -2,14 +2,16 @@
 #define X_AST_H
 
 #include <iostream>
+#include <utility>
 #include <vector>
 #include <variant>
 #include <optional>
+#include <string>
 
 #include "llvm/IR/Value.h"
 
 namespace X {
-    using ScalarValue = std::variant<int, float, bool>;
+    using ScalarValue = std::variant<int, float, bool, std::string>;
 
     enum class OpType {
         PRE_INC,
@@ -40,6 +42,7 @@ namespace X {
             INT,
             FLOAT,
             BOOL,
+            STRING,
             VOID,
             CLASS
         };
@@ -95,7 +98,7 @@ namespace X {
         ScalarValue value;
 
     public:
-        ScalarNode(Type type, const ScalarValue &value) : type(std::move(type)), value(value) {}
+        ScalarNode(Type type, ScalarValue value) : type(std::move(type)), value(std::move(value)) {}
 
         void print(AstPrinter &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen &codegen) override;

@@ -28,6 +28,7 @@ yy::parser::symbol_type yylex(Driver &driver) {
       "int" { return yy::parser::make_INT_TYPE(); }
       "float" { return yy::parser::make_FLOAT_TYPE(); }
       "bool" { return yy::parser::make_BOOL_TYPE(); }
+      "string" { return yy::parser::make_STRING_TYPE(); }
       "void" { return yy::parser::make_VOID_TYPE(); }
       "false" { return yy::parser::make_BOOL(false); }
       "true" { return yy::parser::make_BOOL(true); }
@@ -69,7 +70,7 @@ yy::parser::symbol_type yylex(Driver &driver) {
 
       [0-9]+"."[0-9]+ { return yy::parser::make_FLOAT(std::atof(yypmatch[0])); }
       "0"|[1-9][0-9]* { return yy::parser::make_INT(std::atoi(yypmatch[0])); }
-      ["]([^"\n\x00])*["] { return yy::parser::make_STRING(std::string(yypmatch[0], yypmatch[1] - yypmatch[0])); }
+      ["]([^"\n\x00]*)["] { return yy::parser::make_STRING(std::string(yypmatch[2], yypmatch[3] - yypmatch[2])); }
 
       * { return yy::parser::symbol_type(*start); }
      */

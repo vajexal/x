@@ -33,6 +33,7 @@ namespace X {
             case Type::TypeID::INT: return out << "int";
             case Type::TypeID::FLOAT: return out << "float";
             case Type::TypeID::BOOL: return out << "bool";
+            case Type::TypeID::STRING: return out << "string";
             case Type::TypeID::VOID: return out << "void";
             case Type::TypeID::CLASS: return out << "class " << type.getClassName();
         }

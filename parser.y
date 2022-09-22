@@ -35,6 +35,7 @@
 %token INT_TYPE "int"
 %token FLOAT_TYPE "float"
 %token BOOL_TYPE "bool"
+%token STRING_TYPE "string"
 %token VOID_TYPE "void"
 %token FN "fn"
 %token VAR "var"
@@ -186,6 +187,7 @@ type:
 INT_TYPE { $$ = Type(Type::TypeID::INT); }
 | FLOAT_TYPE { $$ = Type(Type::TypeID::FLOAT); }
 | BOOL_TYPE { $$ = Type(Type::TypeID::BOOL); }
+| STRING_TYPE { $$ = Type(Type::TypeID::STRING); }
 | VOID_TYPE { $$ = Type(Type::TypeID::VOID); }
 | IDENTIFIER { $$ = Type(std::move($1)); }
 ;
@@ -202,6 +204,7 @@ scalar:
 INT { $$ = new ScalarNode(std::move(Type(Type::TypeID::INT)), $1); }
 | FLOAT { $$ = new ScalarNode(std::move(Type(Type::TypeID::FLOAT)), $1); }
 | BOOL { $$ = new ScalarNode(std::move(Type(Type::TypeID::BOOL)), $1); }
+| STRING { $$ = new ScalarNode(std::move(Type(Type::TypeID::STRING)), std::move($1)); }
 ;
 
 call_arg_list:

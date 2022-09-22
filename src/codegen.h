@@ -101,7 +101,7 @@ namespace X {
         std::pair<llvm::Type *, llvm::Value *> getProp(llvm::Value *obj, const std::string &name) const;
         std::pair<llvm::Type *, llvm::Value *> getStaticProp(const std::string &className, const std::string &propName) const;
         const ClassDecl &getClass(const std::string &mangledName) const;
-        llvm::AllocaInst *createAlloca(llvm::Type *type, const std::string &name) const;
+        llvm::AllocaInst *createAlloca(llvm::Type *type, const std::string &name = "") const;
         AccessModifier getMethodAccessModifier(const std::string &mangledClassName, const std::string &methodName) const;
 
         std::pair<llvm::Value *, llvm::Value *> upcast(llvm::Value *a, llvm::Value *b) const;

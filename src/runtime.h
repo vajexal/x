@@ -16,6 +16,14 @@ namespace X {
         void addDeclarations(llvm::LLVMContext &context, llvm::Module &module);
         void addDefinitions(llvm::ExecutionEngine &engine);
     };
+
+    struct String {
+        static inline const std::string CLASS_NAME = "String";
+        static inline const std::string CONSTRUCTOR_FN_NAME = "String_construct";
+
+        char *str;
+        uint64_t len;
+    };
 }
 
 #endif //X_RUNTIME_H
