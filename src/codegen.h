@@ -103,6 +103,7 @@ namespace X {
         const ClassDecl &getClass(const std::string &mangledName) const;
         llvm::AllocaInst *createAlloca(llvm::Type *type, const std::string &name = "") const;
         AccessModifier getMethodAccessModifier(const std::string &mangledClassName, const std::string &methodName) const;
+        llvm::Function *getConstructor(const std::string &mangledClassName) const;
 
         std::pair<llvm::Value *, llvm::Value *> upcast(llvm::Value *a, llvm::Value *b) const;
         std::pair<llvm::Value *, llvm::Value *> forceUpcast(llvm::Value *a, llvm::Value *b) const;
@@ -114,6 +115,7 @@ namespace X {
         void checkAbstractMethods(ClassNode *classNode) const; // todo remove from codegen
         bool compareDeclAndDef(MethodDeclNode *declNode, MethodDefNode *defNode) const;
         std::pair<llvm::Function *, llvm::Type *> findMethod(llvm::StructType *type, const std::string &methodName) const;
+        bool isInternalClass(llvm::StructType *type) const;
     };
 
     class CodegenException : public std::exception {

@@ -31,9 +31,8 @@ namespace X {
                 return llvm::ConstantInt::get(llvm::Type::getInt1Ty(context), std::get<bool>(value));
             case Type::TypeID::STRING: {
                 auto str = createAlloca(llvm::StructType::getTypeByName(context, String::CLASS_NAME));
-                auto stringConstructor = module.getFunction(String::CONSTRUCTOR_FN_NAME);
                 auto dataPtr = builder.CreateGlobalStringPtr(std::get<std::string>(value));
-                builder.CreateCall(stringConstructor, {str, dataPtr});
+                builder.CreateCall(getConstructor(String::CLASS_NAME), {str, dataPtr});
                 return str;
             }
             default:
@@ -625,6 +624,10 @@ namespace X {
         return method->second.accessModifier;
     }
 
+    llvm::Function *Codegen::getConstructor(const std::string &mangledClassName) const {
+        return module.getFunction(mangler.mangleMethod(mangledClassName, "construct"));
+    }
+
     std::pair<llvm::Value *, llvm::Value *> Codegen::upcast(llvm::Value *a, llvm::Value *b) const {
         if (a->getType()->isFloatTy() && b->getType()->isIntegerTy()) {
             return {a, builder.CreateSIToFP(b, llvm::Type::getFloatTy(context))};
@@ -806,22 +809,32 @@ namespace X {
     }
 
     std::pair<llvm::Function *, llvm::Type *> Codegen::findMethod(llvm::StructType *type, const std::string &methodName) const {
-        const ClassDecl *currentClassDecl = &getClass(type->getStructName().str());
+        if (isInternalClass(type)) {
+            auto name = mangler.mangleMethod(type->getName().str(), methodName);
+            return {module.getFunction(name), nullptr};
+        }
+
+        auto classDecl = getClass(type->getName().str());
+        const ClassDecl *currentClassDecl = &classDecl;
         while (currentClassDecl) {
-            auto className = currentClassDecl->type->getStructName();
-            auto name = mangler.mangleMethod(className.str(), methodName);
+            auto className = currentClassDecl->type->getName().str();
+            auto name = mangler.mangleMethod(className, methodName);
             auto callee = module.getFunction(name);
             if (callee) {
-                auto methodAccessModifier = getMethodAccessModifier(className.str(), methodName);
+                auto methodAccessModifier = getMethodAccessModifier(className, methodName);
                 if (!that && methodAccessModifier != AccessModifier::PUBLIC) {
                     throw CodegenException("cannot access private method: " + methodName);
                 }
-                return {callee, currentClassDecl->type};
+                return {callee, currentClassDecl != &classDecl ? currentClassDecl->type : nullptr};
             }
 
             currentClassDecl = currentClassDecl->parent;
         }
 
         return {nullptr, nullptr};
+    }
+
+    bool Codegen::isInternalClass(llvm::StructType *type) const {
+        return type->getName() == String::CLASS_NAME;
     }
 }

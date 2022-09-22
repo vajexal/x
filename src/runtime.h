@@ -8,8 +8,12 @@
 #include "llvm/IR/Function.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 
+#include "mangler.h"
+
 namespace X {
     class Runtime {
+        Mangler mangler;
+
         std::map<std::string, llvm::Function *> functions;
 
     public:
