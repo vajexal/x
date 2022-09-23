@@ -33,7 +33,8 @@ target_link_libraries(x ${X_LIBS})
 enable_testing()
 
 add_executable(x_test ${X_SOURCES}
-        tests/strings/concat_test.cpp)
+        tests/strings/concat_test.cpp
+        tests/strings/length_test.cpp)
 target_link_libraries(x_test GTest::gtest_main ${X_LIBS})
 
 include(GoogleTest)

@@ -25,6 +25,10 @@ namespace X {
         return res;
     }
 
+    uint64_t String_length(String *that) {
+        return that->len;
+    }
+
     void println(String *str) {
         std::cout << str->str << std::endl;
     }
@@ -48,6 +52,12 @@ namespace X {
         functions[stringConcatFnName] = llvm::cast<llvm::Function>(
                 module.getOrInsertFunction(stringConcatFnName, stringConcatFnType).getCallee());
 
+        auto stringLengthFnType = llvm::FunctionType::get(
+                llvm::Type::getInt64Ty(context), {stringType->getPointerTo()}, false);
+        auto stringLengthFnName = mangler.mangleMethod(String::CLASS_NAME, "length");
+        functions[stringLengthFnName] = llvm::cast<llvm::Function>(
+                module.getOrInsertFunction(stringLengthFnName, stringLengthFnType).getCallee());
+
         auto printlnFnType = llvm::FunctionType::get(llvm::Type::getVoidTy(context), {stringType->getPointerTo()}, false);
         functions["println"] = llvm::cast<llvm::Function>(module.getOrInsertFunction("println", printlnFnType).getCallee());
     }
@@ -58,6 +68,8 @@ namespace X {
                 functions[mangler.mangleMethod(String::CLASS_NAME, "construct")], reinterpret_cast<void *>(String_construct));
         engine.addGlobalMapping(
                 functions[mangler.mangleMethod(String::CLASS_NAME, "concat")], reinterpret_cast<void *>(String_concat));
+        engine.addGlobalMapping(
+                functions[mangler.mangleMethod(String::CLASS_NAME, "length")], reinterpret_cast<void *>(String_length));
         engine.addGlobalMapping(functions["println"], reinterpret_cast<void *>(println));
     }
 }
