@@ -2,6 +2,7 @@
 
 #include "compiler.h"
 
+// todo print result and reuse StringTest
 class LengthTest : public testing::TestWithParam<std::pair<std::string, uint64_t>> {
 protected:
     X::Compiler compiler;

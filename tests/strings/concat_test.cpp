@@ -1,26 +1,11 @@
-#include <gtest/gtest.h>
+#include "string_test.h"
 
-#include "compiler.h"
-
-class ConcatTest : public testing::TestWithParam<std::pair<std::string, std::string>> {
-protected:
-    X::Compiler compiler;
+class ConcatTest : public StringTest {
 };
 
 TEST_P(ConcatTest, concat) {
-    testing::internal::CaptureStdout(); // todo customize compiler output stream
-
     auto [code, expectedOutput] = GetParam();
-    code = R"code(
-fn main() int {
-    )code" + code + R"code(
-    return 0
-}
-)code";
-
-    compiler.compile(code);
-
-    ASSERT_EQ(testing::internal::GetCapturedStdout(), expectedOutput);
+    compileAndTestOutput(code, expectedOutput);
 }
 
 INSTANTIATE_TEST_SUITE_P(Code, ConcatTest, testing::Values(

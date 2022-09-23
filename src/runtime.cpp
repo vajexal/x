@@ -4,6 +4,14 @@
 #include "runtime.h"
 
 namespace X {
+    String *String_new(uint64_t len) {
+        auto res = new String;
+        res->len = len;
+        res->str = new char[res->len + 1];
+        res->str[res->len] = 0;
+        return res;
+    }
+
     void String_construct(String *that, const char *s) {
         that->len = std::strlen(s);
         that->str = new char[that->len + 1];
@@ -16,10 +24,7 @@ namespace X {
             return that;
         }
 
-        auto res = new String;
-        res->len = that->len + other->len;
-        res->str = new char[res->len + 1];
-        res->str[res->len] = 0;
+        auto res = String_new(that->len + other->len);
         std::memcpy(res->str, that->str, that->len);
         std::memcpy(res->str + that->len, other->str, other->len);
         return res;
@@ -27,6 +32,26 @@ namespace X {
 
     uint64_t String_length(String *that) {
         return that->len;
+    }
+
+    String *String_trim(String *that) {
+        if (!that->len) {
+            return String_new(0);
+        }
+
+        auto startIdx = 0;
+        for (; startIdx < that->len && isspace(that->str[startIdx]); startIdx++) {}
+
+        if (startIdx == that->len - 1) {
+            return String_new(0);
+        }
+
+        auto endIdx = that->len - 1;
+        for (; endIdx > startIdx && isspace(that->str[endIdx]); endIdx--) {}
+
+        auto res = String_new(endIdx - startIdx + 1);
+        memcpy(res->str, that->str + startIdx, res->len);
+        return res;
     }
 
     void println(String *str) {
@@ -58,6 +83,12 @@ namespace X {
         functions[stringLengthFnName] = llvm::cast<llvm::Function>(
                 module.getOrInsertFunction(stringLengthFnName, stringLengthFnType).getCallee());
 
+        auto stringTrimFnType = llvm::FunctionType::get(
+                stringType->getPointerTo(), {stringType->getPointerTo()}, false);
+        auto stringTrimFnName = mangler.mangleMethod(String::CLASS_NAME, "trim");
+        functions[stringTrimFnName] = llvm::cast<llvm::Function>(
+                module.getOrInsertFunction(stringTrimFnName, stringTrimFnType).getCallee());
+
         auto printlnFnType = llvm::FunctionType::get(llvm::Type::getVoidTy(context), {stringType->getPointerTo()}, false);
         functions["println"] = llvm::cast<llvm::Function>(module.getOrInsertFunction("println", printlnFnType).getCallee());
     }
@@ -70,6 +101,8 @@ namespace X {
                 functions[mangler.mangleMethod(String::CLASS_NAME, "concat")], reinterpret_cast<void *>(String_concat));
         engine.addGlobalMapping(
                 functions[mangler.mangleMethod(String::CLASS_NAME, "length")], reinterpret_cast<void *>(String_length));
+        engine.addGlobalMapping(
+                functions[mangler.mangleMethod(String::CLASS_NAME, "trim")], reinterpret_cast<void *>(String_trim));
         engine.addGlobalMapping(functions["println"], reinterpret_cast<void *>(println));
     }
 }

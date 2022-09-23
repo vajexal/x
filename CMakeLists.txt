@@ -15,6 +15,7 @@ add_definitions(${LLVM_DEFINITIONS_LIST})
 
 include_directories(.)
 include_directories(./src)
+include_directories(./tests)
 
 set(X_SOURCES lexer.cpp
         parser.tab.cc
@@ -33,8 +34,10 @@ target_link_libraries(x ${X_LIBS})
 enable_testing()
 
 add_executable(x_test ${X_SOURCES}
+        tests/strings/string_test.cpp
         tests/strings/concat_test.cpp
-        tests/strings/length_test.cpp)
+        tests/strings/length_test.cpp
+        tests/strings/trim_test.cpp)
 target_link_libraries(x_test GTest::gtest_main ${X_LIBS})
 
 include(GoogleTest)
