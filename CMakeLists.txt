@@ -7,6 +7,7 @@ set(LLVM_ENABLE_ASSERTIONS ON)
 
 find_package(LLVM REQUIRED CONFIG)
 find_package(fmt REQUIRED CONFIG)
+find_package(GTest CONFIG REQUIRED)
 
 include_directories(${LLVM_INCLUDE_DIRS})
 separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
@@ -15,6 +16,25 @@ add_definitions(${LLVM_DEFINITIONS_LIST})
 include_directories(.)
 include_directories(./src)
 
-add_executable(x main.cpp lexer.cpp parser.tab.cc src/ast.cpp src/codegen.cpp src/ast_printer.cpp src/runtime.cpp)
+set(X_SOURCES lexer.cpp
+        parser.tab.cc
+        src/ast.cpp
+        src/codegen.cpp
+        src/ast_printer.cpp
+        src/runtime.cpp
+        src/compiler.cpp)
 
-target_link_libraries(x LLVM fmt::fmt)
+set(X_LIBS LLVM fmt::fmt)
+
+add_executable(x main.cpp ${X_SOURCES})
+
+target_link_libraries(x ${X_LIBS})
+
+enable_testing()
+
+add_executable(x_test ${X_SOURCES}
+        tests/strings/concat_test.cpp)
+target_link_libraries(x_test GTest::gtest_main ${X_LIBS})
+
+include(GoogleTest)
+gtest_discover_tests(x_test)
