@@ -64,6 +64,16 @@ namespace X {
         return res;
     }
 
+    String *String_toUpper(String *that) {
+        auto res = String_new(that->len);
+
+        for (auto i = 0; i < that->len; i++) {
+            res->str[i] = (char) std::toupper(that->str[i]);
+        }
+
+        return res;
+    }
+
     void println(String *str) {
         std::cout << str->str << std::endl;
     }
@@ -105,6 +115,12 @@ namespace X {
         functions[stringToLowerFnName] = llvm::cast<llvm::Function>(
                 module.getOrInsertFunction(stringToLowerFnName, stringToLowerFnType).getCallee());
 
+        auto stringToUpperFnType = llvm::FunctionType::get(
+                stringType->getPointerTo(), {stringType->getPointerTo()}, false);
+        auto stringToUpperFnName = mangler.mangleMethod(String::CLASS_NAME, "toUpper");
+        functions[stringToUpperFnName] = llvm::cast<llvm::Function>(
+                module.getOrInsertFunction(stringToUpperFnName, stringToUpperFnType).getCallee());
+
         auto printlnFnType = llvm::FunctionType::get(llvm::Type::getVoidTy(context), {stringType->getPointerTo()}, false);
         functions["println"] = llvm::cast<llvm::Function>(module.getOrInsertFunction("println", printlnFnType).getCallee());
     }
@@ -121,6 +137,8 @@ namespace X {
                 functions[mangler.mangleMethod(String::CLASS_NAME, "trim")], reinterpret_cast<void *>(String_trim));
         engine.addGlobalMapping(
                 functions[mangler.mangleMethod(String::CLASS_NAME, "toLower")], reinterpret_cast<void *>(String_toLower));
+        engine.addGlobalMapping(
+                functions[mangler.mangleMethod(String::CLASS_NAME, "toUpper")], reinterpret_cast<void *>(String_toUpper));
         engine.addGlobalMapping(functions["println"], reinterpret_cast<void *>(println));
     }
 }
