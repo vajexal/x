@@ -79,6 +79,10 @@ namespace X {
         return res ? res - that->str : -1;
     }
 
+    bool String_contains(String *that, String *other) {
+        return String_index(that, other) != -1;
+    }
+
     void println(String *str) {
         std::cout << str->str << std::endl;
     }
@@ -132,6 +136,12 @@ namespace X {
         functions[stringIndexFnName] = llvm::cast<llvm::Function>(
                 module.getOrInsertFunction(stringIndexFnName, stringIndexFnType).getCallee());
 
+        auto stringContainsFnType = llvm::FunctionType::get(
+                llvm::Type::getInt1Ty(context), {stringType->getPointerTo(), stringType->getPointerTo()}, false);
+        auto stringContainsFnName = mangler.mangleMethod(String::CLASS_NAME, "contains");
+        functions[stringContainsFnName] = llvm::cast<llvm::Function>(
+                module.getOrInsertFunction(stringContainsFnName, stringContainsFnType).getCallee());
+
         auto printlnFnType = llvm::FunctionType::get(llvm::Type::getVoidTy(context), {stringType->getPointerTo()}, false);
         functions["println"] = llvm::cast<llvm::Function>(module.getOrInsertFunction("println", printlnFnType).getCallee());
     }
@@ -152,6 +162,8 @@ namespace X {
                 functions[mangler.mangleMethod(String::CLASS_NAME, "toUpper")], reinterpret_cast<void *>(String_toUpper));
         engine.addGlobalMapping(
                 functions[mangler.mangleMethod(String::CLASS_NAME, "index")], reinterpret_cast<void *>(String_index));
+        engine.addGlobalMapping(
+                functions[mangler.mangleMethod(String::CLASS_NAME, "contains")], reinterpret_cast<void *>(String_contains));
         engine.addGlobalMapping(functions["println"], reinterpret_cast<void *>(println));
     }
 }
