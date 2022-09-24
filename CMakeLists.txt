@@ -39,7 +39,8 @@ add_executable(x_test ${X_SOURCES}
         tests/strings/length_test.cpp
         tests/strings/trim_test.cpp
         tests/strings/to_lower_test.cpp
-        tests/strings/to_upper_test.cpp)
+        tests/strings/to_upper_test.cpp
+        tests/strings/index_test.cpp)
 target_link_libraries(x_test GTest::gtest_main ${X_LIBS})
 
 include(GoogleTest)

@@ -1,22 +1,11 @@
-#include <gtest/gtest.h>
+#include "string_test.h"
 
-#include "compiler.h"
-
-// todo print result and reuse StringTest
-class LengthTest : public testing::TestWithParam<std::pair<std::string, uint64_t>> {
-protected:
-    X::Compiler compiler;
+class LengthTest : public StringResultCodeTest {
 };
 
 TEST_P(LengthTest, concat) {
     auto [code, expectedResultCode] = GetParam();
-    code = R"code(
-fn main() int {
-    )code" + code + R"code(
-}
-)code";
-
-    ASSERT_EQ(compiler.compile(code), expectedResultCode);
+    compileAndTestResultCode(code, expectedResultCode);
 }
 
 INSTANTIATE_TEST_SUITE_P(Code, LengthTest, testing::Values(
