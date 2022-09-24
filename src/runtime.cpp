@@ -54,6 +54,16 @@ namespace X {
         return res;
     }
 
+    String *String_toLower(String *that) {
+        auto res = String_new(that->len);
+
+        for (auto i = 0; i < that->len; i++) {
+            res->str[i] = (char) std::tolower(that->str[i]);
+        }
+
+        return res;
+    }
+
     void println(String *str) {
         std::cout << str->str << std::endl;
     }
@@ -89,6 +99,12 @@ namespace X {
         functions[stringTrimFnName] = llvm::cast<llvm::Function>(
                 module.getOrInsertFunction(stringTrimFnName, stringTrimFnType).getCallee());
 
+        auto stringToLowerFnType = llvm::FunctionType::get(
+                stringType->getPointerTo(), {stringType->getPointerTo()}, false);
+        auto stringToLowerFnName = mangler.mangleMethod(String::CLASS_NAME, "toLower");
+        functions[stringToLowerFnName] = llvm::cast<llvm::Function>(
+                module.getOrInsertFunction(stringToLowerFnName, stringToLowerFnType).getCallee());
+
         auto printlnFnType = llvm::FunctionType::get(llvm::Type::getVoidTy(context), {stringType->getPointerTo()}, false);
         functions["println"] = llvm::cast<llvm::Function>(module.getOrInsertFunction("println", printlnFnType).getCallee());
     }
@@ -103,6 +119,8 @@ namespace X {
                 functions[mangler.mangleMethod(String::CLASS_NAME, "length")], reinterpret_cast<void *>(String_length));
         engine.addGlobalMapping(
                 functions[mangler.mangleMethod(String::CLASS_NAME, "trim")], reinterpret_cast<void *>(String_trim));
+        engine.addGlobalMapping(
+                functions[mangler.mangleMethod(String::CLASS_NAME, "toLower")], reinterpret_cast<void *>(String_toLower));
         engine.addGlobalMapping(functions["println"], reinterpret_cast<void *>(println));
     }
 }
