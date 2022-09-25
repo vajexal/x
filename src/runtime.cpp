@@ -19,6 +19,12 @@ namespace X {
         std::memcpy(that->str, s, that->len);
     }
 
+    String *String_create(const char *s) {
+        auto res = new String;
+        String_construct(res, s);
+        return res;
+    }
+
     String *String_concat(String *that, String *other) {
         if (!other->len) {
             return that;
@@ -87,6 +93,20 @@ namespace X {
         std::cout << str->str << std::endl;
     }
 
+    String *castBoolToString(bool value) {
+        return value ? String_create("true") : String_create("false");
+    }
+
+    String *castIntToString(int64_t value) {
+        auto s = std::to_string(value);
+        return String_create(s.c_str());
+    }
+
+    String *castFloatToString(float value) {
+        auto s = std::to_string(value);
+        return String_create(s.c_str());
+    }
+
     void Runtime::addDeclarations(llvm::LLVMContext &context, llvm::Module &module) {
         auto abortFnType = llvm::FunctionType::get(llvm::Type::getVoidTy(context), {}, false);
         functions["abort"] = llvm::cast<llvm::Function>(module.getOrInsertFunction("abort", abortFnType).getCallee());
@@ -144,6 +164,15 @@ namespace X {
 
         auto printlnFnType = llvm::FunctionType::get(llvm::Type::getVoidTy(context), {stringType->getPointerTo()}, false);
         functions["println"] = llvm::cast<llvm::Function>(module.getOrInsertFunction("println", printlnFnType).getCallee());
+
+        auto castBoolToStringFnType = llvm::FunctionType::get(stringType->getPointerTo(), {llvm::Type::getInt1Ty(context)}, false);
+        functions["castBoolToString"] = llvm::cast<llvm::Function>(module.getOrInsertFunction(".castBoolToString", castBoolToStringFnType).getCallee());
+
+        auto castIntToStringFnType = llvm::FunctionType::get(stringType->getPointerTo(), {llvm::Type::getInt64Ty(context)}, false);
+        functions["castIntToString"] = llvm::cast<llvm::Function>(module.getOrInsertFunction(".castIntToString", castIntToStringFnType).getCallee());
+
+        auto castFloatToStringFnType = llvm::FunctionType::get(stringType->getPointerTo(), {llvm::Type::getFloatTy(context)}, false);
+        functions["castFloatToString"] = llvm::cast<llvm::Function>(module.getOrInsertFunction(".castFloatToString", castFloatToStringFnType).getCallee());
     }
 
     void Runtime::addDefinitions(llvm::ExecutionEngine &engine) {
@@ -165,5 +194,9 @@ namespace X {
         engine.addGlobalMapping(
                 functions[mangler.mangleMethod(String::CLASS_NAME, "contains")], reinterpret_cast<void *>(String_contains));
         engine.addGlobalMapping(functions["println"], reinterpret_cast<void *>(println));
+
+        engine.addGlobalMapping(functions["castBoolToString"], reinterpret_cast<void *>(castBoolToString));
+        engine.addGlobalMapping(functions["castIntToString"], reinterpret_cast<void *>(castIntToString));
+        engine.addGlobalMapping(functions["castFloatToString"], reinterpret_cast<void *>(castFloatToString));
     }
 }

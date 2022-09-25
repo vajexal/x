@@ -1,57 +1,42 @@
 #include "string_test.h"
 
-class ContainsTest : public StringResultCodeTest {
+class ContainsTest : public StringTest {
 };
 
 TEST_P(ContainsTest, contains) {
-    auto [code, expectedResultCode] = GetParam();
-    compileAndTestResultCode(code, expectedResultCode);
+    auto [code, expectedOutput] = GetParam();
+    compileAndTestOutput(code, expectedOutput);
 }
 
 INSTANTIATE_TEST_SUITE_P(Code, ContainsTest, testing::Values(
         std::make_pair(
                 R"code(
     string s = ""
-    if s.contains("") {
-        return 1
-    }
-    return 0
+    println(s.contains(""))
 )code",
-                1),
+                "true\n"),
         std::make_pair(
                 R"code(
     string s = ""
-    if s.contains("hello") {
-        return 1
-    }
-    return 0
+    println(s.contains("hello"))
 )code",
-                0),
+                "false\n"),
         std::make_pair(
                 R"code(
     string s = "hello world"
-    if s.contains("") {
-        return 1
-    }
-    return 0
+    println(s.contains(""))
 )code",
-                1),
+                "true\n"),
         std::make_pair(
                 R"code(
     string s = "hello world"
-    if s.contains("hello") {
-        return 1
-    }
-    return 0
+    println(s.contains("hello"))
 )code",
-                1),
+                "true\n"),
         std::make_pair(
                 R"code(
     string s = "hello world"
-    if s.contains("world") {
-        return 1
-    }
-    return 0
+    println(s.contains("world"))
 )code",
-                1)
+                "true\n")
 ));

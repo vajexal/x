@@ -29,6 +29,7 @@ namespace X {
         void printNode(FnDefNode *node, int level);
         void printNode(FnCallNode *node, int level);
         void printNode(ReturnNode *node, int level);
+        void printNode(PrintlnNode *node, int level);
         void printNode(BreakNode *node, int level);
         void printNode(ContinueNode *node, int level);
         void printNode(CommentNode *node, int level);

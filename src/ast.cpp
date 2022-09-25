@@ -73,6 +73,7 @@ namespace X {
     void FnDefNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<FnDefNode>(this, level); }
     void FnCallNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<FnCallNode>(this, level); }
     void ReturnNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<ReturnNode>(this, level); }
+    void PrintlnNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<PrintlnNode>(this, level); }
     void BreakNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<BreakNode>(this, level); }
     void ContinueNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<ContinueNode>(this, level); }
     void CommentNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<CommentNode>(this, level); }
@@ -104,6 +105,7 @@ namespace X {
     llvm::Value *FnDefNode::gen(Codegen &codegen) { return codegen.gen(this); }
     llvm::Value *FnCallNode::gen(Codegen &codegen) { return codegen.gen(this); }
     llvm::Value *ReturnNode::gen(Codegen &codegen) { return codegen.gen(this); }
+    llvm::Value *PrintlnNode::gen(Codegen &codegen) { return codegen.gen(this); }
     llvm::Value *BreakNode::gen(Codegen &codegen) { return codegen.gen(this); }
     llvm::Value *ContinueNode::gen(Codegen &codegen) { return codegen.gen(this); }
     llvm::Value *CommentNode::gen(Codegen &codegen) { return codegen.gen(this); }

@@ -49,6 +49,7 @@
 %token CONTINUE "continue"
 %token BREAK "break"
 %token RETURN "return"
+%token PRINTLN "println"
 %token INC "++"
 %token DEC "--"
 %token POW "**"
@@ -149,6 +150,7 @@ expr { $$ = $1; }
 | CONTINUE { $$ = new ContinueNode; }
 | RETURN { $$ = new ReturnNode; }
 | RETURN expr { $$ = new ReturnNode($2); }
+| PRINTLN '(' expr ')' { $$ = new PrintlnNode($3); }
 | COMMENT { $$ = new CommentNode(std::move($1)); }
 | class_decl { $$ = $1; }
 | interface_decl { $$ = $1; }

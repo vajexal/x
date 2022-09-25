@@ -1,42 +1,42 @@
 #include "string_test.h"
 
-class IndexTest : public StringResultCodeTest {
+class IndexTest : public StringTest {
 };
 
 TEST_P(IndexTest, index) {
-    auto [code, expectedResultCode] = GetParam();
-    compileAndTestResultCode(code, expectedResultCode);
+    auto [code, expectedOutput] = GetParam();
+    compileAndTestOutput(code, expectedOutput);
 }
 
 INSTANTIATE_TEST_SUITE_P(Code, IndexTest, testing::Values(
         std::make_pair(
                 R"code(
     string s = ""
-    return s.index("")
+    println(s.index(""))
 )code",
-                0),
+                "0\n"),
         std::make_pair(
                 R"code(
     string s = ""
-    return s.index("hello")
+    println(s.index("hello"))
 )code",
-                -1),
+                "-1\n"),
         std::make_pair(
                 R"code(
     string s = "hello world"
-    return s.index("")
+    println(s.index(""))
 )code",
-                0),
+                "0\n"),
         std::make_pair(
                 R"code(
     string s = "hello world"
-    return s.index("hello")
+    println(s.index("hello"))
 )code",
-                0),
+                "0\n"),
         std::make_pair(
                 R"code(
     string s = "hello world"
-    return s.index("world")
+    println(s.index("world"))
 )code",
-                6)
+                "6\n")
 ));

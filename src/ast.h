@@ -346,6 +346,21 @@ namespace X {
         ExprNode *getVal() const { return val; }
     };
 
+    class PrintlnNode : public Node {
+        ExprNode *val;
+
+    public:
+        explicit PrintlnNode(ExprNode *val) : val(val) {}
+        ~PrintlnNode() {
+            delete val;
+        }
+
+        void print(AstPrinter &astPrinter, int level = 0) override;
+        llvm::Value *gen(Codegen &codegen) override;
+
+        ExprNode *getVal() const { return val; }
+    };
+
     class BreakNode : public Node {
     public:
         void print(AstPrinter &astPrinter, int level = 0) override;

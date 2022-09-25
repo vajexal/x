@@ -12,13 +12,3 @@ fn main() int {
 
     ASSERT_EQ(testing::internal::GetCapturedStdout(), expectedOutput);
 }
-
-void StringResultCodeTest::compileAndTestResultCode(const std::string &code, int64_t expectedResultCode) {
-    auto resultCode = compiler.compile(R"code(
-fn main() int {
-    )code" + code + R"code(
-}
-)code");
-
-    ASSERT_EQ(resultCode, expectedResultCode);
-}

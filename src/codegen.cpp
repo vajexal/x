@@ -278,6 +278,22 @@ namespace X {
         return nullptr;
     }
 
+    llvm::Value *Codegen::gen(PrintlnNode *node) {
+        auto value = node->getVal()->gen(*this);
+        if (!value) {
+            throw CodegenException("println value is empty");
+        }
+
+        if (!value->getType()->isStructTy()) {
+            value = castToString(value);
+        }
+
+        auto callee = module.getFunction("println");
+        builder.CreateCall(callee, {value});
+
+        return nullptr;
+    }
+
     llvm::Value *Codegen::gen(BreakNode *node) {
         if (loops.empty()) {
             throw CodegenException("using break outside of loop");
@@ -665,6 +681,27 @@ namespace X {
             default:
                 throw CodegenException("invalid type");
         }
+    }
+
+    llvm::Value *Codegen::castToString(llvm::Value *value) const {
+        auto type = value->getType();
+        switch (type->getTypeID()) {
+            case llvm::Type::TypeID::IntegerTyID: {
+                if (type->isIntegerTy(1)) {
+                    auto callee = module.getFunction(".castBoolToString");
+                    return builder.CreateCall(callee, {value});
+                }
+
+                auto callee = module.getFunction(".castIntToString");
+                return builder.CreateCall(callee, {value});
+            }
+            case llvm::Type::TypeID::FloatTyID: {
+                auto callee = module.getFunction(".castFloatToString");
+                return builder.CreateCall(callee, {value});
+            }
+        }
+
+        return value;
     }
 
     llvm::Type *Codegen::deref(llvm::Type *type) const {

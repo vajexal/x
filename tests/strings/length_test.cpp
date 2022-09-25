@@ -1,24 +1,24 @@
 #include "string_test.h"
 
-class LengthTest : public StringResultCodeTest {
+class LengthTest : public StringTest {
 };
 
 TEST_P(LengthTest, concat) {
-    auto [code, expectedResultCode] = GetParam();
-    compileAndTestResultCode(code, expectedResultCode);
+    auto [code, expectedOutput] = GetParam();
+    compileAndTestOutput(code, expectedOutput);
 }
 
 INSTANTIATE_TEST_SUITE_P(Code, LengthTest, testing::Values(
         std::make_pair(
                 R"code(
     string s = ""
-    return s.length()
+    println(s.length())
 )code",
-                0),
+                "0\n"),
         std::make_pair(
                 R"code(
     string s = "hello"
-    return s.length()
+    println(s.length())
 )code",
-                5)
+                "5\n")
 ));

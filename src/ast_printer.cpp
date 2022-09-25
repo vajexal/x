@@ -104,6 +104,12 @@ namespace X {
         }
     }
 
+    void AstPrinter::printNode(PrintlnNode *node, int level) {
+        std::cout << "println" << std::endl;
+
+        node->getVal()->print(*this, level + 1);
+    }
+
     void AstPrinter::printNode(BreakNode *node, int level) {
         std::cout << "break" << std::endl;
     }
