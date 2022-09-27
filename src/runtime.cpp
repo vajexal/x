@@ -40,6 +40,10 @@ namespace X {
         return that->len;
     }
 
+    bool String_isEmpty(String *that) {
+        return !String_length(that);
+    }
+
     String *String_trim(String *that) {
         if (!that->len) {
             return String_new(0);
@@ -132,6 +136,12 @@ namespace X {
         functions[stringLengthFnName] = llvm::cast<llvm::Function>(
                 module.getOrInsertFunction(stringLengthFnName, stringLengthFnType).getCallee());
 
+        auto stringIsEmptyFnType = llvm::FunctionType::get(
+                llvm::Type::getInt1Ty(context), {stringType->getPointerTo()}, false);
+        auto stringIsEmptyFnName = mangler.mangleMethod(String::CLASS_NAME, "isEmpty");
+        functions[stringIsEmptyFnName] = llvm::cast<llvm::Function>(
+                module.getOrInsertFunction(stringIsEmptyFnName, stringIsEmptyFnType).getCallee());
+
         auto stringTrimFnType = llvm::FunctionType::get(
                 stringType->getPointerTo(), {stringType->getPointerTo()}, false);
         auto stringTrimFnName = mangler.mangleMethod(String::CLASS_NAME, "trim");
@@ -183,6 +193,8 @@ namespace X {
                 functions[mangler.mangleMethod(String::CLASS_NAME, "concat")], reinterpret_cast<void *>(String_concat));
         engine.addGlobalMapping(
                 functions[mangler.mangleMethod(String::CLASS_NAME, "length")], reinterpret_cast<void *>(String_length));
+        engine.addGlobalMapping(
+                functions[mangler.mangleMethod(String::CLASS_NAME, "isEmpty")], reinterpret_cast<void *>(String_isEmpty));
         engine.addGlobalMapping(
                 functions[mangler.mangleMethod(String::CLASS_NAME, "trim")], reinterpret_cast<void *>(String_trim));
         engine.addGlobalMapping(

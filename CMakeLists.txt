@@ -37,6 +37,7 @@ add_executable(x_test ${X_SOURCES}
         tests/strings/string_test.cpp
         tests/strings/concat_test.cpp
         tests/strings/length_test.cpp
+        tests/strings/is_empty_test.cpp
         tests/strings/trim_test.cpp
         tests/strings/to_lower_test.cpp
         tests/strings/to_upper_test.cpp
