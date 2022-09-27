@@ -43,7 +43,8 @@ add_executable(x_test ${X_SOURCES}
         tests/strings/to_upper_test.cpp
         tests/strings/index_test.cpp
         tests/strings/contains_test.cpp
-        tests/strings/starts_with_test.cpp)
+        tests/strings/starts_with_test.cpp
+        tests/strings/ends_with_test.cpp)
 target_link_libraries(x_test GTest::gtest_main ${X_LIBS})
 
 include(GoogleTest)

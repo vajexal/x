@@ -101,6 +101,14 @@ namespace X {
         return std::strncmp(that->str, other->str, other->len) == 0;
     }
 
+    bool String_endsWith(String *that, String *other) {
+        if (other->len > that->len) {
+            return false;
+        }
+
+        return std::strncmp(that->str + that->len - other->len, other->str, other->len) == 0;
+    }
+
     void println(String *str) {
         std::cout << str->str << std::endl;
     }
@@ -186,6 +194,12 @@ namespace X {
         functions[stringStartsWithFnName] = llvm::cast<llvm::Function>(
                 module.getOrInsertFunction(stringStartsWithFnName, stringStartsWithFnType).getCallee());
 
+        auto stringEndsWithFnType = llvm::FunctionType::get(
+                llvm::Type::getInt1Ty(context), {stringType->getPointerTo(), stringType->getPointerTo()}, false);
+        auto stringEndsWithFnName = mangler.mangleMethod(String::CLASS_NAME, "endsWith");
+        functions[stringEndsWithFnName] = llvm::cast<llvm::Function>(
+                module.getOrInsertFunction(stringEndsWithFnName, stringEndsWithFnType).getCallee());
+
         auto printlnFnType = llvm::FunctionType::get(llvm::Type::getVoidTy(context), {stringType->getPointerTo()}, false);
         functions["println"] = llvm::cast<llvm::Function>(module.getOrInsertFunction("println", printlnFnType).getCallee());
 
@@ -221,6 +235,8 @@ namespace X {
                 functions[mangler.mangleMethod(String::CLASS_NAME, "contains")], reinterpret_cast<void *>(String_contains));
         engine.addGlobalMapping(
                 functions[mangler.mangleMethod(String::CLASS_NAME, "startsWith")], reinterpret_cast<void *>(String_startsWith));
+        engine.addGlobalMapping(
+                functions[mangler.mangleMethod(String::CLASS_NAME, "endsWith")], reinterpret_cast<void *>(String_endsWith));
         engine.addGlobalMapping(functions["println"], reinterpret_cast<void *>(println));
 
         engine.addGlobalMapping(functions["castBoolToString"], reinterpret_cast<void *>(castBoolToString));
