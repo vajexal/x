@@ -3,7 +3,7 @@
 class EndsWithTest : public StringTest {
 };
 
-TEST_P(EndsWithTest, index) {
+TEST_P(EndsWithTest, endsWith) {
     auto [code, expectedOutput] = GetParam();
     compileAndTestOutput(code, expectedOutput);
 }

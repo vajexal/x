@@ -3,7 +3,7 @@
 class LengthTest : public StringTest {
 };
 
-TEST_P(LengthTest, concat) {
+TEST_P(LengthTest, length) {
     auto [code, expectedOutput] = GetParam();
     compileAndTestOutput(code, expectedOutput);
 }

@@ -3,7 +3,7 @@
 class StartsWithTest : public StringTest {
 };
 
-TEST_P(StartsWithTest, index) {
+TEST_P(StartsWithTest, startsWith) {
     auto [code, expectedOutput] = GetParam();
     compileAndTestOutput(code, expectedOutput);
 }

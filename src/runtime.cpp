@@ -60,7 +60,7 @@ namespace X {
         for (; endIdx > startIdx && isspace(that->str[endIdx]); endIdx--) {}
 
         auto res = String_new(endIdx - startIdx + 1);
-        memcpy(res->str, that->str + startIdx, res->len);
+        std::memcpy(res->str, that->str + startIdx, res->len);
         return res;
     }
 
@@ -107,6 +107,20 @@ namespace X {
         }
 
         return std::strncmp(that->str + that->len - other->len, other->str, other->len) == 0;
+    }
+
+    String *String_substring(String *that, int64_t offset, int64_t length) {
+        if (offset < 0 || length <= 0 || offset > that->len) {
+            return String_new(0);
+        }
+
+        if (length + offset > that->len) {
+            length = (int64_t) that->len - offset;
+        }
+
+        auto res = String_new(length);
+        std::memcpy(res->str, that->str + offset, length);
+        return res;
     }
 
     void println(String *str) {
@@ -200,6 +214,12 @@ namespace X {
         functions[stringEndsWithFnName] = llvm::cast<llvm::Function>(
                 module.getOrInsertFunction(stringEndsWithFnName, stringEndsWithFnType).getCallee());
 
+        auto stringSubstringFnType = llvm::FunctionType::get(
+                stringType->getPointerTo(), {stringType->getPointerTo(), llvm::Type::getInt64Ty(context), llvm::Type::getInt64Ty(context)}, false);
+        auto stringSubstringFnName = mangler.mangleMethod(String::CLASS_NAME, "substring");
+        functions[stringSubstringFnName] = llvm::cast<llvm::Function>(
+                module.getOrInsertFunction(stringSubstringFnName, stringSubstringFnType).getCallee());
+
         auto printlnFnType = llvm::FunctionType::get(llvm::Type::getVoidTy(context), {stringType->getPointerTo()}, false);
         functions["println"] = llvm::cast<llvm::Function>(module.getOrInsertFunction("println", printlnFnType).getCallee());
 
@@ -237,6 +257,8 @@ namespace X {
                 functions[mangler.mangleMethod(String::CLASS_NAME, "startsWith")], reinterpret_cast<void *>(String_startsWith));
         engine.addGlobalMapping(
                 functions[mangler.mangleMethod(String::CLASS_NAME, "endsWith")], reinterpret_cast<void *>(String_endsWith));
+        engine.addGlobalMapping(
+                functions[mangler.mangleMethod(String::CLASS_NAME, "substring")], reinterpret_cast<void *>(String_substring));
         engine.addGlobalMapping(functions["println"], reinterpret_cast<void *>(println));
 
         engine.addGlobalMapping(functions["castBoolToString"], reinterpret_cast<void *>(castBoolToString));

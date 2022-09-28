@@ -3,7 +3,7 @@
 class IsEmptyTest : public StringTest {
 };
 
-TEST_P(IsEmptyTest, concat) {
+TEST_P(IsEmptyTest, isEmpty) {
     auto [code, expectedOutput] = GetParam();
     compileAndTestOutput(code, expectedOutput);
 }
