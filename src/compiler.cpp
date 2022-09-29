@@ -10,7 +10,7 @@
 #include "driver.h"
 #include "parser.tab.hh"
 #include "codegen.h"
-#include "runtime.h"
+#include "runtime/runtime.h"
 #include "ast_printer.h"
 
 namespace X {
@@ -24,9 +24,9 @@ namespace X {
         llvm::LLVMContext context;
         llvm::IRBuilder<> builder(context);
         auto module = std::make_unique<llvm::Module>("Module", context);
-        X::Codegen codegen(context, builder, *module.get());
-        X::Runtime runtime;
-        X::AstPrinter astPrinter;
+        Codegen codegen(context, builder, *module.get());
+        Runtime::Runtime runtime;
+        AstPrinter astPrinter;
 
 //        driver.result->print(astPrinter);
 

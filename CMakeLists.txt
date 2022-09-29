@@ -22,7 +22,9 @@ set(X_SOURCES lexer.cpp
         src/ast.cpp
         src/codegen.cpp
         src/ast_printer.cpp
-        src/runtime.cpp
+        src/runtime/runtime.cpp
+        src/runtime/string.cpp
+        src/runtime/casts.cpp
         src/compiler.cpp)
 
 set(X_LIBS LLVM fmt::fmt)

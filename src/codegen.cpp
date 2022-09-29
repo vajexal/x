@@ -4,7 +4,7 @@
 #include "llvm/IR/GlobalValue.h"
 
 #include "codegen.h"
-#include "runtime.h"
+#include "runtime/runtime.h"
 
 namespace X {
     llvm::Value *Codegen::gen(Node *node) {
@@ -30,9 +30,9 @@ namespace X {
             case Type::TypeID::BOOL:
                 return llvm::ConstantInt::get(llvm::Type::getInt1Ty(context), std::get<bool>(value));
             case Type::TypeID::STRING: {
-                auto str = createAlloca(llvm::StructType::getTypeByName(context, String::CLASS_NAME));
+                auto str = createAlloca(llvm::StructType::getTypeByName(context, Runtime::String::CLASS_NAME));
                 auto dataPtr = builder.CreateGlobalStringPtr(std::get<std::string>(value));
-                builder.CreateCall(getConstructor(String::CLASS_NAME), {str, dataPtr});
+                builder.CreateCall(getConstructor(Runtime::String::CLASS_NAME), {str, dataPtr});
                 return str;
             }
             default:
@@ -90,7 +90,7 @@ namespace X {
         if (isStringType(lhs->getType()) && isStringType(rhs->getType())) {
             switch (node->getType()) {
                 case OpType::PLUS: {
-                    auto stringConcatFnName = mangler.mangleMethod(String::CLASS_NAME, "concat");
+                    auto stringConcatFnName = mangler.mangleMethod(Runtime::String::CLASS_NAME, "concat");
                     auto callee = module.getFunction(stringConcatFnName);
                     return builder.CreateCall(callee, {lhs, rhs});
                 }
@@ -511,7 +511,7 @@ namespace X {
             case Type::TypeID::BOOL:
                 return llvm::Type::getInt1Ty(context);
             case Type::TypeID::STRING:
-                return llvm::StructType::getTypeByName(context, String::CLASS_NAME)->getPointerTo();
+                return llvm::StructType::getTypeByName(context, Runtime::String::CLASS_NAME)->getPointerTo();
             case Type::TypeID::VOID:
                 return llvm::Type::getVoidTy(context);
             case Type::TypeID::CLASS: {
@@ -696,7 +696,7 @@ namespace X {
                 return builder.CreateFCmpONE(value, llvm::ConstantFP::get(llvm::Type::getFloatTy(context), 0));
             default:
                 if (isStringType(value->getType())) {
-                    auto stringIsEmptyFnName = mangler.mangleMethod(String::CLASS_NAME, "isEmpty");
+                    auto stringIsEmptyFnName = mangler.mangleMethod(Runtime::String::CLASS_NAME, "isEmpty");
                     auto callee = module.getFunction(stringIsEmptyFnName);
                     auto val = builder.CreateCall(callee, {value});
                     return negate(val);
@@ -895,7 +895,7 @@ namespace X {
 
     bool Codegen::isStringType(llvm::Type *type) const {
         type = deref(type);
-        return type->isStructTy() && type->getStructName() == String::CLASS_NAME;
+        return type->isStructTy() && type->getStructName() == Runtime::String::CLASS_NAME;
     }
 
     llvm::Value *Codegen::compareStrings(llvm::Value *first, llvm::Value *second) const {

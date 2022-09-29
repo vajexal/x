@@ -8,25 +8,22 @@
 #include "llvm/IR/Function.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 
+#include "string.h"
 #include "mangler.h"
 
-namespace X {
+namespace X::Runtime {
+    void println(String *str);
+
+    /// returns true is stings are equal
+    bool compareStrings(String *first, String *second);
+
     class Runtime {
         Mangler mangler;
 
-        std::map<std::string, llvm::Function *> functions;
-
+        std::vector<std::tuple<llvm::Function *, void *>> fnDefinitions;
     public:
         void addDeclarations(llvm::LLVMContext &context, llvm::Module &module);
         void addDefinitions(llvm::ExecutionEngine &engine);
-    };
-
-    struct String {
-        static inline const std::string CLASS_NAME = "String";
-        static inline const std::string CONSTRUCTOR_FN_NAME = "String_construct";
-
-        char *str;
-        uint64_t len;
     };
 }
 
