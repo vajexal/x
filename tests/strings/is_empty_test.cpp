@@ -1,6 +1,6 @@
-#include "string_test.h"
+#include "compiler_test_helper.h"
 
-class IsEmptyTest : public StringTest {
+class IsEmptyTest : public CompilerTest {
 };
 
 TEST_P(IsEmptyTest, isEmpty) {

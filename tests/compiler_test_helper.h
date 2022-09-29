@@ -1,5 +1,5 @@
-#ifndef X_STRING_TEST_H
-#define X_STRING_TEST_H
+#ifndef X_COMPILER_TEST_HELPER_H
+#define X_COMPILER_TEST_HELPER_H
 
 #include <gtest/gtest.h>
 
@@ -7,11 +7,11 @@
 
 using namespace X;
 
-class StringTest : public testing::TestWithParam<std::pair<std::string, std::string>> {
+class CompilerTest : public testing::TestWithParam<std::pair<std::string, std::string>> {
 protected:
     Compiler compiler;
 
     void compileAndTestOutput(const std::string &code, const std::string &expectedOutput);
 };
 
-#endif //X_STRING_TEST_H
+#endif //X_COMPILER_TEST_HELPER_H

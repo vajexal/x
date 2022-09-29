@@ -1,6 +1,6 @@
-#include "string_test.h"
+#include "compiler_test_helper.h"
 
-class IndexTest : public StringTest {
+class IndexTest : public CompilerTest {
 };
 
 TEST_P(IndexTest, index) {

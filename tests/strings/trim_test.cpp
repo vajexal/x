@@ -1,6 +1,6 @@
-#include "string_test.h"
+#include "compiler_test_helper.h"
 
-class TrimTest : public StringTest {
+class TrimTest : public CompilerTest {
 };
 
 TEST_P(TrimTest, trim) {

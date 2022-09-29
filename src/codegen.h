@@ -117,7 +117,9 @@ namespace X {
         void checkAbstractMethods(ClassNode *classNode) const; // todo remove from codegen
         bool compareDeclAndDef(MethodDeclNode *declNode, MethodDefNode *defNode) const;
         std::pair<llvm::Function *, llvm::Type *> findMethod(llvm::StructType *type, const std::string &methodName) const;
-        bool isInternalClass(llvm::StructType *type) const;
+        bool isStringType(llvm::Type *type) const;
+        llvm::Value *compareStrings(llvm::Value *first, llvm::Value *second) const;
+        llvm::Value *negate(llvm::Value *value) const;
     };
 
     class CodegenException : public std::exception {

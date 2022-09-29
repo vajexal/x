@@ -1,6 +1,6 @@
-#include "string_test.h"
+#include "compiler_test_helper.h"
 
-class ContainsTest : public StringTest {
+class ContainsTest : public CompilerTest {
 };
 
 TEST_P(ContainsTest, contains) {

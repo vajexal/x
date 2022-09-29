@@ -1,6 +1,6 @@
-#include "string_test.h"
+#include "compiler_test_helper.h"
 
-class ToLowerTest : public StringTest {
+class ToLowerTest : public CompilerTest {
 };
 
 TEST_P(ToLowerTest, toLower) {

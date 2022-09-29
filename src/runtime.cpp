@@ -4,7 +4,7 @@
 #include "runtime.h"
 
 namespace X {
-    String *String_new(uint64_t len) {
+    String *String_new(uint64_t len = 0) {
         auto res = new String;
         res->len = len;
         res->str = new char[res->len + 1];
@@ -25,9 +25,15 @@ namespace X {
         return res;
     }
 
+    String *String_copy(String *str) {
+        auto res = String_new(str->len);
+        std::memcpy(res->str, str->str, str->len);
+        return res;
+    }
+
     String *String_concat(String *that, String *other) {
         if (!other->len) {
-            return that;
+            return String_copy(that);
         }
 
         auto res = String_new(that->len + other->len);
@@ -46,14 +52,14 @@ namespace X {
 
     String *String_trim(String *that) {
         if (!that->len) {
-            return String_new(0);
+            return String_new();
         }
 
         auto startIdx = 0;
         for (; startIdx < that->len && isspace(that->str[startIdx]); startIdx++) {}
 
         if (startIdx == that->len - 1) {
-            return String_new(0);
+            return String_new();
         }
 
         auto endIdx = that->len - 1;
@@ -111,7 +117,7 @@ namespace X {
 
     String *String_substring(String *that, int64_t offset, int64_t length) {
         if (offset < 0 || length <= 0 || offset > that->len) {
-            return String_new(0);
+            return String_new();
         }
 
         if (length + offset > that->len) {
@@ -139,6 +145,11 @@ namespace X {
     String *castFloatToString(float value) {
         auto s = std::to_string(value);
         return String_create(s.c_str());
+    }
+
+    /// returns true is stings are equal
+    bool compareStrings(String *first, String *second) {
+        return first->len == second->len && std::strncmp(first->str, second->str, first->len) == 0;
     }
 
     void Runtime::addDeclarations(llvm::LLVMContext &context, llvm::Module &module) {
@@ -231,6 +242,9 @@ namespace X {
 
         auto castFloatToStringFnType = llvm::FunctionType::get(stringType->getPointerTo(), {llvm::Type::getFloatTy(context)}, false);
         functions["castFloatToString"] = llvm::cast<llvm::Function>(module.getOrInsertFunction(".castFloatToString", castFloatToStringFnType).getCallee());
+
+        auto compareStringsFnType = llvm::FunctionType::get(llvm::Type::getInt1Ty(context), {stringType->getPointerTo(), stringType->getPointerTo()}, false);
+        functions["compareStrings"] = llvm::cast<llvm::Function>(module.getOrInsertFunction(".compareStrings", compareStringsFnType).getCallee());
     }
 
     void Runtime::addDefinitions(llvm::ExecutionEngine &engine) {
@@ -264,5 +278,6 @@ namespace X {
         engine.addGlobalMapping(functions["castBoolToString"], reinterpret_cast<void *>(castBoolToString));
         engine.addGlobalMapping(functions["castIntToString"], reinterpret_cast<void *>(castIntToString));
         engine.addGlobalMapping(functions["castFloatToString"], reinterpret_cast<void *>(castFloatToString));
+        engine.addGlobalMapping(functions["compareStrings"], reinterpret_cast<void *>(compareStrings));
     }
 }

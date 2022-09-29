@@ -1,6 +1,6 @@
-#include "string_test.h"
+#include "compiler_test_helper.h"
 
-class StartsWithTest : public StringTest {
+class StartsWithTest : public CompilerTest {
 };
 
 TEST_P(StartsWithTest, startsWith) {

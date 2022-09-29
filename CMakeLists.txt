@@ -34,7 +34,7 @@ target_link_libraries(x ${X_LIBS})
 enable_testing()
 
 add_executable(x_test ${X_SOURCES}
-        tests/strings/string_test.cpp
+        tests/compiler_test_helper.cpp
         tests/strings/concat_test.cpp
         tests/strings/length_test.cpp
         tests/strings/is_empty_test.cpp
@@ -45,7 +45,8 @@ add_executable(x_test ${X_SOURCES}
         tests/strings/contains_test.cpp
         tests/strings/starts_with_test.cpp
         tests/strings/ends_with_test.cpp
-        tests/strings/substring_test.cpp)
+        tests/strings/substring_test.cpp
+        tests/operators_test.cpp)
 target_link_libraries(x_test GTest::gtest_main ${X_LIBS})
 
 include(GoogleTest)

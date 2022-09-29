@@ -1,6 +1,6 @@
-#include "string_test.h"
+#include "compiler_test_helper.h"
 
-class EndsWithTest : public StringTest {
+class EndsWithTest : public CompilerTest {
 };
 
 TEST_P(EndsWithTest, endsWith) {

@@ -73,7 +73,7 @@ namespace X {
             }
             case OpType::NOT:
                 expr = downcastToBool(expr);
-                return builder.CreateXor(expr, llvm::ConstantInt::getTrue(context));
+                return negate(expr);
             default:
                 throw CodegenException("invalid op type");
         }
@@ -85,6 +85,22 @@ namespace X {
 
         if (!lhs || !rhs) {
             throw CodegenException("binary arg is empty");
+        }
+
+        if (isStringType(lhs->getType()) && isStringType(rhs->getType())) {
+            switch (node->getType()) {
+                case OpType::PLUS: {
+                    auto stringConcatFnName = mangler.mangleMethod(String::CLASS_NAME, "concat");
+                    auto callee = module.getFunction(stringConcatFnName);
+                    return builder.CreateCall(callee, {lhs, rhs});
+                }
+                case OpType::EQUAL:
+                    return compareStrings(lhs, rhs);
+                case OpType::NOT_EQUAL:
+                    return negate(compareStrings(lhs, rhs));
+                default:
+                    throw CodegenException("invalid op type");
+            }
         }
 
         if (node->getType() == OpType::DIV) {
@@ -679,6 +695,12 @@ namespace X {
             case llvm::Type::TypeID::FloatTyID:
                 return builder.CreateFCmpONE(value, llvm::ConstantFP::get(llvm::Type::getFloatTy(context), 0));
             default:
+                if (isStringType(value->getType())) {
+                    auto stringIsEmptyFnName = mangler.mangleMethod(String::CLASS_NAME, "isEmpty");
+                    auto callee = module.getFunction(stringIsEmptyFnName);
+                    auto val = builder.CreateCall(callee, {value});
+                    return negate(val);
+                }
                 throw CodegenException("invalid type");
         }
     }
@@ -705,11 +727,11 @@ namespace X {
     }
 
     llvm::Type *Codegen::deref(llvm::Type *type) const {
-        if (!type->isPointerTy()) {
-            return type;
+        if (type->isPointerTy()) {
+            return type->getPointerElementType();
         }
 
-        return type->getPointerElementType();
+        return type;
     }
 
     void Codegen::genFn(const std::string &name, const std::vector<ArgNode *> &args, const Type &returnType, StatementListNode *body, std::optional<Type> thisType) {
@@ -846,7 +868,7 @@ namespace X {
     }
 
     std::pair<llvm::Function *, llvm::Type *> Codegen::findMethod(llvm::StructType *type, const std::string &methodName) const {
-        if (isInternalClass(type)) {
+        if (isStringType(type)) {
             auto name = mangler.mangleMethod(type->getName().str(), methodName);
             return {module.getFunction(name), nullptr};
         }
@@ -871,7 +893,17 @@ namespace X {
         return {nullptr, nullptr};
     }
 
-    bool Codegen::isInternalClass(llvm::StructType *type) const {
-        return type->getName() == String::CLASS_NAME;
+    bool Codegen::isStringType(llvm::Type *type) const {
+        type = deref(type);
+        return type->isStructTy() && type->getStructName() == String::CLASS_NAME;
+    }
+
+    llvm::Value *Codegen::compareStrings(llvm::Value *first, llvm::Value *second) const {
+        auto callee = module.getFunction(".compareStrings");
+        return builder.CreateCall(callee, {first, second});
+    }
+
+    llvm::Value *Codegen::negate(llvm::Value *value) const {
+        return builder.CreateXor(value, llvm::ConstantInt::getTrue(context));
     }
 }

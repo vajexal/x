@@ -1,6 +1,6 @@
-#include "string_test.h"
+#include "compiler_test_helper.h"
 
-class LengthTest : public StringTest {
+class LengthTest : public CompilerTest {
 };
 
 TEST_P(LengthTest, length) {

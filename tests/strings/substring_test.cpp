@@ -1,6 +1,6 @@
-#include "string_test.h"
+#include "compiler_test_helper.h"
 
-class SubstringTest : public StringTest {
+class SubstringTest : public CompilerTest {
 };
 
 TEST_P(SubstringTest, substring) {

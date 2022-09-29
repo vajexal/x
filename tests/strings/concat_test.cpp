@@ -1,6 +1,6 @@
-#include "string_test.h"
+#include "compiler_test_helper.h"
 
-class ConcatTest : public StringTest {
+class ConcatTest : public CompilerTest {
 };
 
 TEST_P(ConcatTest, concat) {

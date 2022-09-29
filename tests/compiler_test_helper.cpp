@@ -1,6 +1,6 @@
-#include "string_test.h"
+#include "compiler_test_helper.h"
 
-void StringTest::compileAndTestOutput(const std::string &code, const std::string &expectedOutput) {
+void CompilerTest::compileAndTestOutput(const std::string &code, const std::string &expectedOutput) {
     testing::internal::CaptureStdout(); // todo customize compiler output stream
 
     compiler.compile(R"code(
@@ -12,3 +12,4 @@ fn main() int {
 
     ASSERT_EQ(testing::internal::GetCapturedStdout(), expectedOutput);
 }
+
