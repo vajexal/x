@@ -16,7 +16,7 @@
 #include "ast.h"
 #include "mangler.h"
 
-namespace X {
+namespace X::Codegen {
     struct Loop {
         llvm::BasicBlock *start;
         llvm::BasicBlock *end;

@@ -20,7 +20,10 @@ include_directories(./tests)
 set(X_SOURCES lexer.cpp
         parser.tab.cc
         src/ast.cpp
-        src/codegen.cpp
+        src/codegen/codegen.cpp
+        src/codegen/expr.cpp
+        src/codegen/function.cpp
+        src/codegen/class.cpp
         src/ast_printer.cpp
         src/runtime/runtime.cpp
         src/runtime/string.cpp

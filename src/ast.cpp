@@ -1,6 +1,6 @@
 #include "ast.h"
 #include "ast_printer.h"
-#include "codegen.h"
+#include "codegen/codegen.h"
 
 namespace X {
     std::ostream &operator<<(std::ostream &out, OpType type) {
@@ -91,35 +91,35 @@ namespace X {
     void MethodDeclNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<MethodDeclNode>(this, level); }
     void InterfaceNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<InterfaceNode>(this, level); }
 
-    llvm::Value *ScalarNode::gen(Codegen &codegen) { return codegen.gen(this); }
-    llvm::Value *StatementListNode::gen(Codegen &codegen) { return codegen.gen(this); }
-    llvm::Value *UnaryNode::gen(Codegen &codegen) { return codegen.gen(this); }
-    llvm::Value *BinaryNode::gen(Codegen &codegen) { return codegen.gen(this); }
-    llvm::Value *DeclareNode::gen(Codegen &codegen) { return codegen.gen(this); }
-    llvm::Value *AssignNode::gen(Codegen &codegen) { return codegen.gen(this); }
-    llvm::Value *VarNode::gen(Codegen &codegen) { return codegen.gen(this); }
-    llvm::Value *IfNode::gen(Codegen &codegen) { return codegen.gen(this); }
-    llvm::Value *WhileNode::gen(Codegen &codegen) { return codegen.gen(this); }
-    llvm::Value *ArgNode::gen(Codegen &codegen) { return codegen.gen(this); }
-    llvm::Value *FnDeclNode::gen(Codegen &codegen) { return codegen.gen(this); }
-    llvm::Value *FnDefNode::gen(Codegen &codegen) { return codegen.gen(this); }
-    llvm::Value *FnCallNode::gen(Codegen &codegen) { return codegen.gen(this); }
-    llvm::Value *ReturnNode::gen(Codegen &codegen) { return codegen.gen(this); }
-    llvm::Value *PrintlnNode::gen(Codegen &codegen) { return codegen.gen(this); }
-    llvm::Value *BreakNode::gen(Codegen &codegen) { return codegen.gen(this); }
-    llvm::Value *ContinueNode::gen(Codegen &codegen) { return codegen.gen(this); }
-    llvm::Value *CommentNode::gen(Codegen &codegen) { return codegen.gen(this); }
-    llvm::Value *ClassNode::gen(Codegen &codegen) { return codegen.gen(this); }
-    llvm::Value *ClassMembersNode::gen(Codegen &codegen) { return codegen.gen(this); }
-    llvm::Value *PropDeclNode::gen(Codegen &codegen) { return codegen.gen(this); }
-    llvm::Value *MethodDefNode::gen(Codegen &codegen) { return codegen.gen(this); }
-    llvm::Value *FetchPropNode::gen(Codegen &codegen) { return codegen.gen(this); }
-    llvm::Value *FetchStaticPropNode::gen(Codegen &codegen) { return codegen.gen(this); }
-    llvm::Value *MethodCallNode::gen(Codegen &codegen) { return codegen.gen(this); }
-    llvm::Value *StaticMethodCallNode::gen(Codegen &codegen) { return codegen.gen(this); }
-    llvm::Value *AssignPropNode::gen(Codegen &codegen) { return codegen.gen(this); }
-    llvm::Value *AssignStaticPropNode::gen(Codegen &codegen) { return codegen.gen(this); }
-    llvm::Value *NewNode::gen(Codegen &codegen) { return codegen.gen(this); }
-    llvm::Value *MethodDeclNode::gen(Codegen &codegen) { return codegen.gen(this); }
-    llvm::Value *InterfaceNode::gen(Codegen &codegen) { return codegen.gen(this); }
+    llvm::Value *ScalarNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
+    llvm::Value *StatementListNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
+    llvm::Value *UnaryNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
+    llvm::Value *BinaryNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
+    llvm::Value *DeclareNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
+    llvm::Value *AssignNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
+    llvm::Value *VarNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
+    llvm::Value *IfNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
+    llvm::Value *WhileNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
+    llvm::Value *ArgNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
+    llvm::Value *FnDeclNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
+    llvm::Value *FnDefNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
+    llvm::Value *FnCallNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
+    llvm::Value *ReturnNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
+    llvm::Value *PrintlnNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
+    llvm::Value *BreakNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
+    llvm::Value *ContinueNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
+    llvm::Value *CommentNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
+    llvm::Value *ClassNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
+    llvm::Value *ClassMembersNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
+    llvm::Value *PropDeclNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
+    llvm::Value *MethodDefNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
+    llvm::Value *FetchPropNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
+    llvm::Value *FetchStaticPropNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
+    llvm::Value *MethodCallNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
+    llvm::Value *StaticMethodCallNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
+    llvm::Value *AssignPropNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
+    llvm::Value *AssignStaticPropNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
+    llvm::Value *NewNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
+    llvm::Value *MethodDeclNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
+    llvm::Value *InterfaceNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
 }
