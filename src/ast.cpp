@@ -1,5 +1,5 @@
 #include "ast.h"
-#include "ast_printer.h"
+#include "pipes/print_ast.h"
 #include "codegen/codegen.h"
 
 namespace X {
@@ -59,37 +59,37 @@ namespace X {
         return out;
     }
 
-    void ScalarNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<ScalarNode>(this, level); }
-    void StatementListNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<StatementListNode>(this, level); }
-    void UnaryNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<UnaryNode>(this, level); }
-    void BinaryNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<BinaryNode>(this, level); }
-    void DeclareNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<DeclareNode>(this, level); }
-    void AssignNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<AssignNode>(this, level); }
-    void VarNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<VarNode>(this, level); }
-    void IfNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<IfNode>(this, level); }
-    void WhileNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<WhileNode>(this, level); }
-    void ArgNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<ArgNode>(this, level); }
-    void FnDeclNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<FnDeclNode>(this, level); }
-    void FnDefNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<FnDefNode>(this, level); }
-    void FnCallNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<FnCallNode>(this, level); }
-    void ReturnNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<ReturnNode>(this, level); }
-    void PrintlnNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<PrintlnNode>(this, level); }
-    void BreakNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<BreakNode>(this, level); }
-    void ContinueNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<ContinueNode>(this, level); }
-    void CommentNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<CommentNode>(this, level); }
-    void ClassNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<ClassNode>(this, level); }
-    void ClassMembersNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<ClassMembersNode>(this, level); }
-    void PropDeclNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<PropDeclNode>(this, level); }
-    void MethodDefNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<MethodDefNode>(this, level); }
-    void FetchPropNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<FetchPropNode>(this, level); }
-    void FetchStaticPropNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<FetchStaticPropNode>(this, level); }
-    void MethodCallNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<MethodCallNode>(this, level); }
-    void StaticMethodCallNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<StaticMethodCallNode>(this, level); }
-    void AssignPropNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<AssignPropNode>(this, level); }
-    void AssignStaticPropNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<AssignStaticPropNode>(this, level); }
-    void NewNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<NewNode>(this, level); }
-    void MethodDeclNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<MethodDeclNode>(this, level); }
-    void InterfaceNode::print(AstPrinter &astPrinter, int level) { astPrinter.print<InterfaceNode>(this, level); }
+    void ScalarNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<ScalarNode>(this, level); }
+    void StatementListNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<StatementListNode>(this, level); }
+    void UnaryNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<UnaryNode>(this, level); }
+    void BinaryNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<BinaryNode>(this, level); }
+    void DeclareNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<DeclareNode>(this, level); }
+    void AssignNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<AssignNode>(this, level); }
+    void VarNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<VarNode>(this, level); }
+    void IfNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<IfNode>(this, level); }
+    void WhileNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<WhileNode>(this, level); }
+    void ArgNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<ArgNode>(this, level); }
+    void FnDeclNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<FnDeclNode>(this, level); }
+    void FnDefNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<FnDefNode>(this, level); }
+    void FnCallNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<FnCallNode>(this, level); }
+    void ReturnNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<ReturnNode>(this, level); }
+    void PrintlnNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<PrintlnNode>(this, level); }
+    void BreakNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<BreakNode>(this, level); }
+    void ContinueNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<ContinueNode>(this, level); }
+    void CommentNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<CommentNode>(this, level); }
+    void ClassNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<ClassNode>(this, level); }
+    void ClassMembersNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<ClassMembersNode>(this, level); }
+    void PropDeclNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<PropDeclNode>(this, level); }
+    void MethodDefNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<MethodDefNode>(this, level); }
+    void FetchPropNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<FetchPropNode>(this, level); }
+    void FetchStaticPropNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<FetchStaticPropNode>(this, level); }
+    void MethodCallNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<MethodCallNode>(this, level); }
+    void StaticMethodCallNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<StaticMethodCallNode>(this, level); }
+    void AssignPropNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<AssignPropNode>(this, level); }
+    void AssignStaticPropNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<AssignStaticPropNode>(this, level); }
+    void NewNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<NewNode>(this, level); }
+    void MethodDeclNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<MethodDeclNode>(this, level); }
+    void InterfaceNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<InterfaceNode>(this, level); }
 
     llvm::Value *ScalarNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
     llvm::Value *StatementListNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }

@@ -76,7 +76,9 @@ namespace X {
 
     std::ostream &operator<<(std::ostream &out, AccessModifier accessModifier);
 
-    class AstPrinter;
+    namespace Pipes {
+        class PrintAst;
+    }
     namespace Codegen {
         class Codegen;
     }
@@ -85,7 +87,7 @@ namespace X {
     public:
         virtual ~Node() = default;
 
-        virtual void print(AstPrinter &astPrinter, int level = 0) = 0;
+        virtual void print(Pipes::PrintAst &astPrinter, int level = 0) = 0;
         virtual llvm::Value *gen(Codegen::Codegen &codegen) = 0;
 
         virtual bool isTerminate() { return false; }
@@ -101,7 +103,7 @@ namespace X {
     public:
         ScalarNode(Type type, ScalarValue value) : type(std::move(type)), value(std::move(value)) {}
 
-        void print(AstPrinter &astPrinter, int level = 0) override;
+        void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
 
         const Type &getType() const { return type; }
@@ -118,7 +120,7 @@ namespace X {
             }
         }
 
-        void print(AstPrinter &astPrinter, int level = 0) override;
+        void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
 
         void add(Node *node) { children.push_back(node); }
@@ -136,7 +138,7 @@ namespace X {
             delete expr;
         }
 
-        void print(AstPrinter &astPrinter, int level = 0) override;
+        void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
 
         OpType getType() const { return type; }
@@ -155,7 +157,7 @@ namespace X {
             delete rhs;
         }
 
-        void print(AstPrinter &astPrinter, int level = 0) override;
+        void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
 
         OpType getType() const { return type; }
@@ -174,7 +176,7 @@ namespace X {
             delete expr;
         }
 
-        void print(AstPrinter &astPrinter, int level = 0) override;
+        void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
 
         const Type &getType() const { return type; }
@@ -192,7 +194,7 @@ namespace X {
             delete expr;
         }
 
-        void print(AstPrinter &astPrinter, int level = 0) override;
+        void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
 
         const std::string &getName() const { return name; }
@@ -205,7 +207,7 @@ namespace X {
     public:
         VarNode(std::string name) : name(std::move(name)) {}
 
-        void print(AstPrinter &astPrinter, int level = 0) override;
+        void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
 
         const std::string &getName() const { return name; }
@@ -224,7 +226,7 @@ namespace X {
             delete elseNode;
         }
 
-        void print(AstPrinter &astPrinter, int level = 0) override;
+        void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
 
         ExprNode *getCond() const { return cond; }
@@ -243,7 +245,7 @@ namespace X {
             delete body;
         }
 
-        void print(AstPrinter &astPrinter, int level = 0) override;
+        void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
 
         ExprNode *getCond() const { return cond; }
@@ -257,7 +259,7 @@ namespace X {
     public:
         ArgNode(Type type, std::string name) : type(std::move(type)), name(std::move(name)) {}
 
-        void print(AstPrinter &astPrinter, int level = 0) override;
+        void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
 
         const Type &getType() const { return type; }
@@ -278,7 +280,7 @@ namespace X {
             }
         }
 
-        void print(AstPrinter &astPrinter, int level = 0) override;
+        void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
 
         const std::string &getName() const { return name; }
@@ -304,7 +306,7 @@ namespace X {
             delete body;
         }
 
-        void print(AstPrinter &astPrinter, int level = 0) override;
+        void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
 
         const std::string &getName() const { return name; }
@@ -325,7 +327,7 @@ namespace X {
             }
         }
 
-        void print(AstPrinter &astPrinter, int level = 0) override;
+        void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
 
         const std::string &getName() const { return name; }
@@ -341,7 +343,7 @@ namespace X {
             delete val;
         }
 
-        void print(AstPrinter &astPrinter, int level = 0) override;
+        void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
 
         bool isTerminate() override { return true; };
@@ -357,7 +359,7 @@ namespace X {
             delete val;
         }
 
-        void print(AstPrinter &astPrinter, int level = 0) override;
+        void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
 
         ExprNode *getVal() const { return val; }
@@ -365,7 +367,7 @@ namespace X {
 
     class BreakNode : public Node {
     public:
-        void print(AstPrinter &astPrinter, int level = 0) override;
+        void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
 
         bool isTerminate() override { return true; };
@@ -373,7 +375,7 @@ namespace X {
 
     class ContinueNode : public Node {
     public:
-        void print(AstPrinter &astPrinter, int level = 0) override;
+        void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
 
         bool isTerminate() override { return true; };
@@ -385,7 +387,7 @@ namespace X {
     public:
         CommentNode(std::string comment) : comment(std::move(comment)) {}
 
-        void print(AstPrinter &astPrinter, int level = 0) override;
+        void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
 
         const std::string &getComment() const { return comment; }
@@ -401,7 +403,7 @@ namespace X {
         PropDeclNode(Type type, std::string name, AccessModifier accessModifier = AccessModifier::PUBLIC, bool isStatic = false) :
                 type(std::move(type)), name(std::move(name)), accessModifier(accessModifier), isStatic(isStatic) {}
 
-        void print(AstPrinter &astPrinter, int level = 0) override;
+        void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
 
         const Type &getType() const { return type; }
@@ -422,7 +424,7 @@ namespace X {
             delete fnDecl;
         }
 
-        void print(AstPrinter &astPrinter, int level = 0) override;
+        void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
 
         FnDeclNode *getFnDecl() const { return fnDecl; }
@@ -442,7 +444,7 @@ namespace X {
             delete fnDef;
         }
 
-        void print(AstPrinter &astPrinter, int level = 0) override;
+        void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
 
         FnDefNode *getFnDef() const { return fnDef; }
@@ -468,7 +470,7 @@ namespace X {
             }
         }
 
-        void print(AstPrinter &astPrinter, int level = 0) override;
+        void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
 
         void addProp(PropDeclNode *prop) { props.push_back(prop); }
@@ -493,7 +495,7 @@ namespace X {
             delete members;
         }
 
-        void print(AstPrinter &astPrinter, int level = 0) override;
+        void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
 
         const std::string &getName() const { return name; }
@@ -513,7 +515,7 @@ namespace X {
             delete obj;
         }
 
-        void print(AstPrinter &astPrinter, int level = 0) override;
+        void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
 
         VarNode *getObj() const { return obj; }
@@ -527,7 +529,7 @@ namespace X {
     public:
         FetchStaticPropNode(std::string className, std::string propName) : className(std::move(className)), propName(std::move(propName)) {}
 
-        void print(AstPrinter &astPrinter, int level = 0) override;
+        void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
 
         const std::string &getClassName() const { return className; }
@@ -549,7 +551,7 @@ namespace X {
             }
         }
 
-        void print(AstPrinter &astPrinter, int level = 0) override;
+        void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
 
         VarNode *getObj() const { return obj; }
@@ -572,7 +574,7 @@ namespace X {
             }
         }
 
-        void print(AstPrinter &astPrinter, int level = 0) override;
+        void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
 
         const std::string &getClassName() const { return className; }
@@ -592,7 +594,7 @@ namespace X {
             delete expr;
         }
 
-        void print(AstPrinter &astPrinter, int level = 0) override;
+        void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
 
         VarNode *getObj() const { return obj; }
@@ -613,7 +615,7 @@ namespace X {
             delete expr;
         }
 
-        void print(AstPrinter &astPrinter, int level = 0) override;
+        void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
 
         const std::string &getClassName() const { return className; }
@@ -627,7 +629,7 @@ namespace X {
     public:
         NewNode(std::string name) : name(std::move(name)) {}
 
-        void print(AstPrinter &astPrinter, int level = 0) override;
+        void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
 
         const std::string &getName() const { return name; }
@@ -645,7 +647,7 @@ namespace X {
             }
         }
 
-        void print(AstPrinter &astPrinter, int level = 0) override;
+        void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
 
         const std::string &getName() const { return name; }

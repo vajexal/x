@@ -21,5 +21,7 @@ int main(int argc, char *argv[]) {
 
     X::Compiler compiler;
 
-    return compiler.compile(code);
+    compiler.compile(code);
+
+    return 0;
 }

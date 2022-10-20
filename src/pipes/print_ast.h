@@ -1,11 +1,18 @@
-#ifndef X_AST_PRINTER_H
-#define X_AST_PRINTER_H
+#ifndef X_PRINT_AST_H
+#define X_PRINT_AST_H
 
+#include "pipeline.h"
 #include "ast.h"
 
-namespace X {
-    class AstPrinter {
+namespace X::Pipes {
+    class PrintAst : public Pipe {
     public:
+        StatementListNode *handle(X::StatementListNode *node) override {
+            print<StatementListNode>(node);
+
+            return node;
+        }
+
         template<class T>
         void print(T *node, int level = 0) {
             std::cout << std::string(level * 2, ' ');
@@ -48,16 +55,16 @@ namespace X {
         void printNode(InterfaceNode *node, int level);
     };
 
-    class AstPrinterException : public std::exception {
+    class PrintAstException : public std::exception {
         const char *message;
 
     public:
-        AstPrinterException(const char *m) : message(m) {}
+        PrintAstException(const char *m) : message(m) {}
 
         const char *what() const noexcept override {
             return message;
         }
     };
-};
+}
 
-#endif //X_AST_PRINTER_H
+#endif //X_PRINT_AST_H

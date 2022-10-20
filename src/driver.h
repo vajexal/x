@@ -6,14 +6,11 @@
 namespace X {
     class Driver {
     public:
-        StatementListNode *result = nullptr;
+        StatementListNode *root = nullptr;
         const char *s;
 
         Driver(const char *s) : s(s) {}
         Driver(const std::string &s) : s(s.c_str()) {}
-        ~Driver() {
-            delete result;
-        }
     };
 }
 

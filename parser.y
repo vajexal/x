@@ -111,7 +111,7 @@
 %%
 
 start:
-wrapped_statement_list { driver.result = $1; }
+wrapped_statement_list { driver.root = $1; }
 ;
 
 newlines:
