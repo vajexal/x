@@ -13,6 +13,7 @@
 namespace X::Pipes {
     StatementListNode *CodeGenerator::handle(StatementListNode *node) {
         llvm::LLVMContext context;
+        context.setOpaquePointers(false); // todo migrate to opaque pointers
         llvm::IRBuilder<> builder(context);
         llvm::Module module("Module", context);
         Codegen::Codegen codegen(context, builder, module);
