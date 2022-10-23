@@ -45,9 +45,7 @@ namespace X::Codegen {
         std::map<std::string, StaticProp> staticProps;
         std::map<std::string, Method> methods;
         ClassDecl *parent;
-        std::map<std::string, MethodDeclNode *> abstractMethods;
-
-        bool isAbstract() const { return !abstractMethods.empty(); }
+        bool isAbstract;
     };
 
     class Codegen {
@@ -112,7 +110,6 @@ namespace X::Codegen {
         llvm::Type *deref(llvm::Type *type) const;
 
         void genFn(const std::string &name, const std::vector<ArgNode *> &args, const Type &returnType, StatementListNode *body, std::optional<Type> thisType = std::nullopt);
-        void checkAbstractMethods(ClassNode *classNode) const; // todo remove from codegen
         std::pair<llvm::Function *, llvm::Type *> findMethod(llvm::StructType *type, const std::string &methodName) const;
         bool isStringType(llvm::Type *type) const;
         llvm::Value *compareStrings(llvm::Value *first, llvm::Value *second) const;

@@ -4,6 +4,7 @@
 #include "pipes/parse_code.h"
 #include "pipes/print_ast.h"
 #include "pipes/check_interfaces.h"
+#include "pipes/check_abstract_classes.h"
 #include "pipes/code_generator.h"
 
 namespace X {
@@ -13,6 +14,7 @@ namespace X {
                 .pipe(new Pipes::ParseCode(code))
 //                .pipe(new Pipes::PrintAst())
                 .pipe(new Pipes::CheckInterfaces())
+                .pipe(new Pipes::CheckAbstractClasses())
                 .pipe(new Pipes::CodeGenerator())
                 .get();
 

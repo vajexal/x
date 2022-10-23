@@ -32,7 +32,8 @@ set(X_SOURCES lexer.cpp
         src/pipes/parse_code.cpp
         src/pipes/print_ast.cpp
         src/pipes/code_generator.cpp
-        src/pipes/check_interfaces.cpp)
+        src/pipes/check_interfaces.cpp
+        src/pipes/check_abstract_classes.cpp)
 
 set(X_LIBS LLVM fmt::fmt)
 
@@ -56,7 +57,8 @@ add_executable(x_test ${X_SOURCES}
         tests/strings/ends_with_test.cpp
         tests/strings/substring_test.cpp
         tests/operators_test.cpp
-        tests/check_interfaces_test.cpp)
+        tests/check_interfaces_test.cpp
+        tests/check_abstract_classes_test.cpp)
 target_link_libraries(x_test GTest::gtest_main ${X_LIBS})
 
 include(GoogleTest)

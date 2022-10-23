@@ -2,7 +2,6 @@
 #include <fmt/core.h>
 
 #include "codegen.h"
-#include "utils.h"
 
 namespace X::Codegen {
     llvm::Value *Codegen::gen(ClassNode *node) {
@@ -18,7 +17,9 @@ namespace X::Codegen {
             throw CodegenException(fmt::format("class {} must be declared abstract", name));
         }
 
-        if (!node->getParent().empty()) {
+        classDecl.isAbstract = node->isAbstract();
+
+        if (node->hasParent()) {
             auto mangledParentName = mangler.mangleClass(node->getParent());
             auto parentClassDecl = classes.find(mangledParentName);
             if (parentClassDecl == classes.end()) {
@@ -28,13 +29,6 @@ namespace X::Codegen {
             props.push_back(parentClassDecl->second.type);
             propIndex++;
             classDecl.parent = &parentClassDecl->second;
-
-            // todo refactor this mess
-            if (node->isAbstract()) {
-                for (auto [methodName, methodDeclNode]: parentClassDecl->second.abstractMethods) {
-                    classDecl.abstractMethods[methodName] = methodDeclNode;
-                }
-            }
         }
 
         for (auto prop: members->getProps()) {
@@ -51,10 +45,6 @@ namespace X::Codegen {
             }
         }
 
-        for (auto method: members->getAbstractMethods()) {
-            classDecl.abstractMethods[method->getFnDecl()->getName()] = method;
-        }
-
         auto klass = llvm::StructType::create(context, props, mangledName);
         classDecl.type = klass;
         classes[mangledName] = std::move(classDecl);
@@ -69,8 +59,6 @@ namespace X::Codegen {
         }
 
         self = nullptr;
-
-        checkAbstractMethods(node);
 
         return nullptr;
     }
@@ -157,7 +145,7 @@ namespace X::Codegen {
 
     llvm::Value *Codegen::gen(NewNode *node) {
         auto classDecl = getClass(mangler.mangleClass(node->getName()));
-        if (classDecl.isAbstract()) {
+        if (classDecl.isAbstract) {
             throw CodegenException("cannot instantiate abstract class " + node->getName());
         }
 
@@ -234,37 +222,6 @@ namespace X::Codegen {
 
     llvm::Function *Codegen::getConstructor(const std::string &mangledClassName) const {
         return module.getFunction(mangler.mangleMethod(mangledClassName, "construct"));
-    }
-
-    void Codegen::checkAbstractMethods(ClassNode *classNode) const {
-        if (classNode->getParent().empty()) {
-            return;
-        }
-
-        auto parentClassDecl = classes.find(mangler.mangleClass(classNode->getParent()));
-        if (parentClassDecl == classes.end()) {
-            throw CodegenException(fmt::format("class {} not found", classNode->getParent()));
-        }
-
-        if (!parentClassDecl->second.isAbstract()) {
-            return;
-        }
-
-        auto classMethods = classNode->getMembers()->getMethods();
-        for (auto [methodName, abstractMethod]: parentClassDecl->second.abstractMethods) {
-            auto classMethod = std::find_if(classMethods.cbegin(), classMethods.cend(), [methodName = methodName](MethodDefNode *method) {
-                return method->getFnDef()->getName() == methodName;
-            });
-            if (classMethod == classMethods.cend()) {
-                throw CodegenException(fmt::format("abstract method {}::{} must be implemented", classNode->getParent(), methodName));
-            }
-
-            if (!compareDeclAndDef(abstractMethod, *classMethod)) {
-                throw CodegenException(
-                        fmt::format("declaration of {}::{} must be compatible with abstract method {}", classNode->getName(),
-                                    (*classMethod)->getFnDef()->getName(), methodName));
-            }
-        }
     }
 
     std::pair<llvm::Function *, llvm::Type *> Codegen::findMethod(llvm::StructType *type, const std::string &methodName) const {

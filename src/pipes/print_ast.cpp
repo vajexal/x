@@ -129,7 +129,7 @@ namespace X::Pipes {
 
         std::cout << "class " << node->getName();
 
-        if (!node->getParent().empty()) {
+        if (node->hasParent()) {
             std::cout << " extends " << node->getParent();
         }
 

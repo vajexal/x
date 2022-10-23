@@ -503,6 +503,7 @@ namespace X {
         const std::string &getParent() const { return parent; }
         const std::vector<std::string> &getInterfaces() const { return interfaces; }
         bool isAbstract() const { return abstract; }
+        bool hasParent() const { return !parent.empty(); }
     };
 
     class FetchPropNode : public ExprNode {
