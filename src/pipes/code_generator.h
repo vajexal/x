@@ -4,22 +4,22 @@
 #include "pipeline.h"
 
 namespace X::Pipes {
-    class CodeGeneratorException : public std::exception {
-        const char *message;
-
-    public:
-        CodeGeneratorException(const char *m) : message(m) {}
-        CodeGeneratorException(const std::string &s) : message(s.c_str()) {}
-
-        const char *what() const noexcept override {
-            return message;
-        }
-    };
-
     // todo rename
     class CodeGenerator : public Pipe {
     public:
         StatementListNode *handle(StatementListNode *node) override;
+    };
+
+    class CodeGeneratorException : public std::exception {
+        std::string message;
+
+    public:
+        CodeGeneratorException(const char *m) : message(m) {}
+        CodeGeneratorException(std::string s) : message(std::move(s)) {}
+
+        const char *what() const noexcept override {
+            return message.c_str();
+        }
     };
 }
 

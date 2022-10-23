@@ -12,4 +12,3 @@ fn main() int {
 
     ASSERT_EQ(testing::internal::GetCapturedStdout(), expectedOutput);
 }
-

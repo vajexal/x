@@ -20,6 +20,7 @@ include_directories(./tests)
 set(X_SOURCES lexer.cpp
         parser.tab.cc
         src/ast.cpp
+        src/utils.cpp
         src/codegen/codegen.cpp
         src/codegen/expr.cpp
         src/codegen/function.cpp
@@ -30,7 +31,8 @@ set(X_SOURCES lexer.cpp
         src/compiler.cpp
         src/pipes/parse_code.cpp
         src/pipes/print_ast.cpp
-        src/pipes/code_generator.cpp)
+        src/pipes/code_generator.cpp
+        src/pipes/check_interfaces.cpp)
 
 set(X_LIBS LLVM fmt::fmt)
 
@@ -53,7 +55,8 @@ add_executable(x_test ${X_SOURCES}
         tests/strings/starts_with_test.cpp
         tests/strings/ends_with_test.cpp
         tests/strings/substring_test.cpp
-        tests/operators_test.cpp)
+        tests/operators_test.cpp
+        tests/check_interfaces_test.cpp)
 target_link_libraries(x_test GTest::gtest_main ${X_LIBS})
 
 include(GoogleTest)

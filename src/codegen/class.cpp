@@ -2,6 +2,7 @@
 #include <fmt/core.h>
 
 #include "codegen.h"
+#include "utils.h"
 
 namespace X::Codegen {
     llvm::Value *Codegen::gen(ClassNode *node) {
@@ -69,7 +70,6 @@ namespace X::Codegen {
 
         self = nullptr;
 
-        checkInterfaces(node);
         checkAbstractMethods(node);
 
         return nullptr;
@@ -165,8 +165,6 @@ namespace X::Codegen {
     }
 
     llvm::Value *Codegen::gen(InterfaceNode *node) {
-        interfaces[node->getName()] = node;
-
         return nullptr;
     }
 
@@ -238,32 +236,6 @@ namespace X::Codegen {
         return module.getFunction(mangler.mangleMethod(mangledClassName, "construct"));
     }
 
-    void Codegen::checkInterfaces(ClassNode *classNode) const {
-        auto classMethods = classNode->getMembers()->getMethods();
-
-        for (auto &interfaceName: classNode->getInterfaces()) {
-            auto interface = interfaces.find(interfaceName);
-            if (interface == interfaces.end()) {
-                throw CodegenException(fmt::format("interface {} not found", interfaceName));
-            }
-
-            for (auto interfaceMethod: interface->second->getMethods()) {
-                auto classMethod = std::find_if(classMethods.cbegin(), classMethods.cend(), [interfaceMethod](MethodDefNode *method) {
-                    return method->getFnDef()->getName() == interfaceMethod->getFnDecl()->getName();
-                });
-                if (classMethod == classMethods.cend()) {
-                    throw CodegenException(fmt::format("interface method {}::{} must be implemented", interfaceName, interfaceMethod->getFnDecl()->getName()));
-                }
-
-                if (!compareDeclAndDef(interfaceMethod, *classMethod)) {
-                    throw CodegenException(
-                            fmt::format("declaration of {}::{} must be compatible with interface {}", classNode->getName(),
-                                        (*classMethod)->getFnDef()->getName(), interfaceName));
-                }
-            }
-        }
-    }
-
     void Codegen::checkAbstractMethods(ClassNode *classNode) const {
         if (classNode->getParent().empty()) {
             return;
@@ -293,35 +265,6 @@ namespace X::Codegen {
                                     (*classMethod)->getFnDef()->getName(), methodName));
             }
         }
-    }
-
-    bool Codegen::compareDeclAndDef(MethodDeclNode *declNode, MethodDefNode *defNode) const {
-        if (declNode->getAccessModifier() != defNode->getAccessModifier()) {
-            return false;
-        }
-
-        if (declNode->getIsStatic() != defNode->getIsStatic()) {
-            return false;
-        }
-
-        auto fnDecl = declNode->getFnDecl();
-        auto fnDef = defNode->getFnDef();
-
-        if (fnDecl->getReturnType() != fnDef->getReturnType()) {
-            return false;
-        }
-
-        if (fnDecl->getArgs().size() != fnDef->getArgs().size()) {
-            return false;
-        }
-
-        for (auto i = 0; i < fnDecl->getArgs().size(); i++) {
-            if (fnDecl->getArgs()[i]->getType() != fnDef->getArgs()[i]->getType()) {
-                return false;
-            }
-        }
-
-        return true;
     }
 
     std::pair<llvm::Function *, llvm::Type *> Codegen::findMethod(llvm::StructType *type, const std::string &methodName) const {

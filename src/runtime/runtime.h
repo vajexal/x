@@ -8,7 +8,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 
-#include "string.h"
+#include "runtime/string.h"
 #include "mangler.h"
 
 namespace X::Runtime {

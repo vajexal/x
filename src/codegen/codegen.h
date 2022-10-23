@@ -62,7 +62,6 @@ namespace X::Codegen {
         llvm::Value *that;
         ClassDecl *self; // current class in static context
         std::map<std::string, ClassDecl> classes;
-        std::map<std::string, InterfaceNode *> interfaces; // todo remove from codegen
 
     public:
         Codegen(llvm::LLVMContext &context, llvm::IRBuilder<> &builder, llvm::Module &module) : context(context), builder(builder), module(module) {}
@@ -113,9 +112,7 @@ namespace X::Codegen {
         llvm::Type *deref(llvm::Type *type) const;
 
         void genFn(const std::string &name, const std::vector<ArgNode *> &args, const Type &returnType, StatementListNode *body, std::optional<Type> thisType = std::nullopt);
-        void checkInterfaces(ClassNode *classNode) const; // todo remove from codegen
         void checkAbstractMethods(ClassNode *classNode) const; // todo remove from codegen
-        bool compareDeclAndDef(MethodDeclNode *declNode, MethodDefNode *defNode) const;
         std::pair<llvm::Function *, llvm::Type *> findMethod(llvm::StructType *type, const std::string &methodName) const;
         bool isStringType(llvm::Type *type) const;
         llvm::Value *compareStrings(llvm::Value *first, llvm::Value *second) const;
@@ -123,14 +120,14 @@ namespace X::Codegen {
     };
 
     class CodegenException : public std::exception {
-        const char *message;
+        std::string message;
 
     public:
         CodegenException(const char *m) : message(m) {}
-        CodegenException(const std::string &s) : message(s.c_str()) {}
+        CodegenException(std::string s) : message(std::move(s)) {}
 
         const char *what() const noexcept override {
-            return message;
+            return message.c_str();
         }
     };
 }

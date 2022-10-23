@@ -4,6 +4,15 @@
 #include "pipeline.h"
 
 namespace X::Pipes {
+    class ParseCode : public Pipe {
+        std::string code;
+
+    public:
+        ParseCode(std::string code) : code(std::move(code)) {}
+
+        StatementListNode *handle(StatementListNode *node) override;
+    };
+
     class ParseCodeException : public std::exception {
         const char *message;
 
@@ -13,15 +22,6 @@ namespace X::Pipes {
         const char *what() const noexcept override {
             return message;
         }
-    };
-
-    class ParseCode : public Pipe {
-        std::string code;
-
-    public:
-        ParseCode(std::string code) : code(std::move(code)) {}
-
-        StatementListNode *handle(StatementListNode *node) override;
     };
 }
 
