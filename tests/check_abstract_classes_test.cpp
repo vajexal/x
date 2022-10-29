@@ -23,6 +23,13 @@ fn main() int {
 INSTANTIATE_TEST_SUITE_P(Code, CheckAbstractClassesTest, testing::Values(
         std::make_pair(
                 R"code(
+class Foo {
+    abstract public fn a() void
+}
+)code",
+                "class Foo must be declared abstract"),
+        std::make_pair(
+                R"code(
 class Bar extends Foo {
 }
 )code",

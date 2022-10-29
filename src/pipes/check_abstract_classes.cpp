@@ -18,6 +18,10 @@ namespace X::Pipes {
     void CheckAbstractClasses::checkClass(ClassNode *node) {
         auto &className = node->getName();
 
+        if (!node->getMembers()->getAbstractMethods().empty() && !node->isAbstract()) {
+            throw CheckAbstractClassesException(fmt::format("class {} must be declared abstract", className));
+        }
+
         if (node->hasParent() && !classAbstractMethods.contains(node->getParent())) {
             throw CheckAbstractClassesException(fmt::format("class {} not found", node->getParent()));
         }

@@ -13,10 +13,6 @@ namespace X::Codegen {
         ClassDecl classDecl;
         uint64_t propIndex = 0;
 
-        if (!node->getMembers()->getAbstractMethods().empty() && !node->isAbstract()) {
-            throw CodegenException(fmt::format("class {} must be declared abstract", name));
-        }
-
         classDecl.isAbstract = node->isAbstract();
 
         if (node->hasParent()) {
