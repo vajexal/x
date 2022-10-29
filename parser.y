@@ -76,6 +76,10 @@
 %token PRIVATE "private"
 %token ABSTRACT "abstract"
 
+%nterm <StatementListNode *> wrapped_top_statement_list
+%nterm <StatementListNode *> top_statement_list
+%nterm <Node *> wrapped_top_statement
+%nterm <Node *> top_statement
 %nterm <StatementListNode *> wrapped_statement_list
 %nterm <StatementListNode *> statement_list
 %nterm <Node *> wrapped_statement
@@ -111,7 +115,7 @@
 %%
 
 start:
-wrapped_statement_list { driver.root = $1; }
+wrapped_top_statement_list { driver.root = $1; }
 ;
 
 newlines:
@@ -122,6 +126,19 @@ newlines:
 maybe_newlines:
 %empty
 | maybe_newlines '\n'
+;
+
+wrapped_top_statement_list:
+maybe_newlines top_statement_list { $$ = $2; }
+;
+
+top_statement_list:
+%empty { $$ = new StatementListNode; }
+| top_statement_list wrapped_top_statement { $1->add($2); $$ = $1; }
+;
+
+wrapped_top_statement:
+top_statement newlines { $$ = $1; }
 ;
 
 wrapped_statement_list:
@@ -137,6 +154,13 @@ wrapped_statement:
 statement newlines { $$ = $1; }
 ;
 
+top_statement:
+statement { $$ = $1; }
+| class_decl { $$ = $1; }
+| interface_decl { $$ = $1; }
+| fn_def { $$ = $1; }
+;
+
 statement:
 expr { $$ = $1; }
 | var_decl { $$ = $1; }
@@ -145,15 +169,12 @@ expr { $$ = $1; }
 | IDENTIFIER SCOPE IDENTIFIER '=' expr { $$ = new AssignStaticPropNode(std::move($1), std::move($3), $5); }
 | if_statement { $$ = $1; }
 | while_statement { $$ = $1; }
-| fn_def { $$ = $1; }
 | BREAK { $$ = new BreakNode; }
 | CONTINUE { $$ = new ContinueNode; }
 | RETURN { $$ = new ReturnNode; }
 | RETURN expr { $$ = new ReturnNode($2); }
 | PRINTLN '(' expr ')' { $$ = new PrintlnNode($3); }
 | COMMENT { $$ = new CommentNode(std::move($1)); }
-| class_decl { $$ = $1; }
-| interface_decl { $$ = $1; }
 ;
 
 expr:
