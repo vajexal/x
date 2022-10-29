@@ -135,6 +135,10 @@ namespace X::Codegen {
     }
 
     llvm::Value *Codegen::gen(DeclareNode *node) {
+        if (node->getType().getTypeID() == Type::TypeID::VOID) {
+            throw CodegenException("invalid type");
+        }
+
         auto type = mapType(node->getType());
         auto &name = node->getName();
         auto stackVar = createAlloca(type, name);

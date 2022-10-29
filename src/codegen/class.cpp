@@ -28,6 +28,10 @@ namespace X::Codegen {
         }
 
         for (auto prop: members->getProps()) {
+            if (prop->getType().getTypeID() == Type::TypeID::VOID) {
+                throw CodegenException("invalid type");
+            }
+
             auto propName = prop->getName();
             auto type = mapType(prop->getType());
             if (prop->getIsStatic()) {

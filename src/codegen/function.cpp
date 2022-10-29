@@ -41,6 +41,10 @@ namespace X::Codegen {
             paramTypes.push_back(mapType(thisType.value()));
         }
         for (auto arg: args) {
+            if (arg->getType().getTypeID() == Type::TypeID::VOID) {
+                throw CodegenException("invalid type");
+            }
+
             paramTypes.push_back(mapType(arg->getType()));
         }
 
