@@ -119,7 +119,7 @@ namespace X::Pipes {
     }
 
     void PrintAst::printNode(CommentNode *node, int level) {
-        std::cout << "// " << node->getComment() << std::endl;
+        std::cout << "//" << node->getComment() << std::endl;
     }
 
     void PrintAst::printNode(ClassNode *node, int level) {

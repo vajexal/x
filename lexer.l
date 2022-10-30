@@ -67,7 +67,7 @@ yy::parser::symbol_type yylex(Driver &driver) {
       "<=" { return yy::parser::make_SMALLER_OR_EQUAL(); }
       ">=" { return yy::parser::make_GREATER_OR_EQUAL(); }
 
-      "//"[^\n\x00]* { return yy::parser::make_COMMENT(std::string(yypmatch[0], yypmatch[1] - yypmatch[0])); }
+      "//"([^\n\x00]*) { return yy::parser::make_COMMENT(std::string(yypmatch[2], yypmatch[3] - yypmatch[2])); }
 
       [0-9]+"."[0-9]+ { return yy::parser::make_FLOAT(std::atof(yypmatch[0])); }
       "0"|[+\-]?[1-9][0-9]* { return yy::parser::make_INT(std::atoi(yypmatch[0])); }
