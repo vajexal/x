@@ -124,7 +124,9 @@ namespace X {
         llvm::Value *gen(Codegen::Codegen &codegen) override;
 
         void add(Node *node) { children.push_back(node); }
-        bool isLastNodeTerminate() const { return children.back()->isTerminate(); }
+        bool isLastNodeTerminate() const {
+            return !children.empty() && children.back()->isTerminate();
+        }
         const std::vector<Node *> &getChildren() const { return children; }
     };
 
