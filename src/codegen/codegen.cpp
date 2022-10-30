@@ -47,6 +47,9 @@ namespace X::Codegen {
                 return llvm::ConstantFP::get(llvm::Type::getFloatTy(context), 0);
             case Type::TypeID::BOOL:
                 return llvm::ConstantInt::get(llvm::Type::getInt1Ty(context), 0);
+            case Type::TypeID::STRING:
+                // todo optimize
+                return llvm::ConstantPointerNull::get(llvm::StructType::getTypeByName(context, Runtime::String::CLASS_NAME)->getPointerTo());
             default:
                 throw CodegenException("invalid type");
         }
