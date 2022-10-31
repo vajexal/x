@@ -228,6 +228,10 @@ namespace X::Pipes {
 
     void PrintAst::printNode(NewNode *node, int level) {
         std::cout << "new " << node->getName() << std::endl;
+
+        for (auto &arg: node->getArgs()) {
+            arg->print(*this, level + 1);
+        }
     }
 
     void PrintAst::printNode(MethodDeclNode *node, int level) {

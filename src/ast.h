@@ -637,14 +637,21 @@ namespace X {
 
     class NewNode : public ExprNode {
         std::string name;
+        std::vector<ExprNode *> args;
 
     public:
-        NewNode(std::string name) : name(std::move(name)) {}
+        NewNode(std::string name, std::vector<ExprNode *> args) : name(std::move(name)), args(std::move(args)) {}
+        ~NewNode() {
+            for (auto expr: args) {
+                delete expr;
+            }
+        }
 
         void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
 
         const std::string &getName() const { return name; }
+        const std::vector<ExprNode *> &getArgs() const { return args; }
     };
 
     class InterfaceNode : public Node {

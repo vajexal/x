@@ -204,7 +204,7 @@ INC identifier { $$ = new UnaryNode(OpType::PRE_INC, $2); }
 | identifier '.' IDENTIFIER '(' call_arg_list ')' { $$ = new MethodCallNode($1, std::move($3), std::move($5)); }
 | IDENTIFIER SCOPE IDENTIFIER { $$ = new FetchStaticPropNode(std::move($1), std::move($3)); }
 | IDENTIFIER SCOPE IDENTIFIER '(' call_arg_list ')' { $$ = new StaticMethodCallNode(std::move($1), std::move($3), std::move($5)); }
-| NEW IDENTIFIER { $$ = new NewNode(std::move($2)); }
+| NEW IDENTIFIER '(' call_arg_list ')' { $$ = new NewNode(std::move($2), std::move($4)); }
 ;
 
 type:

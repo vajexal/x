@@ -5,8 +5,8 @@
 
 namespace X::Codegen {
     llvm::Value *Codegen::gen(ClassNode *node) {
-        auto name = node->getName();
-        auto mangledName = mangler.mangleClass(name);
+        auto &name = node->getName();
+        auto &mangledName = mangler.mangleClass(name);
         auto members = node->getMembers();
         std::vector<llvm::Type *> props;
         props.reserve(members->getProps().size());
@@ -16,7 +16,7 @@ namespace X::Codegen {
         classDecl.isAbstract = node->isAbstract();
 
         if (node->hasParent()) {
-            auto mangledParentName = mangler.mangleClass(node->getParent());
+            auto &mangledParentName = mangler.mangleClass(node->getParent());
             auto parentClassDecl = classes.find(mangledParentName);
             if (parentClassDecl == classes.end()) {
                 throw CodegenException(fmt::format("class {} not found", node->getParent()));
@@ -32,10 +32,10 @@ namespace X::Codegen {
                 throw CodegenException("invalid type");
             }
 
-            auto propName = prop->getName();
+            auto &propName = prop->getName();
             auto type = mapType(prop->getType());
             if (prop->getIsStatic()) {
-                auto mangledPropName = mangler.mangleStaticProp(mangledName, propName);
+                auto &mangledPropName = mangler.mangleStaticProp(mangledName, propName);
                 auto global = llvm::cast<llvm::GlobalVariable>(module.getOrInsertGlobal(mangledPropName, type));
                 global->setInitializer(getDefaultValue(prop->getType()));
                 classDecl.staticProps[propName] = {global, prop->getAccessModifier()};
@@ -52,10 +52,16 @@ namespace X::Codegen {
 
         for (auto method: members->getMethods()) {
             auto fn = method->getFnDef();
-            auto fnName = mangler.mangleMethod(mangledName, fn->getName());
+            auto isConstructor = fn->getName() == CONSTRUCTOR_FN_NAME;
+            if (isConstructor) {
+                checkConstructor(method, name);
+            }
+            auto &fnName = mangler.mangleMethod(mangledName, fn->getName());
             std::optional<Type> thisType = method->getIsStatic() ? std::nullopt : std::optional<Type>(std::move(Type(name)));
             genFn(fnName, fn->getArgs(), fn->getReturnType(), fn->getBody(), thisType);
-            classes[mangledName].methods[fn->getName()] = {method->getAccessModifier()};
+            if (!isConstructor) {
+                self->methods[fn->getName()] = {method->getAccessModifier()};
+            }
         }
 
         self = nullptr;
@@ -107,9 +113,9 @@ namespace X::Codegen {
     }
 
     llvm::Value *Codegen::gen(StaticMethodCallNode *node) {
-        const auto &methodName = node->getMethodName();
-        auto className = mangler.mangleClass(node->getClassName());
-        auto classDecl = getClass(className);
+        auto &methodName = node->getMethodName();
+        auto &className = mangler.mangleClass(node->getClassName());
+        auto &classDecl = getClass(className);
         auto [callee, thisType] = findMethod(classDecl.type, methodName);
         if (!callee) {
             throw CodegenException("method is not found: " + methodName);
@@ -144,12 +150,25 @@ namespace X::Codegen {
     }
 
     llvm::Value *Codegen::gen(NewNode *node) {
-        auto classDecl = getClass(mangler.mangleClass(node->getName()));
+        auto &mangledClassName = mangler.mangleClass(node->getName());
+        auto &classDecl = getClass(mangledClassName);
         if (classDecl.isAbstract) {
             throw CodegenException("cannot instantiate abstract class " + node->getName());
         }
 
-        return builder.CreateAlloca(classDecl.type);
+        auto obj = builder.CreateAlloca(classDecl.type);
+        auto constructor = module.getFunction(mangler.mangleMethod(mangledClassName, CONSTRUCTOR_FN_NAME));
+        if (constructor) {
+            std::vector<llvm::Value *> args;
+            args.reserve(node->getArgs().size() + 1);
+            args.push_back(obj);
+            for (auto arg: node->getArgs()) {
+                args.push_back(arg->gen(*this));
+            }
+            builder.CreateCall(constructor, args);
+        }
+
+        return obj;
     }
 
     llvm::Value *Codegen::gen(InterfaceNode *node) {
@@ -163,7 +182,7 @@ namespace X::Codegen {
         }
 
         auto className = type->getStructName();
-        auto classDecl = getClass(className.str());
+        auto &classDecl = getClass(className.str());
         auto currentClassDecl = &classDecl;
         while (currentClassDecl) {
             auto prop = currentClassDecl->props.find(name);
@@ -184,8 +203,8 @@ namespace X::Codegen {
     }
 
     std::pair<llvm::Type *, llvm::Value *> Codegen::getStaticProp(const std::string &className, const std::string &propName) const {
-        auto mangledClassName = mangler.mangleClass(className);
-        auto classDecl = getClass(mangledClassName);
+        auto &mangledClassName = mangler.mangleClass(className);
+        auto &classDecl = getClass(mangledClassName);
         auto currentClassDecl = &classDecl;
         while (currentClassDecl) {
             auto prop = currentClassDecl->staticProps.find(propName);
@@ -212,7 +231,7 @@ namespace X::Codegen {
     }
 
     AccessModifier Codegen::getMethodAccessModifier(const std::string &mangledClassName, const std::string &methodName) const {
-        auto classDecl = getClass(mangledClassName);
+        auto &classDecl = getClass(mangledClassName);
         auto method = classDecl.methods.find(methodName);
         if (method == classDecl.methods.end()) {
             throw CodegenException("method not found: " + methodName);
@@ -221,20 +240,32 @@ namespace X::Codegen {
     }
 
     llvm::Function *Codegen::getConstructor(const std::string &mangledClassName) const {
-        return module.getFunction(mangler.mangleMethod(mangledClassName, "construct"));
+        return module.getFunction(mangler.mangleMethod(mangledClassName, CONSTRUCTOR_FN_NAME));
+    }
+
+    void Codegen::checkConstructor(MethodDefNode *node, const std::string &className) const {
+        if (node->getIsStatic()) {
+            throw CodegenException(fmt::format("{}::{} cannot be static", className, CONSTRUCTOR_FN_NAME));
+        }
+        if (node->getAccessModifier() != AccessModifier::PUBLIC) {
+            throw CodegenException(fmt::format("{}::{} must be public", className, CONSTRUCTOR_FN_NAME));
+        }
+        if (node->getFnDef()->getReturnType().getTypeID() != Type::TypeID::VOID) {
+            throw CodegenException(fmt::format("{}::{} must return void", className, CONSTRUCTOR_FN_NAME));
+        }
     }
 
     std::pair<llvm::Function *, llvm::Type *> Codegen::findMethod(llvm::StructType *type, const std::string &methodName) const {
         if (isStringType(type)) {
-            auto name = mangler.mangleMethod(type->getName().str(), methodName);
+            auto &name = mangler.mangleMethod(type->getName().str(), methodName);
             return {module.getFunction(name), nullptr};
         }
 
-        auto classDecl = getClass(type->getName().str());
-        const ClassDecl *currentClassDecl = &classDecl;
+        auto &classDecl = getClass(type->getName().str());
+        auto currentClassDecl = &classDecl;
         while (currentClassDecl) {
             auto className = currentClassDecl->type->getName().str();
-            auto name = mangler.mangleMethod(className, methodName);
+            auto &name = mangler.mangleMethod(className, methodName);
             auto callee = module.getFunction(name);
             if (callee) {
                 auto methodAccessModifier = getMethodAccessModifier(className, methodName);

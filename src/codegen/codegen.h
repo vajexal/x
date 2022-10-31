@@ -49,6 +49,8 @@ namespace X::Codegen {
     };
 
     class Codegen {
+        static inline const std::string CONSTRUCTOR_FN_NAME = "construct";
+
         llvm::LLVMContext &context;
         llvm::IRBuilder<> &builder;
         llvm::Module &module;
@@ -102,6 +104,7 @@ namespace X::Codegen {
         llvm::AllocaInst *createAlloca(llvm::Type *type, const std::string &name = "") const;
         AccessModifier getMethodAccessModifier(const std::string &mangledClassName, const std::string &methodName) const;
         llvm::Function *getConstructor(const std::string &mangledClassName) const;
+        void checkConstructor(MethodDefNode *node, const std::string &className) const;
 
         std::pair<llvm::Value *, llvm::Value *> upcast(llvm::Value *a, llvm::Value *b) const;
         std::pair<llvm::Value *, llvm::Value *> forceUpcast(llvm::Value *a, llvm::Value *b) const;
