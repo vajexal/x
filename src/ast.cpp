@@ -59,6 +59,44 @@ namespace X {
         return out;
     }
 
+    bool ArgNode::operator==(const ArgNode &other) const {
+        return type == other.type && name == other.name;
+    }
+
+    bool ArgNode::operator!=(const ArgNode &other) const {
+        return !(*this == other);
+    }
+
+    bool FnDeclNode::operator==(const FnDeclNode &other) const {
+        if (name != other.name || returnType != other.returnType) {
+            return false;
+        }
+
+        if (args.size() != other.args.size()) {
+            return false;
+        }
+
+        for (auto i = 0; i < args.size(); i++) {
+            if (*args[i] != *other.args[i]) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    bool FnDeclNode::operator!=(const FnDeclNode &other) const {
+        return !(*this == other);
+    }
+
+    bool MethodDeclNode::operator==(const MethodDeclNode &other) const {
+        return *fnDecl == *other.fnDecl && accessModifier == other.accessModifier && isStatic == other.isStatic;
+    }
+
+    bool MethodDeclNode::operator!=(const MethodDeclNode &other) const {
+        return !(*this == other);
+    }
+
     void ScalarNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<ScalarNode>(this, level); }
     void StatementListNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<StatementListNode>(this, level); }
     void UnaryNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<UnaryNode>(this, level); }

@@ -266,6 +266,9 @@ namespace X {
 
         const Type &getType() const { return type; }
         const std::string &getName() const { return name; }
+
+        bool operator==(const ArgNode &other) const;
+        bool operator!=(const ArgNode &other) const;
     };
 
     class FnDeclNode : public Node {
@@ -288,6 +291,9 @@ namespace X {
         const std::string &getName() const { return name; }
         const std::vector<ArgNode *> &getArgs() const { return args; }
         const Type &getReturnType() const { return returnType; }
+
+        bool operator==(const FnDeclNode &other) const;
+        bool operator!=(const FnDeclNode &other) const;
     };
 
     class FnDefNode : public Node {
@@ -432,6 +438,9 @@ namespace X {
         FnDeclNode *getFnDecl() const { return fnDecl; }
         bool getIsStatic() const { return isStatic; }
         AccessModifier getAccessModifier() const { return accessModifier; }
+
+        bool operator==(const MethodDeclNode &other) const;
+        bool operator!=(const MethodDeclNode &other) const;
     };
 
     class MethodDefNode : public Node {
@@ -640,10 +649,12 @@ namespace X {
 
     class InterfaceNode : public Node {
         std::string name;
+        std::vector<std::string> parents;
         std::vector<MethodDeclNode *> methods;
 
     public:
-        InterfaceNode(std::string name, std::vector<MethodDeclNode *> methods) : name(std::move(name)), methods(std::move(methods)) {}
+        InterfaceNode(std::string name, std::vector<std::string> parents, std::vector<MethodDeclNode *> methods) :
+                name(std::move(name)), parents(std::move(parents)), methods(std::move(methods)) {}
         ~InterfaceNode() {
             for (auto method: methods) {
                 delete method;
@@ -654,7 +665,9 @@ namespace X {
         llvm::Value *gen(Codegen::Codegen &codegen) override;
 
         const std::string &getName() const { return name; }
+        const std::vector<std::string> &getParents() const { return parents; }
         const std::vector<MethodDeclNode *> &getMethods() const { return methods; }
+        bool hasParents() const { return !parents.empty(); }
     };
 }
 

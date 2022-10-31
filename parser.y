@@ -109,6 +109,7 @@
 %nterm <bool> optional_static
 %nterm <std::vector<std::string>> class_name_list
 %nterm <InterfaceNode *> interface_decl
+%nterm <std::vector<std::string>> extends_list
 %nterm <std::vector<MethodDeclNode *>> interface_methods_list
 %nterm <MethodDeclNode *> method_decl
 
@@ -323,7 +324,12 @@ IDENTIFIER { $$ = std::vector<std::string>(); $$.push_back(std::move($1)); }
 ;
 
 interface_decl:
-INTERFACE IDENTIFIER '{' newlines interface_methods_list '}' { $$ = new InterfaceNode(std::move($2), std::move($5)); }
+INTERFACE IDENTIFIER extends_list '{' newlines interface_methods_list '}' { $$ = new InterfaceNode(std::move($2), std::move($3), std::move($6)); }
+;
+
+extends_list:
+%empty { $$ = std::vector<std::string>(); }
+| EXTENDS class_name_list { $$ = std::move($2); }
 ;
 
 interface_methods_list:

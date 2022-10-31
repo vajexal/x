@@ -7,10 +7,16 @@
 
 namespace X::Pipes {
     class CheckInterfaces : public Pipe {
-        std::map<std::string, InterfaceNode *> interfaces;
+        // interface name -> {method name -> method decl}
+        std::map<std::string, std::map<std::string, MethodDeclNode *>> interfaceMethods;
 
     public:
         StatementListNode *handle(StatementListNode *node) override;
+
+    private:
+        void addInterface(InterfaceNode *node);
+        void addMethodToInterface(const std::string &interfaceName, MethodDeclNode *node);
+        void checkClass(ClassNode *node);
     };
 
     class CheckInterfacesException : public std::exception {

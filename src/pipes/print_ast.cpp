@@ -241,7 +241,21 @@ namespace X::Pipes {
     }
 
     void PrintAst::printNode(InterfaceNode *node, int level) {
-        std::cout << "interface " << node->getName() << std::endl;
+        std::cout << "interface " << node->getName();
+
+        if (node->hasParents()) {
+            std::cout << " extends ";
+
+            auto &interfaces = node->getParents();
+            for (auto it = interfaces.cbegin(); it != interfaces.cend(); it++) {
+                if (it != interfaces.cbegin()) {
+                    std::cout << ", ";
+                }
+                std::cout << *it;
+            }
+        }
+
+        std::cout << std::endl;
 
         for (auto &method: node->getMethods()) {
             method->print(*this, level);

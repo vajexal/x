@@ -13,6 +13,8 @@ namespace X::Pipes {
 
     public:
         StatementListNode *handle(StatementListNode *node) override;
+
+    private:
         void checkClass(ClassNode *node);
     };
 

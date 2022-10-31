@@ -78,5 +78,43 @@ class Bar implements Foo {
     }
 }
 )code",
-                "declaration of Bar::a must be compatible with interface Foo")
+                "declaration of Bar::a must be compatible with interface Foo"),
+        std::make_pair(
+                R"code(
+interface A {
+    public fn a() void
+}
+
+interface B {
+    public fn b() void
+}
+
+interface C extends A, B {
+    public fn c() void
+}
+
+class D implements C {
+    public fn a() void {
+    }
+
+    public fn c() void {
+    }
+}
+)code",
+                "interface method C::b must be implemented"),
+        std::make_pair(
+                R"code(
+interface A {
+    public fn a(int foo) void
+}
+
+interface B {
+    public fn a(int bar) void
+}
+
+interface C extends A, B {
+    public fn c() void
+}
+)code",
+                "interface method C::a is incompatible")
 ));

@@ -22,7 +22,7 @@ namespace X {
         }
 
         for (auto i = 0; i < fnDecl->getArgs().size(); i++) {
-            if (fnDecl->getArgs()[i]->getType() != fnDef->getArgs()[i]->getType()) {
+            if (*fnDecl->getArgs()[i] != *fnDef->getArgs()[i]) {
                 return false;
             }
         }
