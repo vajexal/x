@@ -11,8 +11,8 @@ class CompilerTest : public testing::TestWithParam<std::pair<std::string, std::s
 protected:
     Compiler compiler;
 
-    void compileAndTestOutput(const std::string &code, const std::string &expectedOutput);
-    void compileProgramAndTestOutput(const std::string &code, const std::string &expectedOutput);
+    void checkCode(const std::string &code, const std::string &expectedOutput);
+    void checkProgram(const std::string &code, const std::string &expectedOutput);
 };
 
 #endif //X_COMPILER_TEST_HELPER_H

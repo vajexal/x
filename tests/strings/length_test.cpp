@@ -5,7 +5,7 @@ class LengthTest : public CompilerTest {
 
 TEST_P(LengthTest, length) {
     auto [code, expectedOutput] = GetParam();
-    compileAndTestOutput(code, expectedOutput);
+    checkCode(code, expectedOutput);
 }
 
 INSTANTIATE_TEST_SUITE_P(Code, LengthTest, testing::Values(

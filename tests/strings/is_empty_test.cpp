@@ -5,7 +5,7 @@ class IsEmptyTest : public CompilerTest {
 
 TEST_P(IsEmptyTest, isEmpty) {
     auto [code, expectedOutput] = GetParam();
-    compileAndTestOutput(code, expectedOutput);
+    checkCode(code, expectedOutput);
 }
 
 INSTANTIATE_TEST_SUITE_P(Code, IsEmptyTest, testing::Values(

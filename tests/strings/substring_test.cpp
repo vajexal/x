@@ -5,7 +5,7 @@ class SubstringTest : public CompilerTest {
 
 TEST_P(SubstringTest, substring) {
     auto [code, expectedOutput] = GetParam();
-    compileAndTestOutput(code, expectedOutput);
+    checkCode(code, expectedOutput);
 }
 
 INSTANTIATE_TEST_SUITE_P(Code, SubstringTest, testing::Values(

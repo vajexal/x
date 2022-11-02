@@ -5,7 +5,7 @@ class TrimTest : public CompilerTest {
 
 TEST_P(TrimTest, trim) {
     auto [code, expectedOutput] = GetParam();
-    compileAndTestOutput(code, expectedOutput);
+    checkCode(code, expectedOutput);
 }
 
 // todo test other spaces

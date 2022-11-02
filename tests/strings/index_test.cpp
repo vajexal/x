@@ -5,7 +5,7 @@ class IndexTest : public CompilerTest {
 
 TEST_P(IndexTest, index) {
     auto [code, expectedOutput] = GetParam();
-    compileAndTestOutput(code, expectedOutput);
+    checkCode(code, expectedOutput);
 }
 
 INSTANTIATE_TEST_SUITE_P(Code, IndexTest, testing::Values(

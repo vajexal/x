@@ -5,7 +5,7 @@ class OperatorsTest : public CompilerTest {
 
 TEST_P(OperatorsTest, operators) {
     auto [code, expectedOutput] = GetParam();
-    compileAndTestOutput(code, expectedOutput);
+    checkCode(code, expectedOutput);
 }
 
 INSTANTIATE_TEST_SUITE_P(StringOperators, OperatorsTest, testing::Values(

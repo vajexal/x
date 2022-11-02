@@ -5,7 +5,7 @@ class StartsWithTest : public CompilerTest {
 
 TEST_P(StartsWithTest, startsWith) {
     auto [code, expectedOutput] = GetParam();
-    compileAndTestOutput(code, expectedOutput);
+    checkCode(code, expectedOutput);
 }
 
 INSTANTIATE_TEST_SUITE_P(Code, StartsWithTest, testing::Values(

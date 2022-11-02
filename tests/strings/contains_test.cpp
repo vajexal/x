@@ -5,7 +5,7 @@ class ContainsTest : public CompilerTest {
 
 TEST_P(ContainsTest, contains) {
     auto [code, expectedOutput] = GetParam();
-    compileAndTestOutput(code, expectedOutput);
+    checkCode(code, expectedOutput);
 }
 
 INSTANTIATE_TEST_SUITE_P(Code, ContainsTest, testing::Values(

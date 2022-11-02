@@ -6,7 +6,7 @@ class ClassTest : public CompilerTest {
 };
 
 TEST_F(ClassTest, construct) {
-    compileProgramAndTestOutput(R"code(
+    checkProgram(R"code(
 class Foo {
     fn construct(int a) void {
         println(a)
@@ -22,7 +22,7 @@ fn main() int {
 }
 
 TEST_F(ClassTest, constructorInheritance) {
-    compileProgramAndTestOutput(R"code(
+    checkProgram(R"code(
 class Foo {
     fn construct(int a) void {
         println(a)

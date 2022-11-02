@@ -1,6 +1,6 @@
 #include "compiler_test_helper.h"
 
-void CompilerTest::compileAndTestOutput(const std::string &code, const std::string &expectedOutput) {
+void CompilerTest::checkCode(const std::string &code, const std::string &expectedOutput) {
     auto program = R"code(
 fn main() int {
     )code" + code + R"code(
@@ -8,10 +8,10 @@ fn main() int {
 }
 )code";
 
-    compileProgramAndTestOutput(program, expectedOutput);
+    checkProgram(program, expectedOutput);
 }
 
-void CompilerTest::compileProgramAndTestOutput(const std::string &code, const std::string &expectedOutput) {
+void CompilerTest::checkProgram(const std::string &code, const std::string &expectedOutput) {
     testing::internal::CaptureStdout(); // todo customize compiler output stream
 
     compiler.compile(code);
