@@ -17,13 +17,10 @@ namespace X::Pipes {
 
     void CheckAbstractClasses::checkClass(ClassNode *node) {
         auto &className = node->getName();
+        auto &parentClassName = node->getParent();
 
         if (!node->getMembers()->getAbstractMethods().empty() && !node->isAbstract()) {
             throw CheckAbstractClassesException(fmt::format("class {} must be declared abstract", className));
-        }
-
-        if (node->hasParent() && !classAbstractMethods.contains(node->getParent())) {
-            throw CheckAbstractClassesException(fmt::format("class {} not found", node->getParent()));
         }
 
         if (node->isAbstract()) {
@@ -33,7 +30,7 @@ namespace X::Pipes {
 
             if (node->hasParent()) {
                 // copy abstract methods from parent class
-                classAbstractMethods[className] = classAbstractMethods[node->getParent()];
+                classAbstractMethods[className] = classAbstractMethods[parentClassName];
             }
 
             auto &abstractMethods = classAbstractMethods[className];
@@ -45,24 +42,24 @@ namespace X::Pipes {
         }
 
         // if class has no parent or parent class has no abstract methods then return
-        if (!node->hasParent() || classAbstractMethods[node->getParent()].empty()) {
+        if (!node->hasParent() || classAbstractMethods[parentClassName].empty()) {
             return;
         }
 
         auto classMethods = node->getMembers()->getMethods();
-        for (auto &[methodName, methodDecl]: classAbstractMethods[node->getParent()]) {
+        for (auto &[methodName, methodDecl]: classAbstractMethods[parentClassName]) {
             // todo optimize
             auto methodDef = std::find_if(classMethods.cbegin(), classMethods.cend(), [methodName = methodName](MethodDefNode *method) {
                 return method->getFnDef()->getName() == methodName;
             });
 
             if (methodDef == classMethods.cend()) {
-                throw CheckAbstractClassesException(fmt::format("abstract method {}::{} must be implemented", node->getParent(), methodName));
+                throw CheckAbstractClassesException(fmt::format("abstract method {}::{} must be implemented", parentClassName, methodName));
             }
 
             if (!compareDeclAndDef(methodDecl, *methodDef)) {
                 throw CheckAbstractClassesException(fmt::format("declaration of {}::{} must be compatible with abstract class {}",
-                                                                className, (*methodDef)->getFnDef()->getName(), node->getParent()));
+                                                                className, (*methodDef)->getFnDef()->getName(), parentClassName));
             }
         }
     }

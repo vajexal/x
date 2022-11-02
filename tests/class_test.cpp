@@ -42,3 +42,19 @@ fn main() int {
         ASSERT_STREQ(e.what(), "method not found: construct");
     }
 }
+
+TEST_F(ClassTest, inheritance) {
+    try {
+        compiler.compile(R"code(
+class Bar extends Foo {
+}
+
+fn main() int {
+    return 0
+}
+)code");
+        FAIL() << "expected CodegenException";
+    } catch (const Codegen::CodegenException &e) {
+        ASSERT_STREQ(e.what(), "class Foo not found");
+    }
+}

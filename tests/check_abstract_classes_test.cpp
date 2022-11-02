@@ -30,12 +30,6 @@ class Foo {
                 "class Foo must be declared abstract"),
         std::make_pair(
                 R"code(
-class Bar extends Foo {
-}
-)code",
-                "class Foo not found"),
-        std::make_pair(
-                R"code(
 abstract class Foo {
     abstract public fn a() void
 }
