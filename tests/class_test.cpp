@@ -40,6 +40,24 @@ fn main() int {
 )code", "10\n");
 }
 
+TEST_F(ClassTest, constructorArgsMismatch) {
+    try {
+        compiler.compile(R"code(
+class Foo {
+}
+
+fn main() int {
+    Foo foo = new Foo(10)
+
+    return 0
+}
+)code");
+        FAIL() << "expected CodegenException";
+    } catch (const Codegen::CodegenException &e) {
+        ASSERT_STREQ(e.what(), "constructor args mismatch");
+    }
+}
+
 TEST_F(ClassTest, constructorIsNotCallable) {
     try {
         compiler.compile(R"code(
@@ -57,7 +75,7 @@ fn main() int {
 }
 )code");
         FAIL() << "expected CodegenException";
-    } catch (const Codegen::CodegenException &e) {
+    } catch (const Codegen::MethodNotFoundException &e) {
         ASSERT_STREQ(e.what(), "method not found: construct");
     }
 }

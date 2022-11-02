@@ -141,7 +141,11 @@ namespace X::Codegen {
         auto obj = builder.CreateAlloca(classDecl.type);
         try {
             callMethod(obj, CONSTRUCTOR_FN_NAME, node->getArgs());
-        } catch (const MethodNotFoundException &e) {}
+        } catch (const MethodNotFoundException &e) {
+            if (!node->getArgs().empty()) {
+                throw CodegenException("constructor args mismatch");
+            }
+        }
 
         return obj;
     }
