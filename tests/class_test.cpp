@@ -21,6 +21,25 @@ fn main() int {
 )code", "10\n");
 }
 
+TEST_F(ClassTest, constructorInheritance) {
+    compileProgramAndTestOutput(R"code(
+class Foo {
+    fn construct(int a) void {
+        println(a)
+    }
+}
+
+class Bar extends Foo {
+}
+
+fn main() int {
+    Bar bar = new Bar(10)
+
+    return 0
+}
+)code", "10\n");
+}
+
 TEST_F(ClassTest, constructorIsNotCallable) {
     try {
         compiler.compile(R"code(

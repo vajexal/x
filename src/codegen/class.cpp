@@ -64,6 +64,8 @@ namespace X::Codegen {
             }
         }
 
+        self->methods[CONSTRUCTOR_FN_NAME] = {AccessModifier::PUBLIC};
+
         self = nullptr;
 
         return nullptr;
@@ -84,32 +86,12 @@ namespace X::Codegen {
     llvm::Value *Codegen::gen(MethodCallNode *node) {
         auto obj = node->getObj()->gen(*this);
         auto &methodName = node->getName();
-        auto type = deref(obj->getType());
-        if (!type->isStructTy()) {
-            throw CodegenException("invalid method call operand");
+
+        if (methodName == CONSTRUCTOR_FN_NAME) {
+            throw MethodNotFoundException(methodName);
         }
 
-        auto [callee, thisType] = findMethod(llvm::cast<llvm::StructType>(type), methodName);
-        if (!callee) {
-            throw CodegenException("method is not found: " + methodName);
-        }
-
-        if (callee->arg_size() != (node->getArgs().size() + 1)) {
-            throw CodegenException("callee args mismatch");
-        }
-
-        if (thisType) {
-            obj = builder.CreateBitCast(obj, thisType->getPointerTo());
-        }
-
-        std::vector<llvm::Value *> args;
-        args.reserve(node->getArgs().size() + 1);
-        args.push_back(obj);
-        for (auto arg: node->getArgs()) {
-            args.push_back(arg->gen(*this));
-        }
-
-        return builder.CreateCall(callee, args);
+        return callMethod(obj, methodName, node->getArgs());
     }
 
     llvm::Value *Codegen::gen(StaticMethodCallNode *node) {
@@ -118,7 +100,7 @@ namespace X::Codegen {
         auto &classDecl = getClass(className);
         auto [callee, thisType] = findMethod(classDecl.type, methodName);
         if (!callee) {
-            throw CodegenException("method is not found: " + methodName);
+            throw CodegenException("method not found: " + methodName);
         }
 
         if (callee->arg_size() != node->getArgs().size()) {
@@ -157,16 +139,9 @@ namespace X::Codegen {
         }
 
         auto obj = builder.CreateAlloca(classDecl.type);
-        auto constructor = module.getFunction(mangler.mangleMethod(mangledClassName, CONSTRUCTOR_FN_NAME));
-        if (constructor) {
-            std::vector<llvm::Value *> args;
-            args.reserve(node->getArgs().size() + 1);
-            args.push_back(obj);
-            for (auto arg: node->getArgs()) {
-                args.push_back(arg->gen(*this));
-            }
-            builder.CreateCall(constructor, args);
-        }
+        try {
+            callMethod(obj, CONSTRUCTOR_FN_NAME, node->getArgs());
+        } catch (const MethodNotFoundException &e) {}
 
         return obj;
     }
@@ -255,6 +230,35 @@ namespace X::Codegen {
         }
     }
 
+    llvm::Value *Codegen::callMethod(llvm::Value *obj, const std::string &methodName, const std::vector<ExprNode *> &args) {
+        auto type = deref(obj->getType());
+        if (!type->isStructTy()) {
+            throw CodegenException("invalid method call operand");
+        }
+
+        auto [callee, thisType] = findMethod(llvm::cast<llvm::StructType>(type), methodName);
+        if (!callee) {
+            throw MethodNotFoundException(methodName);
+        }
+
+        if (callee->arg_size() != (args.size() + 1)) {
+            throw CodegenException("callee args mismatch");
+        }
+
+        if (thisType) {
+            obj = builder.CreateBitCast(obj, thisType->getPointerTo());
+        }
+
+        std::vector<llvm::Value *> llvmArgs;
+        llvmArgs.reserve(args.size() + 1);
+        llvmArgs.push_back(obj);
+        for (auto arg: args) {
+            llvmArgs.push_back(arg->gen(*this));
+        }
+
+        return builder.CreateCall(callee, llvmArgs);
+    }
+
     std::pair<llvm::Function *, llvm::Type *> Codegen::findMethod(llvm::StructType *type, const std::string &methodName) const {
         if (isStringType(type)) {
             auto &name = mangler.mangleMethod(type->getName().str(), methodName);
@@ -265,8 +269,7 @@ namespace X::Codegen {
         auto currentClassDecl = &classDecl;
         while (currentClassDecl) {
             auto className = currentClassDecl->type->getName().str();
-            auto &name = mangler.mangleMethod(className, methodName);
-            auto callee = module.getFunction(name);
+            auto callee = module.getFunction(mangler.mangleMethod(className, methodName));
             if (callee) {
                 auto methodAccessModifier = getMethodAccessModifier(className, methodName);
                 if (!that && methodAccessModifier != AccessModifier::PUBLIC) {

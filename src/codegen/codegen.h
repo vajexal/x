@@ -3,6 +3,7 @@
 
 #include <map>
 #include <stack>
+#include <vector>
 
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/IRBuilder.h"
@@ -44,7 +45,7 @@ namespace X::Codegen {
         std::map<std::string, Prop> props;
         std::map<std::string, StaticProp> staticProps;
         std::map<std::string, Method> methods;
-        ClassDecl *parent;
+        ClassDecl *parent = nullptr;
         bool isAbstract;
     };
 
@@ -105,6 +106,7 @@ namespace X::Codegen {
         AccessModifier getMethodAccessModifier(const std::string &mangledClassName, const std::string &methodName) const;
         llvm::Function *getConstructor(const std::string &mangledClassName) const;
         void checkConstructor(MethodDefNode *node, const std::string &className) const;
+        llvm::Value *callMethod(llvm::Value *obj, const std::string &methodName, const std::vector<ExprNode *> &args);
 
         std::pair<llvm::Value *, llvm::Value *> upcast(llvm::Value *a, llvm::Value *b) const;
         std::pair<llvm::Value *, llvm::Value *> forceUpcast(llvm::Value *a, llvm::Value *b) const;
@@ -112,7 +114,8 @@ namespace X::Codegen {
         llvm::Value *castToString(llvm::Value *value) const;
         llvm::Type *deref(llvm::Type *type) const;
 
-        void genFn(const std::string &name, const std::vector<ArgNode *> &args, const Type &returnType, StatementListNode *body, std::optional<Type> thisType = std::nullopt);
+        void genFn(const std::string &name, const std::vector<ArgNode *> &args, const Type &returnType, StatementListNode *body,
+                   std::optional<Type> thisType = std::nullopt);
         std::pair<llvm::Function *, llvm::Type *> findMethod(llvm::StructType *type, const std::string &methodName) const;
         bool isStringType(llvm::Type *type) const;
         llvm::Value *compareStrings(llvm::Value *first, llvm::Value *second) const;
@@ -129,6 +132,11 @@ namespace X::Codegen {
         const char *what() const noexcept override {
             return message.c_str();
         }
+    };
+
+    class MethodNotFoundException : public CodegenException {
+    public:
+        MethodNotFoundException(const std::string &methodName) : CodegenException("method not found: " + methodName) {}
     };
 }
 
