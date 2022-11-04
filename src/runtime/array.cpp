@@ -19,6 +19,7 @@ namespace X::Runtime {
             addGetter(arrayType, type);
             addSetter(arrayType, type);
             addLength(arrayType, type);
+            addIsEmpty(arrayType, type);
         }
     }
 
@@ -197,6 +198,23 @@ namespace X::Runtime {
         auto arrLenPtr = builder.CreateStructGEP(arrayType, that, 1);
         auto arrLen = builder.CreateLoad(llvm::Type::getInt64Ty(context), arrLenPtr, "len");
         builder.CreateRet(arrLen);
+    }
+
+    void ArrayRuntime::addIsEmpty(llvm::StructType *arrayType, llvm::Type *elemType) {
+        auto fnType = llvm::FunctionType::get(llvm::Type::getInt1Ty(context), {arrayType->getPointerTo()}, false);
+        auto fn = llvm::Function::Create(fnType, llvm::Function::ExternalLinkage,
+                                         mangler.mangleMethod(arrayType->getName().str(), "isEmpty"), module);
+
+        auto that = fn->getArg(0);
+        that->setName("this");
+
+        auto bb = llvm::BasicBlock::Create(context, "entry", fn);
+        builder.SetInsertPoint(bb);
+
+        auto arrLengthFn = module.getFunction(mangler.mangleMethod(arrayType->getName().str(), "length"));
+        auto arrLen = builder.CreateCall(arrLengthFn, {that});
+        auto isEmpty = builder.CreateICmpEQ(arrLen, llvm::ConstantInt::get(llvm::Type::getInt64Ty(context), 0));
+        builder.CreateRet(isEmpty);
     }
 
     std::string Array::getClassName(Type::TypeID typeID) {

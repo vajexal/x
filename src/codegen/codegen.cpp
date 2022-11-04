@@ -155,6 +155,12 @@ namespace X::Codegen {
                     auto callee = module.getFunction(stringIsEmptyFnName);
                     auto val = builder.CreateCall(callee, {value});
                     return negate(val);
+                } else if (isArrayType(value->getType())) {
+                    auto arrType = deref(value->getType());
+                    auto arrayIsEmptyFnName = mangler.mangleMethod(arrType->getStructName().str(), "isEmpty");
+                    auto callee = module.getFunction(arrayIsEmptyFnName);
+                    auto val = builder.CreateCall(callee, {value});
+                    return negate(val);
                 }
                 throw CodegenException("invalid type");
         }
