@@ -58,6 +58,7 @@ add_executable(x_test ${X_SOURCES}
         tests/strings/ends_with_test.cpp
         tests/strings/substring_test.cpp
         tests/arrays/array_test.cpp
+        tests/arrays/length_test.cpp
         tests/operators_test.cpp
         tests/check_interfaces_test.cpp
         tests/check_abstract_classes_test.cpp

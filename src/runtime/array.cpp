@@ -18,6 +18,7 @@ namespace X::Runtime {
             addConstructor(arrayType, type);
             addGetter(arrayType, type);
             addSetter(arrayType, type);
+            addLength(arrayType, type);
         }
     }
 
@@ -180,6 +181,22 @@ namespace X::Runtime {
         auto abortFn = module.getFunction("abort");
         builder.CreateCall(abortFn);
         builder.CreateUnreachable();
+    }
+
+    void ArrayRuntime::addLength(llvm::StructType *arrayType, llvm::Type *elemType) {
+        auto fnType = llvm::FunctionType::get(llvm::Type::getInt64Ty(context), {arrayType->getPointerTo()}, false);
+        auto fn = llvm::Function::Create(fnType, llvm::Function::ExternalLinkage,
+                                         mangler.mangleMethod(arrayType->getName().str(), "length"), module);
+
+        auto that = fn->getArg(0);
+        that->setName("this");
+
+        auto bb = llvm::BasicBlock::Create(context, "entry", fn);
+        builder.SetInsertPoint(bb);
+
+        auto arrLenPtr = builder.CreateStructGEP(arrayType, that, 1);
+        auto arrLen = builder.CreateLoad(llvm::Type::getInt64Ty(context), arrLenPtr, "len");
+        builder.CreateRet(arrLen);
     }
 
     std::string Array::getClassName(Type::TypeID typeID) {

@@ -264,7 +264,7 @@ namespace X::Codegen {
     }
 
     std::pair<llvm::Function *, llvm::Type *> Codegen::findMethod(llvm::StructType *type, const std::string &methodName) const {
-        if (isStringType(type)) {
+        if (isStringType(type) || isArrayType(type)) {
             auto &name = mangler.mangleMethod(type->getName().str(), methodName);
             return {module.getFunction(name), nullptr};
         }

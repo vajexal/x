@@ -120,6 +120,7 @@ namespace X::Codegen {
                    std::optional<Type> thisType = std::nullopt);
         std::pair<llvm::Function *, llvm::Type *> findMethod(llvm::StructType *type, const std::string &methodName) const;
         bool isStringType(llvm::Type *type) const;
+        bool isArrayType(llvm::Type *type) const;
         llvm::Value *compareStrings(llvm::Value *first, llvm::Value *second) const;
         llvm::Value *negate(llvm::Value *value) const;
 

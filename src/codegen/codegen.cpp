@@ -194,6 +194,11 @@ namespace X::Codegen {
         return type->isStructTy() && type->getStructName() == Runtime::String::CLASS_NAME;
     }
 
+    bool Codegen::isArrayType(llvm::Type *type) const {
+        type = deref(type);
+        return type->isStructTy() && type->getStructName().startswith(Runtime::Array::CLASS_NAME);
+    }
+
     llvm::Value *Codegen::compareStrings(llvm::Value *first, llvm::Value *second) const {
         auto callee = module.getFunction(".compareStrings");
         return builder.CreateCall(callee, {first, second});

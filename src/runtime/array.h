@@ -27,6 +27,7 @@ namespace X::Runtime {
         void addConstructor(llvm::StructType *arrayType, llvm::Type *elemType);
         void addGetter(llvm::StructType *arrayType, llvm::Type *elemType);
         void addSetter(llvm::StructType *arrayType, llvm::Type *elemType);
+        void addLength(llvm::StructType *arrayType, llvm::Type *elemType);
     };
 
     struct Array {
