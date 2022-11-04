@@ -16,9 +16,34 @@ namespace X::Pipes {
     }
 
     void PrintAst::printNode(ScalarNode *node, int level) {
-        std::cout << "scalar";
+        std::cout << "scalar(";
+        auto value = node->getValue();
 
-        std::visit([](auto val) { std::cout << '(' << val << ')' << std::endl; }, node->getValue());
+        switch (node->getType().getTypeID()) {
+            case Type::TypeID::INT:
+                std::cout << std::get<int>(value);
+                break;
+            case Type::TypeID::FLOAT:
+                std::cout << std::get<float>(value);
+                break;
+            case Type::TypeID::BOOL:
+                std::cout << std::get<bool>(value);
+                break;
+            case Type::TypeID::STRING:
+                std::cout << std::get<std::string>(value);
+                break;
+            case Type::TypeID::ARRAY:
+                std::cout << '[' << std::endl;
+                for (auto &expr: std::get<ExprList>(value)) {
+                    expr->print(*this, level + 1);
+                }
+                std::cout << std::string(level * 2, ' ') << ']';
+                break;
+            default:
+                throw PrintAstException("invalid scalar type");
+        }
+
+        std::cout << ')' << std::endl;
     }
 
     void PrintAst::printNode(UnaryNode *node, int level) {
@@ -264,5 +289,20 @@ namespace X::Pipes {
         for (auto &method: node->getMethods()) {
             method->print(*this, level);
         }
+    }
+
+    void PrintAst::printNode(FetchArrNode *node, int level) {
+        std::cout << "[]" << std::endl;
+
+        node->getArr()->print(*this, level + 1);
+        node->getIdx()->print(*this, level + 1);
+    }
+
+    void PrintAst::printNode(AssignArrNode *node, int level) {
+        std::cout << "[] = " << std::endl;
+
+        node->getArr()->print(*this, level + 1);
+        node->getIdx()->print(*this, level + 1);
+        node->getExpr()->print(*this, level + 1);
     }
 }

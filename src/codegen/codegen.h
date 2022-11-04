@@ -94,6 +94,8 @@ namespace X::Codegen {
         llvm::Value *gen(AssignStaticPropNode *node);
         llvm::Value *gen(NewNode *node);
         llvm::Value *gen(InterfaceNode *node);
+        llvm::Value *gen(FetchArrNode *node);
+        llvm::Value *gen(AssignArrNode *node);
 
     private:
         llvm::Type *mapType(const Type &type) const;
@@ -120,6 +122,10 @@ namespace X::Codegen {
         bool isStringType(llvm::Type *type) const;
         llvm::Value *compareStrings(llvm::Value *first, llvm::Value *second) const;
         llvm::Value *negate(llvm::Value *value) const;
+
+        llvm::StructType *getArrayForType(llvm::Type *type) const;
+        llvm::StructType *getArrayForType(Type::TypeID typeID) const;
+        void fillArray(llvm::Value *arr, const std::vector<llvm::Value *> &values);
     };
 
     class CodegenException : public std::exception {

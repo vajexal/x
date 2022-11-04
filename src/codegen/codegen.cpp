@@ -27,6 +27,9 @@ namespace X::Codegen {
                 return llvm::Type::getInt1Ty(context);
             case Type::TypeID::STRING:
                 return llvm::StructType::getTypeByName(context, Runtime::String::CLASS_NAME)->getPointerTo();
+            case Type::TypeID::ARRAY:
+                // todo cache
+                return llvm::StructType::getTypeByName(context, Runtime::Array::getClassName(type.getSubtype()))->getPointerTo();
             case Type::TypeID::VOID:
                 return llvm::Type::getVoidTy(context);
             case Type::TypeID::CLASS: {
@@ -50,6 +53,8 @@ namespace X::Codegen {
             case Type::TypeID::STRING:
                 // todo optimize
                 return llvm::ConstantPointerNull::get(llvm::StructType::getTypeByName(context, Runtime::String::CLASS_NAME)->getPointerTo());
+            case Type::TypeID::ARRAY:
+                return llvm::ConstantPointerNull::get(getArrayForType(type.getSubtype())->getPointerTo());
             default:
                 throw CodegenException("invalid type");
         }
@@ -196,5 +201,28 @@ namespace X::Codegen {
 
     llvm::Value *Codegen::negate(llvm::Value *value) const {
         return builder.CreateXor(value, llvm::ConstantInt::getTrue(context));
+    }
+
+    void Codegen::fillArray(llvm::Value *arr, const std::vector<llvm::Value *> &values) {
+        auto arrType = deref(arr->getType());
+        auto arrSetFn = module.getFunction(mangler.mangleMethod(arrType->getStructName().str(), "set[]"));
+        if (!arrSetFn) {
+            throw CodegenException("invalid [] operation");
+        }
+
+        for (auto i = 0; i < values.size(); i++) {
+            auto index = llvm::ConstantInt::getSigned(llvm::Type::getInt64Ty(context), i);
+            builder.CreateCall(arrSetFn, {arr, index, values[i]});
+        }
+    }
+
+    llvm::StructType *Codegen::getArrayForType(llvm::Type *type) const {
+        const auto &arrayClassName = Runtime::Array::getClassName(type);
+        return llvm::StructType::getTypeByName(context, arrayClassName);
+    }
+
+    llvm::StructType *Codegen::getArrayForType(Type::TypeID typeID) const {
+        const auto &arrayClassName = Runtime::Array::getClassName(typeID);
+        return llvm::StructType::getTypeByName(context, arrayClassName);
     }
 }

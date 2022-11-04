@@ -34,6 +34,7 @@ namespace X {
             case Type::TypeID::FLOAT: return out << "float";
             case Type::TypeID::BOOL: return out << "bool";
             case Type::TypeID::STRING: return out << "string";
+            case Type::TypeID::ARRAY: return out << Type(type.getSubtype()) << "[]";
             case Type::TypeID::VOID: return out << "void";
             case Type::TypeID::CLASS: return out << "class " << type.getClassName();
         }
@@ -128,6 +129,8 @@ namespace X {
     void NewNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<NewNode>(this, level); }
     void MethodDeclNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<MethodDeclNode>(this, level); }
     void InterfaceNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<InterfaceNode>(this, level); }
+    void FetchArrNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<FetchArrNode>(this, level); }
+    void AssignArrNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<AssignArrNode>(this, level); }
 
     llvm::Value *ScalarNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
     llvm::Value *StatementListNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
@@ -160,4 +163,6 @@ namespace X {
     llvm::Value *NewNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
     llvm::Value *MethodDeclNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
     llvm::Value *InterfaceNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
+    llvm::Value *FetchArrNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
+    llvm::Value *AssignArrNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
 }

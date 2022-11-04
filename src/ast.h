@@ -11,7 +11,10 @@
 #include "llvm/IR/Value.h"
 
 namespace X {
-    using ScalarValue = std::variant<int, float, bool, std::string>;
+    class ExprNode;
+
+    using ExprList = std::vector<ExprNode *>;
+    using ScalarValue = std::variant<int, float, bool, std::string, ExprList>;
 
     enum class OpType {
         PRE_INC,
@@ -43,12 +46,14 @@ namespace X {
             FLOAT,
             BOOL,
             STRING,
+            ARRAY,
             VOID,
             CLASS
         };
     private:
         TypeID id;
         std::optional<std::string> className;
+        TypeID subtype;
 
     public:
         Type() : id(TypeID::VOID) {} // need empty constructor for bison variant
@@ -58,9 +63,15 @@ namespace X {
             }
         }
         explicit Type(std::string className) : id(TypeID::CLASS), className(std::move(className)) {}
+        Type(TypeID typeID, TypeID subtype) : id(typeID), subtype(subtype) {
+            if (typeID != TypeID::ARRAY) {
+                throw std::invalid_argument("invalid type for scalar");
+            }
+        }
 
         TypeID getTypeID() const { return id; }
         const std::string &getClassName() const { return className.value(); }
+        TypeID getSubtype() const { return subtype; }
 
         bool operator==(const Type &other) const;
         bool operator!=(const Type &other) const;
@@ -325,10 +336,10 @@ namespace X {
 
     class FnCallNode : public ExprNode {
         std::string name;
-        std::vector<ExprNode *> args;
+        ExprList args;
 
     public:
-        FnCallNode(std::string name, std::vector<ExprNode *> args) : name(std::move(name)), args(std::move(args)) {}
+        FnCallNode(std::string name, ExprList args) : name(std::move(name)), args(std::move(args)) {}
         ~FnCallNode() {
             for (auto expr: args) {
                 delete expr;
@@ -339,7 +350,7 @@ namespace X {
         llvm::Value *gen(Codegen::Codegen &codegen) override;
 
         const std::string &getName() const { return name; }
-        const std::vector<ExprNode *> &getArgs() const { return args; }
+        const ExprList &getArgs() const { return args; }
     };
 
     class ReturnNode : public Node {
@@ -551,10 +562,10 @@ namespace X {
     class MethodCallNode : public ExprNode {
         VarNode *obj;
         std::string name;
-        std::vector<ExprNode *> args;
+        ExprList args;
 
     public:
-        MethodCallNode(VarNode *obj, std::string name, std::vector<ExprNode *> args) : obj(obj), name(std::move(name)), args(std::move(args)) {}
+        MethodCallNode(VarNode *obj, std::string name, ExprList args) : obj(obj), name(std::move(name)), args(std::move(args)) {}
         ~MethodCallNode() {
             delete obj;
 
@@ -568,16 +579,16 @@ namespace X {
 
         VarNode *getObj() const { return obj; }
         const std::string &getName() const { return name; }
-        const std::vector<ExprNode *> &getArgs() const { return args; }
+        const ExprList &getArgs() const { return args; }
     };
 
     class StaticMethodCallNode : public ExprNode {
         std::string className;
         std::string methodName;
-        std::vector<ExprNode *> args;
+        ExprList args;
 
     public:
-        StaticMethodCallNode(std::string className, std::string methodName, std::vector<ExprNode *> args) :
+        StaticMethodCallNode(std::string className, std::string methodName, ExprList args) :
                 className(std::move(className)), methodName(std::move(methodName)), args(std::move(args)) {}
 
         ~StaticMethodCallNode() {
@@ -591,7 +602,7 @@ namespace X {
 
         const std::string &getClassName() const { return className; }
         const std::string &getMethodName() const { return methodName; }
-        const std::vector<ExprNode *> &getArgs() const { return args; }
+        const ExprList &getArgs() const { return args; }
     };
 
     class AssignPropNode : public Node {
@@ -637,10 +648,10 @@ namespace X {
 
     class NewNode : public ExprNode {
         std::string name;
-        std::vector<ExprNode *> args;
+        ExprList args;
 
     public:
-        NewNode(std::string name, std::vector<ExprNode *> args) : name(std::move(name)), args(std::move(args)) {}
+        NewNode(std::string name, ExprList args) : name(std::move(name)), args(std::move(args)) {}
         ~NewNode() {
             for (auto expr: args) {
                 delete expr;
@@ -651,7 +662,7 @@ namespace X {
         llvm::Value *gen(Codegen::Codegen &codegen) override;
 
         const std::string &getName() const { return name; }
-        const std::vector<ExprNode *> &getArgs() const { return args; }
+        const ExprList &getArgs() const { return args; }
     };
 
     class InterfaceNode : public Node {
@@ -675,6 +686,45 @@ namespace X {
         const std::vector<std::string> &getParents() const { return parents; }
         const std::vector<MethodDeclNode *> &getMethods() const { return methods; }
         bool hasParents() const { return !parents.empty(); }
+    };
+
+    class FetchArrNode : public ExprNode {
+        VarNode *arr;
+        ExprNode *idx;
+
+    public:
+        FetchArrNode(VarNode *arr, ExprNode *idx) : arr(arr), idx(idx) {}
+        ~FetchArrNode() {
+            delete arr;
+            delete idx;
+        }
+
+        void print(Pipes::PrintAst &astPrinter, int level = 0) override;
+        llvm::Value *gen(Codegen::Codegen &codegen) override;
+
+        VarNode *getArr() const { return arr; }
+        ExprNode *getIdx() const { return idx; }
+    };
+
+    class AssignArrNode : public Node {
+        VarNode *arr;
+        ExprNode *idx;
+        ExprNode *expr;
+
+    public:
+        AssignArrNode(VarNode *arr, ExprNode *idx, ExprNode *expr) : arr(arr), idx(idx), expr(expr) {}
+        ~AssignArrNode() {
+            delete arr;
+            delete idx;
+            delete expr;
+        }
+
+        void print(Pipes::PrintAst &astPrinter, int level = 0) override;
+        llvm::Value *gen(Codegen::Codegen &codegen) override;
+
+        VarNode *getArr() const { return arr; }
+        ExprNode *getIdx() const { return idx; }
+        ExprNode *getExpr() const { return expr; }
     };
 }
 

@@ -13,12 +13,14 @@ namespace X::Runtime {
         return first->len == second->len && std::strncmp(first->str, second->str, first->len) == 0;
     }
 
-    void Runtime::addDeclarations(llvm::LLVMContext &context, llvm::Module &module) {
+    void Runtime::addDeclarations(llvm::LLVMContext &context, llvm::IRBuilder<> &builder, llvm::Module &module) {
         auto stringType = llvm::StructType::create(
                 context, {llvm::Type::getInt8PtrTy(context), llvm::Type::getInt64Ty(context)}, String::CLASS_NAME);
 
         // function name, return type, param types, function pointer
         std::vector<std::tuple<std::string, llvm::Type *, llvm::ArrayRef<llvm::Type *>, void *>> functions{
+                {mangler.mangleInternalFunction("malloc"),
+                 llvm::Type::getInt8PtrTy(context), {llvm::Type::getInt64Ty(context)}, reinterpret_cast<void *>(std::malloc)},
                 {"abort", llvm::Type::getVoidTy(context), {}, reinterpret_cast<void *>(std::abort)},
                 {"println", llvm::Type::getVoidTy(context), {stringType->getPointerTo()}, reinterpret_cast<void *>(println)},
                 {".castBoolToString", stringType->getPointerTo(), {llvm::Type::getInt1Ty(context)}, reinterpret_cast<void *>(castBoolToString)},
@@ -60,6 +62,9 @@ namespace X::Runtime {
             auto fn = module.getOrInsertFunction(fnName, fnType).getCallee();
             fnDefinitions.emplace_back(llvm::cast<llvm::Function>(fn), fnPtr);
         }
+
+        ArrayRuntime arrayRuntime(context, builder, module);
+        arrayRuntime.add();
     }
 
     void Runtime::addDefinitions(llvm::ExecutionEngine &engine) {

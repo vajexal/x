@@ -22,12 +22,12 @@ namespace X::Pipes {
         llvm::InitializeNativeTarget();
         llvm::InitializeNativeTargetAsmPrinter();
 
-        runtime.addDeclarations(context, module);
+        runtime.addDeclarations(context, builder, module);
 
         codegen.gen(node);
 
         llvm::verifyModule(module, &llvm::errs());
-//        module->print(llvm::outs(), nullptr);
+//        module.print(llvm::outs(), nullptr);
 
         std::string errStr;
         llvm::ExecutionEngine *engine = llvm::EngineBuilder(std::unique_ptr<llvm::Module>(&module))

@@ -53,6 +53,8 @@ namespace X::Pipes {
         void printNode(NewNode *node, int level);
         void printNode(MethodDeclNode *node, int level);
         void printNode(InterfaceNode *node, int level);
+        void printNode(FetchArrNode *node, int level);
+        void printNode(AssignArrNode *node, int level);
     };
 
     class PrintAstException : public std::exception {

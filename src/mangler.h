@@ -5,6 +5,8 @@
 
 namespace X {
     class Mangler {
+        static inline const std::string INTERNAL_PREFIX = "x.";
+
     public:
         const std::string mangleClass(const std::string &className) const {
             return std::move("class." + className);
@@ -20,6 +22,10 @@ namespace X {
 
         const std::string mangleStaticProp(const std::string &mangledClassName, const std::string &propName) const {
             return std::move(mangledClassName + "_" + propName);
+        }
+
+        const std::string mangleInternalFunction(const std::string &fnName) const {
+            return std::move(INTERNAL_PREFIX + fnName);
         }
     };
 }

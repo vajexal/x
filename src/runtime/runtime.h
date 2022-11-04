@@ -5,10 +5,12 @@
 
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Function.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 
 #include "runtime/string.h"
+#include "runtime/array.h"
 #include "mangler.h"
 
 namespace X::Runtime {
@@ -22,7 +24,7 @@ namespace X::Runtime {
 
         std::vector<std::tuple<llvm::Function *, void *>> fnDefinitions;
     public:
-        void addDeclarations(llvm::LLVMContext &context, llvm::Module &module);
+        void addDeclarations(llvm::LLVMContext &context, llvm::IRBuilder<> &builder, llvm::Module &module);
         void addDefinitions(llvm::ExecutionEngine &engine);
     };
 }

@@ -6,7 +6,6 @@
 namespace X::Runtime {
     struct String {
         static inline const std::string CLASS_NAME = "String";
-        static inline const std::string CONSTRUCTOR_FN_NAME = "String_construct";
 
         char *str;
         uint64_t len;

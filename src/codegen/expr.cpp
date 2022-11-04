@@ -3,9 +3,10 @@
 
 namespace X::Codegen {
     llvm::Value *Codegen::gen(ScalarNode *node) {
+        auto &type = node->getType();
         auto value = node->getValue();
 
-        switch (node->getType().getTypeID()) {
+        switch (type.getTypeID()) {
             case Type::TypeID::INT:
                 return llvm::ConstantInt::getSigned(llvm::Type::getInt64Ty(context), std::get<int>(value));
             case Type::TypeID::FLOAT:
@@ -17,6 +18,25 @@ namespace X::Codegen {
                 auto dataPtr = builder.CreateGlobalStringPtr(std::get<std::string>(value));
                 builder.CreateCall(getConstructor(Runtime::String::CLASS_NAME), {str, dataPtr});
                 return str;
+            }
+            case Type::TypeID::ARRAY: {
+                auto &exprList = std::get<ExprList>(value);
+                if (exprList.empty()) {
+                    // we won't be able to get first element type to determine array types
+                    throw CodegenException("cannot create empty array literal");
+                }
+                std::vector<llvm::Value *> arrayValues;
+                arrayValues.reserve(exprList.size());
+                for (auto expr: exprList) {
+                    arrayValues.push_back(expr->gen(*this));
+                }
+                // todo check all elem types are the same
+                auto arrType = getArrayForType(arrayValues[0]->getType());
+                auto arr = createAlloca(arrType);
+                auto len = llvm::ConstantInt::getSigned(llvm::Type::getInt64Ty(context), (int64_t)exprList.size());
+                builder.CreateCall(getConstructor(arrType->getName().str()), {arr, len});
+                fillArray(arr, arrayValues);
+                return arr;
             }
             default:
                 throw CodegenException("invalid scalar type");
@@ -289,6 +309,30 @@ namespace X::Codegen {
     }
 
     llvm::Value *Codegen::gen(CommentNode *node) {
+        return nullptr;
+    }
+
+    llvm::Value *Codegen::gen(FetchArrNode *node) {
+        auto arr = node->getArr()->gen(*this);
+        auto idx = node->getIdx()->gen(*this);
+        auto arrType = deref(arr->getType());
+        auto arrGetFn = module.getFunction(mangler.mangleMethod(arrType->getStructName().str(), "get[]"));
+        if (!arrGetFn) {
+            throw CodegenException("invalid [] operation");
+        }
+        return builder.CreateCall(arrGetFn, {arr, idx});
+    }
+
+    llvm::Value *Codegen::gen(AssignArrNode *node) {
+        auto arr = node->getArr()->gen(*this);
+        auto idx = node->getIdx()->gen(*this);
+        auto expr = node->getExpr()->gen(*this);
+        auto arrType = deref(arr->getType());
+        auto arrSetFn = module.getFunction(mangler.mangleMethod(arrType->getStructName().str(), "set[]"));
+        if (!arrSetFn) {
+            throw CodegenException("invalid [] operation");
+        }
+        builder.CreateCall(arrSetFn, {arr, idx, expr});
         return nullptr;
     }
 }

@@ -27,6 +27,7 @@ set(X_SOURCES lexer.cpp
         src/codegen/class.cpp
         src/runtime/runtime.cpp
         src/runtime/string.cpp
+        src/runtime/array.cpp
         src/runtime/casts.cpp
         src/compiler.cpp
         src/pipes/parse_code.cpp
@@ -56,6 +57,7 @@ add_executable(x_test ${X_SOURCES}
         tests/strings/starts_with_test.cpp
         tests/strings/ends_with_test.cpp
         tests/strings/substring_test.cpp
+        tests/arrays/array_test.cpp
         tests/operators_test.cpp
         tests/check_interfaces_test.cpp
         tests/check_abstract_classes_test.cpp

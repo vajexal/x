@@ -89,8 +89,8 @@
 %nterm <DeclareNode *> var_decl
 %nterm <VarNode *> identifier
 %nterm <ScalarNode *> scalar
-%nterm <std::vector<ExprNode *>> call_arg_list
-%nterm <std::vector<ExprNode *>> non_empty_call_arg_list
+%nterm <std::vector<ExprNode *>> expr_list
+%nterm <std::vector<ExprNode *>> non_empty_expr_list
 %nterm <IfNode *> if_statement
 %nterm <WhileNode *> while_statement
 %nterm <FnDeclNode *> fn_decl
@@ -168,6 +168,7 @@ expr { $$ = $1; }
 | IDENTIFIER '=' expr { $$ = new AssignNode(std::move($1), $3); }
 | identifier '.' IDENTIFIER '=' expr { $$ = new AssignPropNode($1, std::move($3), $5); }
 | IDENTIFIER SCOPE IDENTIFIER '=' expr { $$ = new AssignStaticPropNode(std::move($1), std::move($3), $5); }
+| identifier '[' expr ']' '=' expr { $$ = new AssignArrNode($1, $3, $6); }
 | if_statement { $$ = $1; }
 | while_statement { $$ = $1; }
 | BREAK { $$ = new BreakNode; }
@@ -199,12 +200,13 @@ INC identifier { $$ = new UnaryNode(OpType::PRE_INC, $2); }
 | expr GREATER_OR_EQUAL expr { $$ = new BinaryNode(OpType::GREATER_OR_EQUAL, $1, $3); }
 | scalar { $$ = $1; }
 | identifier { $$ = $1; }
-| IDENTIFIER '(' call_arg_list ')' { $$ = new FnCallNode(std::move($1), std::move($3)); }
+| IDENTIFIER '(' expr_list ')' { $$ = new FnCallNode(std::move($1), std::move($3)); }
 | identifier '.' IDENTIFIER { $$ = new FetchPropNode($1, std::move($3)); }
-| identifier '.' IDENTIFIER '(' call_arg_list ')' { $$ = new MethodCallNode($1, std::move($3), std::move($5)); }
+| identifier '.' IDENTIFIER '(' expr_list ')' { $$ = new MethodCallNode($1, std::move($3), std::move($5)); }
 | IDENTIFIER SCOPE IDENTIFIER { $$ = new FetchStaticPropNode(std::move($1), std::move($3)); }
-| IDENTIFIER SCOPE IDENTIFIER '(' call_arg_list ')' { $$ = new StaticMethodCallNode(std::move($1), std::move($3), std::move($5)); }
-| NEW IDENTIFIER '(' call_arg_list ')' { $$ = new NewNode(std::move($2), std::move($4)); }
+| identifier '[' expr ']' { $$ = new FetchArrNode($1, $3); }
+| IDENTIFIER SCOPE IDENTIFIER '(' expr_list ')' { $$ = new StaticMethodCallNode(std::move($1), std::move($3), std::move($5)); }
+| NEW IDENTIFIER '(' expr_list ')' { $$ = new NewNode(std::move($2), std::move($4)); }
 ;
 
 type:
@@ -214,6 +216,10 @@ INT_TYPE { $$ = Type(Type::TypeID::INT); }
 | STRING_TYPE { $$ = Type(Type::TypeID::STRING); }
 | VOID_TYPE { $$ = Type(Type::TypeID::VOID); }
 | IDENTIFIER { $$ = Type(std::move($1)); }
+/* array types */
+| INT_TYPE '[' ']' { $$ = Type(Type::TypeID::ARRAY, Type::TypeID::INT); }
+| FLOAT_TYPE '[' ']' { $$ = Type(Type::TypeID::ARRAY, Type::TypeID::FLOAT); }
+| BOOL_TYPE '[' ']' { $$ = Type(Type::TypeID::ARRAY, Type::TypeID::BOOL); }
 ;
 
 var_decl:
@@ -229,16 +235,17 @@ INT { $$ = new ScalarNode(std::move(Type(Type::TypeID::INT)), $1); }
 | FLOAT { $$ = new ScalarNode(std::move(Type(Type::TypeID::FLOAT)), $1); }
 | BOOL { $$ = new ScalarNode(std::move(Type(Type::TypeID::BOOL)), $1); }
 | STRING { $$ = new ScalarNode(std::move(Type(Type::TypeID::STRING)), std::move($1)); }
+| '[' expr_list ']' { $$ = new ScalarNode(std::move(Type(Type::TypeID::ARRAY, Type::TypeID::VOID)), std::move($2)); }
 ;
 
-call_arg_list:
+expr_list:
 %empty { $$ = std::vector<ExprNode *>(); }
-| non_empty_call_arg_list { $$ = std::move($1); }
+| non_empty_expr_list { $$ = std::move($1); }
 ;
 
-non_empty_call_arg_list:
+non_empty_expr_list:
 expr { $$ = std::vector<ExprNode *>(); $$.push_back($1); }
-| non_empty_call_arg_list ',' expr { $1.push_back($3); $$ = std::move($1); }
+| non_empty_expr_list ',' expr { $1.push_back($3); $$ = std::move($1); }
 ;
 
 if_statement:
