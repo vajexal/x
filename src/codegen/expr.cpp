@@ -21,17 +21,13 @@ namespace X::Codegen {
             }
             case Type::TypeID::ARRAY: {
                 auto &exprList = std::get<ExprList>(value);
-                if (exprList.empty()) {
-                    // we won't be able to get first element type to determine array types
-                    throw CodegenException("cannot create empty array literal");
-                }
                 std::vector<llvm::Value *> arrayValues;
                 arrayValues.reserve(exprList.size());
                 for (auto expr: exprList) {
                     arrayValues.push_back(expr->gen(*this));
                 }
                 // todo check all elem types are the same
-                auto arrType = getArrayForType(arrayValues[0]->getType());
+                auto arrType = getArrayForType(type.getSubtype());
                 auto arr = createAlloca(arrType);
                 auto len = llvm::ConstantInt::getSigned(llvm::Type::getInt64Ty(context), (int64_t)exprList.size());
                 builder.CreateCall(getConstructor(arrType->getName().str()), {arr, len});

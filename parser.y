@@ -86,6 +86,7 @@
 %nterm <Node *> statement
 %nterm <ExprNode *> expr
 %nterm <Type> type
+%nterm <Type> array_type
 %nterm <DeclareNode *> var_decl
 %nterm <VarNode *> identifier
 %nterm <ScalarNode *> scalar
@@ -216,8 +217,11 @@ INT_TYPE { $$ = Type(Type::TypeID::INT); }
 | STRING_TYPE { $$ = Type(Type::TypeID::STRING); }
 | VOID_TYPE { $$ = Type(Type::TypeID::VOID); }
 | IDENTIFIER { $$ = Type(std::move($1)); }
-/* array types */
-| INT_TYPE '[' ']' { $$ = Type(Type::TypeID::ARRAY, Type::TypeID::INT); }
+| array_type { $$ = std::move($1); }
+;
+
+array_type:
+INT_TYPE '[' ']' { $$ = Type(Type::TypeID::ARRAY, Type::TypeID::INT); }
 | FLOAT_TYPE '[' ']' { $$ = Type(Type::TypeID::ARRAY, Type::TypeID::FLOAT); }
 | BOOL_TYPE '[' ']' { $$ = Type(Type::TypeID::ARRAY, Type::TypeID::BOOL); }
 ;
@@ -235,7 +239,7 @@ INT { $$ = new ScalarNode(std::move(Type(Type::TypeID::INT)), $1); }
 | FLOAT { $$ = new ScalarNode(std::move(Type(Type::TypeID::FLOAT)), $1); }
 | BOOL { $$ = new ScalarNode(std::move(Type(Type::TypeID::BOOL)), $1); }
 | STRING { $$ = new ScalarNode(std::move(Type(Type::TypeID::STRING)), std::move($1)); }
-| '[' expr_list ']' { $$ = new ScalarNode(std::move(Type(Type::TypeID::ARRAY, Type::TypeID::VOID)), std::move($2)); }
+| array_type '{' expr_list '}' { $$ = new ScalarNode(std::move($1), std::move($3)); }
 ;
 
 expr_list:

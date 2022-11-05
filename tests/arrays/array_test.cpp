@@ -5,7 +5,7 @@ class ArrayTest : public CompilerTest {
 
 TEST_F(ArrayTest, general) {
     auto code = R"code(
-    int[] a = [1, 2, 3]
+    int[] a = int[]{1, 2, 3}
 
     a[1] = 10
 

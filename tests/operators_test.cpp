@@ -36,7 +36,7 @@ true
                 "no\n"),
         std::make_pair(
                 R"code(
-    int[] a = [1, 2, 3]
+    int[] a = int[]{1, 2, 3}
     if a {
         println("yes")
     } else {
