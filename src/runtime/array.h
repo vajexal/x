@@ -29,10 +29,12 @@ namespace X::Runtime {
         void addSetter(llvm::StructType *arrayType, llvm::Type *elemType);
         void addLength(llvm::StructType *arrayType, llvm::Type *elemType);
         void addIsEmpty(llvm::StructType *arrayType, llvm::Type *elemType);
+        void addAppend(llvm::StructType *arrayType, llvm::Type *elemType);
     };
 
     struct Array {
         static inline const std::string CLASS_NAME = "Array";
+        static inline const int MIN_CAP = 8;
 
         static std::string getClassName(Type::TypeID typeID);
         static std::string getClassName(llvm::Type *type);

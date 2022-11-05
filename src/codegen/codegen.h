@@ -96,6 +96,7 @@ namespace X::Codegen {
         llvm::Value *gen(InterfaceNode *node);
         llvm::Value *gen(FetchArrNode *node);
         llvm::Value *gen(AssignArrNode *node);
+        llvm::Value *gen(AppendArrNode *node);
 
     private:
         llvm::Type *mapType(const Type &type) const;

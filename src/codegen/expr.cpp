@@ -332,4 +332,16 @@ namespace X::Codegen {
         builder.CreateCall(arrSetFn, {arr, idx, expr});
         return nullptr;
     }
+
+    llvm::Value *Codegen::gen(AppendArrNode *node) {
+        auto arr = node->getArr()->gen(*this);
+        auto expr = node->getExpr()->gen(*this);
+        auto arrType = deref(arr->getType());
+        auto arrAppendFn = module.getFunction(mangler.mangleMethod(arrType->getStructName().str(), "append[]"));
+        if (!arrAppendFn) {
+            throw CodegenException("invalid [] operation");
+        }
+        builder.CreateCall(arrAppendFn, {arr, expr});
+        return nullptr;
+    }
 }

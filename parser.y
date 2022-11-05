@@ -170,6 +170,7 @@ expr { $$ = $1; }
 | identifier '.' IDENTIFIER '=' expr { $$ = new AssignPropNode($1, std::move($3), $5); }
 | IDENTIFIER SCOPE IDENTIFIER '=' expr { $$ = new AssignStaticPropNode(std::move($1), std::move($3), $5); }
 | identifier '[' expr ']' '=' expr { $$ = new AssignArrNode($1, $3, $6); }
+| identifier '[' ']' '=' expr { $$ = new AppendArrNode($1, $5); }
 | if_statement { $$ = $1; }
 | while_statement { $$ = $1; }
 | BREAK { $$ = new BreakNode; }

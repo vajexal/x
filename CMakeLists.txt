@@ -60,6 +60,7 @@ add_executable(x_test ${X_SOURCES}
         tests/arrays/array_test.cpp
         tests/arrays/length_test.cpp
         tests/arrays/is_empty_test.cpp
+        tests/arrays/append_test.cpp
         tests/operators_test.cpp
         tests/check_interfaces_test.cpp
         tests/check_abstract_classes_test.cpp

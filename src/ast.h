@@ -726,6 +726,24 @@ namespace X {
         ExprNode *getIdx() const { return idx; }
         ExprNode *getExpr() const { return expr; }
     };
+
+    class AppendArrNode : public Node {
+        VarNode *arr;
+        ExprNode *expr;
+
+    public:
+        AppendArrNode(VarNode *arr, ExprNode *expr) : arr(arr), expr(expr) {}
+        ~AppendArrNode() {
+            delete arr;
+            delete expr;
+        }
+
+        void print(Pipes::PrintAst &astPrinter, int level = 0) override;
+        llvm::Value *gen(Codegen::Codegen &codegen) override;
+
+        VarNode *getArr() const { return arr; }
+        ExprNode *getExpr() const { return expr; }
+    };
 }
 
 #endif //X_AST_H

@@ -305,4 +305,11 @@ namespace X::Pipes {
         node->getIdx()->print(*this, level + 1);
         node->getExpr()->print(*this, level + 1);
     }
+
+    void PrintAst::printNode(AppendArrNode *node, int level) {
+        std::cout << "[] = " << std::endl;
+
+        node->getArr()->print(*this, level + 1);
+        node->getExpr()->print(*this, level + 1);
+    }
 }

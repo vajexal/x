@@ -131,6 +131,7 @@ namespace X {
     void InterfaceNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<InterfaceNode>(this, level); }
     void FetchArrNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<FetchArrNode>(this, level); }
     void AssignArrNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<AssignArrNode>(this, level); }
+    void AppendArrNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<AppendArrNode>(this, level); }
 
     llvm::Value *ScalarNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
     llvm::Value *StatementListNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
@@ -165,4 +166,5 @@ namespace X {
     llvm::Value *InterfaceNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
     llvm::Value *FetchArrNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
     llvm::Value *AssignArrNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
+    llvm::Value *AppendArrNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
 }

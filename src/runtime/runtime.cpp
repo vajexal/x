@@ -21,6 +21,8 @@ namespace X::Runtime {
         std::vector<std::tuple<std::string, llvm::Type *, llvm::ArrayRef<llvm::Type *>, void *>> functions{
                 {mangler.mangleInternalFunction("malloc"),
                  llvm::Type::getInt8PtrTy(context), {llvm::Type::getInt64Ty(context)}, reinterpret_cast<void *>(std::malloc)},
+                {mangler.mangleInternalFunction("realloc"), llvm::Type::getInt8PtrTy(context),
+                 {llvm::Type::getInt8PtrTy(context), llvm::Type::getInt64Ty(context)}, reinterpret_cast<void *>(std::realloc)},
                 {"abort", llvm::Type::getVoidTy(context), {}, reinterpret_cast<void *>(std::abort)},
                 {"println", llvm::Type::getVoidTy(context), {stringType->getPointerTo()}, reinterpret_cast<void *>(println)},
                 {".castBoolToString", stringType->getPointerTo(), {llvm::Type::getInt1Ty(context)}, reinterpret_cast<void *>(castBoolToString)},
