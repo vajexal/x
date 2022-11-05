@@ -3,6 +3,7 @@
 #include <fmt/core.h>
 
 #include "runtime/runtime.h"
+#include "utils.h"
 
 namespace X::Codegen {
     llvm::Value *Codegen::gen(Node *node) {
@@ -150,12 +151,12 @@ namespace X::Codegen {
             case llvm::Type::TypeID::FloatTyID:
                 return builder.CreateFCmpONE(value, llvm::ConstantFP::get(llvm::Type::getFloatTy(context), 0));
             default:
-                if (isStringType(value->getType())) {
+                if (Runtime::String::isStringType(value->getType())) {
                     auto stringIsEmptyFnName = mangler.mangleMethod(Runtime::String::CLASS_NAME, "isEmpty");
                     auto callee = module.getFunction(stringIsEmptyFnName);
                     auto val = builder.CreateCall(callee, {value});
                     return negate(val);
-                } else if (isArrayType(value->getType())) {
+                } else if (Runtime::Array::isArrayType(value->getType())) {
                     auto arrType = deref(value->getType());
                     auto arrayIsEmptyFnName = mangler.mangleMethod(arrType->getStructName().str(), "isEmpty");
                     auto callee = module.getFunction(arrayIsEmptyFnName);
@@ -185,24 +186,6 @@ namespace X::Codegen {
         }
 
         return value;
-    }
-
-    llvm::Type *Codegen::deref(llvm::Type *type) const {
-        if (type->isPointerTy()) {
-            return type->getPointerElementType();
-        }
-
-        return type;
-    }
-
-    bool Codegen::isStringType(llvm::Type *type) const {
-        type = deref(type);
-        return type->isStructTy() && type->getStructName() == Runtime::String::CLASS_NAME;
-    }
-
-    bool Codegen::isArrayType(llvm::Type *type) const {
-        type = deref(type);
-        return type->isStructTy() && type->getStructName().startswith(Runtime::Array::CLASS_NAME);
     }
 
     llvm::Value *Codegen::compareStrings(llvm::Value *first, llvm::Value *second) const {

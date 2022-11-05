@@ -1,5 +1,7 @@
 #include "string.h"
 
+#include "utils.h"
+
 namespace X::Runtime {
     String *String_new(uint64_t len) {
         auto res = new String;
@@ -71,7 +73,7 @@ namespace X::Runtime {
         auto res = String_new(that->len);
 
         for (auto i = 0; i < that->len; i++) {
-            res->str[i] = (char) std::tolower(that->str[i]);
+            res->str[i] = (char)std::tolower(that->str[i]);
         }
 
         return res;
@@ -81,7 +83,7 @@ namespace X::Runtime {
         auto res = String_new(that->len);
 
         for (auto i = 0; i < that->len; i++) {
-            res->str[i] = (char) std::toupper(that->str[i]);
+            res->str[i] = (char)std::toupper(that->str[i]);
         }
 
         return res;
@@ -118,11 +120,16 @@ namespace X::Runtime {
         }
 
         if (length + offset > that->len) {
-            length = (int64_t) that->len - offset;
+            length = (int64_t)that->len - offset;
         }
 
         auto res = String_new(length);
         std::memcpy(res->str, that->str + offset, length);
         return res;
+    }
+
+    bool String::isStringType(llvm::Type *type) {
+        type = deref(type);
+        return type->isStructTy() && type->getStructName() == Runtime::String::CLASS_NAME;
     }
 }

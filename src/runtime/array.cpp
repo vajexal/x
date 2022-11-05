@@ -1,11 +1,15 @@
 #include "array.h"
 
+#include "runtime/string.h"
+#include "utils.h"
+
 namespace X::Runtime {
     void ArrayRuntime::add() {
         std::vector<llvm::Type *> types{
                 llvm::Type::getInt64Ty(context),
                 llvm::Type::getFloatTy(context),
                 llvm::Type::getInt1Ty(context),
+                llvm::StructType::getTypeByName(context, String::CLASS_NAME)->getPointerTo()
         };
 
         for (auto type: types) {
@@ -225,6 +229,8 @@ namespace X::Runtime {
                 return CLASS_NAME + ".float";
             case Type::TypeID::BOOL:
                 return CLASS_NAME + ".bool";
+            case Type::TypeID::STRING:
+                return CLASS_NAME + ".string";
             default:
                 throw InvalidArrayTypeException();
         }
@@ -243,6 +249,15 @@ namespace X::Runtime {
             return CLASS_NAME + ".float";
         }
 
+        if (String::isStringType(type)) {
+            return CLASS_NAME + ".string";
+        }
+
         throw InvalidArrayTypeException();
+    }
+
+    bool Array::isArrayType(llvm::Type *type) {
+        type = deref(type);
+        return type->isStructTy() && type->getStructName().startswith(Runtime::Array::CLASS_NAME);
     }
 }

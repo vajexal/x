@@ -36,6 +36,8 @@ namespace X::Runtime {
 
         static std::string getClassName(Type::TypeID typeID);
         static std::string getClassName(llvm::Type *type);
+
+        static bool isArrayType(llvm::Type *type);
     };
 
     class InvalidArrayTypeException : public std::exception {

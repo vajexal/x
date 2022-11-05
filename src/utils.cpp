@@ -1,5 +1,7 @@
 #include "utils.h"
 
+#include "ast.h"
+
 namespace X {
     bool compareDeclAndDef(MethodDeclNode *declNode, MethodDefNode *defNode) {
         if (declNode->getAccessModifier() != defNode->getAccessModifier()) {
@@ -28,5 +30,13 @@ namespace X {
         }
 
         return true;
+    }
+
+    llvm::Type *deref(llvm::Type *type) {
+        if (type->isPointerTy()) {
+            return type->getPointerElementType();
+        }
+
+        return type;
     }
 }

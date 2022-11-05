@@ -114,13 +114,10 @@ namespace X::Codegen {
         std::pair<llvm::Value *, llvm::Value *> forceUpcast(llvm::Value *a, llvm::Value *b) const;
         llvm::Value *downcastToBool(llvm::Value *value) const;
         llvm::Value *castToString(llvm::Value *value) const;
-        llvm::Type *deref(llvm::Type *type) const;
 
         void genFn(const std::string &name, const std::vector<ArgNode *> &args, const Type &returnType, StatementListNode *body,
                    std::optional<Type> thisType = std::nullopt);
         std::pair<llvm::Function *, llvm::Type *> findMethod(llvm::StructType *type, const std::string &methodName) const;
-        bool isStringType(llvm::Type *type) const;
-        bool isArrayType(llvm::Type *type) const;
         llvm::Value *compareStrings(llvm::Value *first, llvm::Value *second) const;
         llvm::Value *negate(llvm::Value *value) const;
 

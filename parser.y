@@ -224,6 +224,7 @@ array_type:
 INT_TYPE '[' ']' { $$ = Type(Type::TypeID::ARRAY, Type::TypeID::INT); }
 | FLOAT_TYPE '[' ']' { $$ = Type(Type::TypeID::ARRAY, Type::TypeID::FLOAT); }
 | BOOL_TYPE '[' ']' { $$ = Type(Type::TypeID::ARRAY, Type::TypeID::BOOL); }
+| STRING_TYPE '[' ']' { $$ = Type(Type::TypeID::ARRAY, Type::TypeID::STRING); }
 ;
 
 var_decl:

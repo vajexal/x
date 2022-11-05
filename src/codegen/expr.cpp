@@ -1,5 +1,6 @@
 #include "codegen.h"
 #include "runtime/runtime.h"
+#include "utils.h"
 
 namespace X::Codegen {
     llvm::Value *Codegen::gen(ScalarNode *node) {
@@ -86,7 +87,7 @@ namespace X::Codegen {
             throw CodegenException("binary arg is empty");
         }
 
-        if (isStringType(lhs->getType()) && isStringType(rhs->getType())) {
+        if (Runtime::String::isStringType(lhs->getType()) && Runtime::String::isStringType(rhs->getType())) {
             switch (node->getType()) {
                 case OpType::PLUS: {
                     auto stringConcatFnName = mangler.mangleMethod(Runtime::String::CLASS_NAME, "concat");
