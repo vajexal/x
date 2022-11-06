@@ -1,14 +1,14 @@
 #include "compiler_test_helper.h"
 
-class EndsWithTest : public CompilerTest {
+class StringEndsWithTest : public CompilerTest {
 };
 
-TEST_P(EndsWithTest, endsWith) {
+TEST_P(StringEndsWithTest, endsWith) {
     auto [code, expectedOutput] = GetParam();
     checkCode(code, expectedOutput);
 }
 
-INSTANTIATE_TEST_SUITE_P(Code, EndsWithTest, testing::Values(
+INSTANTIATE_TEST_SUITE_P(Code, StringEndsWithTest, testing::Values(
         std::make_pair(
                 R"code(
     string s = ""

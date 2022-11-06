@@ -1,14 +1,14 @@
 #include "compiler_test_helper.h"
 
-class SubstringTest : public CompilerTest {
+class StringSubstringTest : public CompilerTest {
 };
 
-TEST_P(SubstringTest, substring) {
+TEST_P(StringSubstringTest, substring) {
     auto [code, expectedOutput] = GetParam();
     checkCode(code, expectedOutput);
 }
 
-INSTANTIATE_TEST_SUITE_P(Code, SubstringTest, testing::Values(
+INSTANTIATE_TEST_SUITE_P(Code, StringSubstringTest, testing::Values(
         std::make_pair(
                 R"code(
     string s = ""

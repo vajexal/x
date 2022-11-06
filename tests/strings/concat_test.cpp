@@ -1,14 +1,14 @@
 #include "compiler_test_helper.h"
 
-class ConcatTest : public CompilerTest {
+class StringConcatTest : public CompilerTest {
 };
 
-TEST_P(ConcatTest, concat) {
+TEST_P(StringConcatTest, concat) {
     auto [code, expectedOutput] = GetParam();
     checkCode(code, expectedOutput);
 }
 
-INSTANTIATE_TEST_SUITE_P(Code, ConcatTest, testing::Values(
+INSTANTIATE_TEST_SUITE_P(Code, StringConcatTest, testing::Values(
         std::make_pair(
                 R"code(
     string s = "hello"

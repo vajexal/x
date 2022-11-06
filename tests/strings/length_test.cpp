@@ -1,14 +1,14 @@
 #include "compiler_test_helper.h"
 
-class LengthTest : public CompilerTest {
+class StringLengthTest : public CompilerTest {
 };
 
-TEST_P(LengthTest, length) {
+TEST_P(StringLengthTest, length) {
     auto [code, expectedOutput] = GetParam();
     checkCode(code, expectedOutput);
 }
 
-INSTANTIATE_TEST_SUITE_P(Code, LengthTest, testing::Values(
+INSTANTIATE_TEST_SUITE_P(Code, StringLengthTest, testing::Values(
         std::make_pair(
                 R"code(
     string s = ""

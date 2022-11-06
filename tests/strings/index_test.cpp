@@ -1,14 +1,14 @@
 #include "compiler_test_helper.h"
 
-class IndexTest : public CompilerTest {
+class StringIndexTest : public CompilerTest {
 };
 
-TEST_P(IndexTest, index) {
+TEST_P(StringIndexTest, index) {
     auto [code, expectedOutput] = GetParam();
     checkCode(code, expectedOutput);
 }
 
-INSTANTIATE_TEST_SUITE_P(Code, IndexTest, testing::Values(
+INSTANTIATE_TEST_SUITE_P(Code, StringIndexTest, testing::Values(
         std::make_pair(
                 R"code(
     string s = ""

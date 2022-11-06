@@ -1,14 +1,14 @@
 #include "compiler_test_helper.h"
 
-class ContainsTest : public CompilerTest {
+class StringContainsTest : public CompilerTest {
 };
 
-TEST_P(ContainsTest, contains) {
+TEST_P(StringContainsTest, contains) {
     auto [code, expectedOutput] = GetParam();
     checkCode(code, expectedOutput);
 }
 
-INSTANTIATE_TEST_SUITE_P(Code, ContainsTest, testing::Values(
+INSTANTIATE_TEST_SUITE_P(Code, StringContainsTest, testing::Values(
         std::make_pair(
                 R"code(
     string s = ""

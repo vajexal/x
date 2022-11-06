@@ -1,14 +1,14 @@
 #include "compiler_test_helper.h"
 
-class ToUpperTest : public CompilerTest {
+class StringToUpperTest : public CompilerTest {
 };
 
-TEST_P(ToUpperTest, toUpper) {
+TEST_P(StringToUpperTest, toUpper) {
     auto [code, expectedOutput] = GetParam();
     checkCode(code, expectedOutput);
 }
 
-INSTANTIATE_TEST_SUITE_P(Code, ToUpperTest, testing::Values(
+INSTANTIATE_TEST_SUITE_P(Code, StringToUpperTest, testing::Values(
         std::make_pair(
                 R"code(
     string s = ""
