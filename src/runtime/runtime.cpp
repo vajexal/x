@@ -23,7 +23,7 @@ namespace X::Runtime {
                  llvm::Type::getInt8PtrTy(context), {llvm::Type::getInt64Ty(context)}, reinterpret_cast<void *>(std::malloc)},
                 {mangler.mangleInternalFunction("realloc"), llvm::Type::getInt8PtrTy(context),
                  {llvm::Type::getInt8PtrTy(context), llvm::Type::getInt64Ty(context)}, reinterpret_cast<void *>(std::realloc)},
-                {"abort", llvm::Type::getVoidTy(context), {}, reinterpret_cast<void *>(std::abort)},
+                {"exit", llvm::Type::getVoidTy(context), {llvm::Type::getInt64Ty(context)}, reinterpret_cast<void *>(std::exit)},
                 {"println", llvm::Type::getVoidTy(context), {stringType->getPointerTo()}, reinterpret_cast<void *>(println)},
                 {mangler.mangleInternalFunction("castBoolToString"), stringType->getPointerTo(),
                  {llvm::Type::getInt1Ty(context)}, reinterpret_cast<void *>(castBoolToString)},

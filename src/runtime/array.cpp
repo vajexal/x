@@ -98,8 +98,8 @@ namespace X::Runtime {
         fn->getBasicBlockList().push_back(invalidLenBB);
         builder.SetInsertPoint(invalidLenBB);
 
-        auto abortFn = module.getFunction("abort");
-        builder.CreateCall(abortFn);
+        auto exitFn = module.getFunction("exit");
+        builder.CreateCall(exitFn, {llvm::ConstantInt::get(llvm::Type::getInt64Ty(context), 1)});
         builder.CreateUnreachable();
     }
 
@@ -148,8 +148,8 @@ namespace X::Runtime {
         fn->getBasicBlockList().push_back(invalidIndexBB);
         builder.SetInsertPoint(invalidIndexBB);
 
-        auto abortFn = module.getFunction("abort");
-        builder.CreateCall(abortFn);
+        auto exitFn = module.getFunction("exit");
+        builder.CreateCall(exitFn, {llvm::ConstantInt::get(llvm::Type::getInt64Ty(context), 1)});
         builder.CreateUnreachable();
     }
 
@@ -202,8 +202,8 @@ namespace X::Runtime {
         fn->getBasicBlockList().push_back(invalidIndexBB);
         builder.SetInsertPoint(invalidIndexBB);
 
-        auto abortFn = module.getFunction("abort");
-        builder.CreateCall(abortFn);
+        auto exitFn = module.getFunction("exit");
+        builder.CreateCall(exitFn, {llvm::ConstantInt::get(llvm::Type::getInt64Ty(context), 1)});
         builder.CreateUnreachable();
     }
 
