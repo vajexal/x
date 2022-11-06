@@ -172,15 +172,15 @@ namespace X::Codegen {
         switch (type->getTypeID()) {
             case llvm::Type::TypeID::IntegerTyID: {
                 if (type->isIntegerTy(1)) {
-                    auto callee = module.getFunction(".castBoolToString");
+                    auto callee = module.getFunction(mangler.mangleInternalFunction("castBoolToString"));
                     return builder.CreateCall(callee, {value});
                 }
 
-                auto callee = module.getFunction(".castIntToString");
+                auto callee = module.getFunction(mangler.mangleInternalFunction("castIntToString"));
                 return builder.CreateCall(callee, {value});
             }
             case llvm::Type::TypeID::FloatTyID: {
-                auto callee = module.getFunction(".castFloatToString");
+                auto callee = module.getFunction(mangler.mangleInternalFunction("castFloatToString"));
                 return builder.CreateCall(callee, {value});
             }
         }
@@ -189,7 +189,7 @@ namespace X::Codegen {
     }
 
     llvm::Value *Codegen::compareStrings(llvm::Value *first, llvm::Value *second) const {
-        auto callee = module.getFunction(".compareStrings");
+        auto callee = module.getFunction(mangler.mangleInternalFunction("compareStrings"));
         return builder.CreateCall(callee, {first, second});
     }
 
