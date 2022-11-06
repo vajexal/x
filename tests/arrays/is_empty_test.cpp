@@ -14,11 +14,11 @@ INSTANTIATE_TEST_SUITE_P(Code, ArrayIsEmptyTest, testing::Values(
     int[] a = int[]{}
     println(a.isEmpty())
 )code",
-                "true\n"),
+                "true"),
         std::make_pair(
                 R"code(
     int[] a = int[]{1, 2, 3}
     println(a.isEmpty())
 )code",
-                "false\n")
+                "false")
 ));

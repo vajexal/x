@@ -14,11 +14,11 @@ INSTANTIATE_TEST_SUITE_P(Code, StringLengthTest, testing::Values(
     string s = ""
     println(s.length())
 )code",
-                "0\n"),
+                "0"),
         std::make_pair(
                 R"code(
     string s = "hello"
     println(s.length())
 )code",
-                "5\n")
+                "5")
 ));

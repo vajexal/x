@@ -14,11 +14,11 @@ INSTANTIATE_TEST_SUITE_P(Code, StringToLowerTest, testing::Values(
     string s = ""
     println(s.toLower())
 )code",
-                "\n"),
+                ""),
         std::make_pair(
                 R"code(
     string s = "HELLO WORLD!"
     println(s.toLower())
 )code",
-                "hello world!\n")
+                "hello world!")
 ));

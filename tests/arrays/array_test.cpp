@@ -11,5 +11,5 @@ TEST_F(ArrayTest, general) {
 
     println(a[1])
 )code";
-    checkCode(code, "10\n");
+    checkCode(code, "10");
 }

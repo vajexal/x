@@ -14,11 +14,11 @@ INSTANTIATE_TEST_SUITE_P(Code, ArrayLengthTest, testing::Values(
     int[] a = int[]{}
     println(a.length())
 )code",
-                "0\n"),
+                "0"),
         std::make_pair(
                 R"code(
     int[] a = int[]{1, 2, 3}
     println(a.length())
 )code",
-                "3\n")
+                "3")
 ));

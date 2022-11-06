@@ -14,29 +14,29 @@ INSTANTIATE_TEST_SUITE_P(Code, StringContainsTest, testing::Values(
     string s = ""
     println(s.contains(""))
 )code",
-                "true\n"),
+                "true"),
         std::make_pair(
                 R"code(
     string s = ""
     println(s.contains("hello"))
 )code",
-                "false\n"),
+                "false"),
         std::make_pair(
                 R"code(
     string s = "hello world"
     println(s.contains(""))
 )code",
-                "true\n"),
+                "true"),
         std::make_pair(
                 R"code(
     string s = "hello world"
     println(s.contains("hello"))
 )code",
-                "true\n"),
+                "true"),
         std::make_pair(
                 R"code(
     string s = "hello world"
     println(s.contains("world"))
 )code",
-                "true\n")
+                "true")
 ));

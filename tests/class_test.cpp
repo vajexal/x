@@ -18,7 +18,7 @@ fn main() int {
 
     return 0
 }
-)code", "10\n");
+)code", "10");
 }
 
 TEST_F(ClassTest, constructorInheritance) {
@@ -37,7 +37,7 @@ fn main() int {
 
     return 0
 }
-)code", "10\n");
+)code", "10");
 }
 
 TEST_F(ClassTest, constructorArgsMismatch) {

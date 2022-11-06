@@ -16,5 +16,8 @@ void CompilerTest::checkProgram(const std::string &code, const std::string &expe
 
     compiler.compile(code);
 
-    ASSERT_EQ(testing::internal::GetCapturedStdout(), expectedOutput);
+    auto output = testing::internal::GetCapturedStdout();
+    output.erase(output.find_last_not_of("\n") + 1);
+
+    ASSERT_EQ(output, expectedOutput);
 }

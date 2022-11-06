@@ -13,7 +13,7 @@ INSTANTIATE_TEST_SUITE_P(StringOperators, OperatorsTest, testing::Values(
                 R"code(
     println("foo" + "bar")
 )code",
-                "foobar\n"),
+                "foobar"),
         std::make_pair(
                 R"code(
     println("foo" == "foo")
@@ -22,8 +22,7 @@ INSTANTIATE_TEST_SUITE_P(StringOperators, OperatorsTest, testing::Values(
 )code",
                 R"output(true
 false
-true
-)output"),
+true)output"),
         std::make_pair(
                 R"code(
     string s = ""
@@ -33,7 +32,7 @@ true
         println("no")
     }
 )code",
-                "no\n"),
+                "no"),
         std::make_pair(
                 R"code(
     int[] a = int[]{1, 2, 3}
@@ -43,5 +42,5 @@ true
         println("no")
     }
 )code",
-                "yes\n")
+                "yes")
 ));

@@ -15,17 +15,17 @@ INSTANTIATE_TEST_SUITE_P(Code, StringConcatTest, testing::Values(
     string s2 = " world"
     println(s.concat(s2))
 )code",
-                "hello world\n"),
+                "hello world"),
         std::make_pair(
                 R"code(
     string s = ""
     println(s.concat("hello"))
 )code",
-                "hello\n"),
+                "hello"),
         std::make_pair(
                 R"code(
     string s = "hello"
     println(s.concat(""))
 )code",
-                "hello\n")
+                "hello")
 ));

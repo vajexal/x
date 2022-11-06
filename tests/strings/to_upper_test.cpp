@@ -14,11 +14,11 @@ INSTANTIATE_TEST_SUITE_P(Code, StringToUpperTest, testing::Values(
     string s = ""
     println(s.toUpper())
 )code",
-                "\n"),
+                ""),
         std::make_pair(
                 R"code(
     string s = "hello world!"
     println(s.toUpper())
 )code",
-                "HELLO WORLD!\n")
+                "HELLO WORLD!")
 ));

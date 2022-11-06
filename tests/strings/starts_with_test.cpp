@@ -14,35 +14,35 @@ INSTANTIATE_TEST_SUITE_P(Code, StringStartsWithTest, testing::Values(
     string s = ""
     println(s.startsWith(""))
 )code",
-                "true\n"),
+                "true"),
         std::make_pair(
                 R"code(
     string s = ""
     println(s.startsWith("hello"))
 )code",
-                "false\n"),
+                "false"),
         std::make_pair(
                 R"code(
     string s = "hello"
     println(s.startsWith(""))
 )code",
-                "true\n"),
+                "true"),
         std::make_pair(
                 R"code(
     string s = "hello"
     println(s.startsWith("hello world"))
 )code",
-                "false\n"),
+                "false"),
         std::make_pair(
                 R"code(
     string s = "hello world!"
     println(s.startsWith("world"))
 )code",
-                "false\n"),
+                "false"),
         std::make_pair(
                 R"code(
     string s = "hello world"
     println(s.startsWith("hello"))
 )code",
-                "true\n")
+                "true")
 ));

@@ -15,17 +15,17 @@ INSTANTIATE_TEST_SUITE_P(Code, StringTrimTest, testing::Values(
     string s = ""
     println(s.trim())
 )code",
-                "\n"),
+                ""),
         std::make_pair(
                 R"code(
     string s = "   "
     println(s.trim())
 )code",
-                "\n"),
+                ""),
         std::make_pair(
                 R"code(
     string s = "   hello   "
     println(s.trim())
 )code",
-                "hello\n")
+                "hello")
 ));

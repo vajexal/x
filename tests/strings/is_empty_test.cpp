@@ -14,17 +14,17 @@ INSTANTIATE_TEST_SUITE_P(Code, StringIsEmptyTest, testing::Values(
     string s = ""
     println(s.isEmpty())
 )code",
-                "true\n"),
+                "true"),
         std::make_pair(
                 R"code(
     string s = "   "
     println(s.isEmpty())
 )code",
-                "false\n"),
+                "false"),
         std::make_pair(
                 R"code(
     string s = "0"
     println(s.isEmpty())
 )code",
-                "false\n")
+                "false")
 ));
