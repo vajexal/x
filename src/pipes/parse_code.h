@@ -8,7 +8,9 @@ namespace X::Pipes {
         std::string code;
 
     public:
-        ParseCode(std::string code) : code(std::move(code)) {}
+        ParseCode(const std::string &code) {
+            this->code = std::move(code + '\n'); // hack for parser
+        }
 
         StatementListNode *handle(StatementListNode *node) override;
     };
