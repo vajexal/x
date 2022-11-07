@@ -23,6 +23,7 @@ set(X_SOURCES lexer.cpp
         src/utils.cpp
         src/codegen/codegen.cpp
         src/codegen/expr.cpp
+        src/codegen/statement.cpp
         src/codegen/function.cpp
         src/codegen/class.cpp
         src/runtime/runtime.cpp
