@@ -16,6 +16,7 @@
 
 #include "ast.h"
 #include "mangler.h"
+#include "runtime/runtime.h"
 
 namespace X::Codegen {
     struct Loop {
@@ -56,6 +57,7 @@ namespace X::Codegen {
         llvm::IRBuilder<> &builder;
         llvm::Module &module;
         Mangler mangler;
+        Runtime::ArrayRuntime arrayRuntime;
 
         std::map<std::string, llvm::AllocaInst *> namedValues;
         std::stack<Loop> loops;
@@ -65,7 +67,8 @@ namespace X::Codegen {
         std::map<std::string, ClassDecl> classes;
 
     public:
-        Codegen(llvm::LLVMContext &context, llvm::IRBuilder<> &builder, llvm::Module &module) : context(context), builder(builder), module(module) {}
+        Codegen(llvm::LLVMContext &context, llvm::IRBuilder<> &builder, llvm::Module &module) :
+                context(context), builder(builder), module(module), arrayRuntime(Runtime::ArrayRuntime(context, module)) {}
 
         llvm::Value *gen(Node *node);
         llvm::Value *gen(StatementListNode *node);
@@ -99,8 +102,8 @@ namespace X::Codegen {
         llvm::Value *gen(AppendArrNode *node);
 
     private:
-        llvm::Type *mapType(const Type &type) const;
-        llvm::Constant *getDefaultValue(const Type &type) const;
+        llvm::Type *mapType(const Type &type);
+        llvm::Constant *getDefaultValue(const Type &type);
         std::pair<llvm::Type *, llvm::Value *> getVar(std::string &name) const;
         std::pair<llvm::Type *, llvm::Value *> getProp(llvm::Value *obj, const std::string &name) const;
         std::pair<llvm::Type *, llvm::Value *> getStaticProp(const std::string &className, const std::string &propName) const;
@@ -122,8 +125,7 @@ namespace X::Codegen {
         llvm::Value *compareStrings(llvm::Value *first, llvm::Value *second) const;
         llvm::Value *negate(llvm::Value *value) const;
 
-        llvm::StructType *getArrayForType(llvm::Type *type) const;
-        llvm::StructType *getArrayForType(Type::TypeID typeID) const;
+        llvm::StructType *getArrayForType(const Type *type);
         void fillArray(llvm::Value *arr, const std::vector<llvm::Value *> &values);
     };
 

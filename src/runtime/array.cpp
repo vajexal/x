@@ -4,28 +4,21 @@
 #include "utils.h"
 
 namespace X::Runtime {
-    void ArrayRuntime::add() {
-        std::vector<llvm::Type *> types{
-                llvm::Type::getInt64Ty(context),
-                llvm::Type::getFloatTy(context),
-                llvm::Type::getInt1Ty(context),
-                llvm::StructType::getTypeByName(context, String::CLASS_NAME)->getPointerTo()
-        };
+    llvm::StructType *ArrayRuntime::add(llvm::Type *type) {
+        auto arrayType = llvm::StructType::create(
+                context,
+                {type->getPointerTo(), llvm::Type::getInt64Ty(context), llvm::Type::getInt64Ty(context)},
+                Array::getClassName(type)
+        );
 
-        for (auto type: types) {
-            auto arrayType = llvm::StructType::create(
-                    context,
-                    {type->getPointerTo(), llvm::Type::getInt64Ty(context), llvm::Type::getInt64Ty(context)},
-                    Array::getClassName(type)
-            );
+        addConstructor(arrayType, type);
+        addGetter(arrayType, type);
+        addSetter(arrayType, type);
+        addLength(arrayType, type);
+        addIsEmpty(arrayType, type);
+        addAppend(arrayType, type);
 
-            addConstructor(arrayType, type);
-            addGetter(arrayType, type);
-            addSetter(arrayType, type);
-            addLength(arrayType, type);
-            addIsEmpty(arrayType, type);
-            addAppend(arrayType, type);
-        }
+        return arrayType;
     }
 
     void ArrayRuntime::addConstructor(llvm::StructType *arrayType, llvm::Type *elemType) {
@@ -36,6 +29,7 @@ namespace X::Runtime {
         );
         auto fn = llvm::Function::Create(fnType, llvm::Function::ExternalLinkage,
                                          mangler.mangleMethod(arrayType->getName().str(), "construct"), module);
+
         auto that = fn->getArg(0);
         auto len = fn->getArg(1);
 
@@ -43,6 +37,7 @@ namespace X::Runtime {
         len->setName("len");
 
         auto bb = llvm::BasicBlock::Create(context, "entry", fn);
+        llvm::IRBuilder<> builder(&fn->getEntryBlock(), fn->getEntryBlock().begin());
         builder.SetInsertPoint(bb);
 
         auto capVar = builder.CreateAlloca(llvm::Type::getInt64Ty(context), nullptr, "cap");
@@ -111,6 +106,7 @@ namespace X::Runtime {
         );
         auto fn = llvm::Function::Create(fnType, llvm::Function::ExternalLinkage,
                                          mangler.mangleMethod(arrayType->getName().str(), "get[]"), module);
+
         auto that = fn->getArg(0);
         auto index = fn->getArg(1);
 
@@ -118,6 +114,7 @@ namespace X::Runtime {
         index->setName("index");
 
         auto bb = llvm::BasicBlock::Create(context, "entry", fn);
+        llvm::IRBuilder<> builder(&fn->getEntryBlock(), fn->getEntryBlock().begin());
         builder.SetInsertPoint(bb);
 
         // validate index
@@ -171,6 +168,7 @@ namespace X::Runtime {
         val->setName("val");
 
         auto bb = llvm::BasicBlock::Create(context, "entry", fn);
+        llvm::IRBuilder<> builder(&fn->getEntryBlock(), fn->getEntryBlock().begin());
         builder.SetInsertPoint(bb);
 
         // validate index
@@ -216,6 +214,7 @@ namespace X::Runtime {
         that->setName("this");
 
         auto bb = llvm::BasicBlock::Create(context, "entry", fn);
+        llvm::IRBuilder<> builder(&fn->getEntryBlock(), fn->getEntryBlock().begin());
         builder.SetInsertPoint(bb);
 
         auto arrLenPtr = builder.CreateStructGEP(arrayType, that, 1);
@@ -232,6 +231,7 @@ namespace X::Runtime {
         that->setName("this");
 
         auto bb = llvm::BasicBlock::Create(context, "entry", fn);
+        llvm::IRBuilder<> builder(&fn->getEntryBlock(), fn->getEntryBlock().begin());
         builder.SetInsertPoint(bb);
 
         auto arrLengthFn = module.getFunction(mangler.mangleMethod(arrayType->getName().str(), "length"));
@@ -251,6 +251,7 @@ namespace X::Runtime {
         val->setName("val");
 
         auto bb = llvm::BasicBlock::Create(context, "entry", fn);
+        llvm::IRBuilder<> builder(&fn->getEntryBlock(), fn->getEntryBlock().begin());
         builder.SetInsertPoint(bb);
 
         auto arrPtr = builder.CreateStructGEP(arrayType, that, 0);
@@ -293,8 +294,8 @@ namespace X::Runtime {
         builder.CreateRetVoid();
     }
 
-    std::string Array::getClassName(Type::TypeID typeID) {
-        switch (typeID) {
+    std::string Array::getClassName(const Type *type) {
+        switch (type->getTypeID()) {
             case Type::TypeID::INT:
                 return CLASS_NAME + ".int";
             case Type::TypeID::FLOAT:
@@ -303,6 +304,11 @@ namespace X::Runtime {
                 return CLASS_NAME + ".bool";
             case Type::TypeID::STRING:
                 return CLASS_NAME + ".string";
+            case Type::TypeID::CLASS: {
+                // todo fix me later
+                Mangler mangler;
+                return CLASS_NAME + '.' + mangler.mangleClass(type->getClassName());
+            }
             default:
                 throw InvalidArrayTypeException();
         }
@@ -323,6 +329,11 @@ namespace X::Runtime {
 
         if (String::isStringType(type)) {
             return CLASS_NAME + ".string";
+        }
+
+        type = deref(type);
+        if (type->isStructTy()) {
+            return CLASS_NAME + '.' + type->getStructName().str();
         }
 
         throw InvalidArrayTypeException();

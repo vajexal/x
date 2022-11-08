@@ -14,7 +14,7 @@ TEST_P(ArrayAppendTest, append) {
 INSTANTIATE_TEST_SUITE_P(Code, ArrayAppendTest, testing::Values(
         std::make_pair(
                 R"code(
-    int[] a = int[]{}
+    []int a = []int{}
     a[] = 1
     println(a.length())
     println(a[0])
@@ -22,7 +22,7 @@ INSTANTIATE_TEST_SUITE_P(Code, ArrayAppendTest, testing::Values(
                 "1\n1"),
         std::make_pair(
                 R"code(
-    int[] a = int[]{1, 2, 3, 4, 5, 6, 7, 8}
+    []int a = []int{1, 2, 3, 4, 5, 6, 7, 8}
     a[] = 9
     println(a.length())
     println(a[8])

@@ -212,20 +212,17 @@ INC identifier { $$ = new UnaryNode(OpType::PRE_INC, $2); }
 ;
 
 type:
-INT_TYPE { $$ = Type(Type::TypeID::INT); }
-| FLOAT_TYPE { $$ = Type(Type::TypeID::FLOAT); }
-| BOOL_TYPE { $$ = Type(Type::TypeID::BOOL); }
-| STRING_TYPE { $$ = Type(Type::TypeID::STRING); }
-| VOID_TYPE { $$ = Type(Type::TypeID::VOID); }
-| IDENTIFIER { $$ = Type(std::move($1)); }
+INT_TYPE { $$ = std::move(Type::scalar(Type::TypeID::INT)); }
+| FLOAT_TYPE { $$ = std::move(Type::scalar(Type::TypeID::FLOAT)); }
+| BOOL_TYPE { $$ = std::move(Type::scalar(Type::TypeID::BOOL)); }
+| STRING_TYPE { $$ = std::move(Type::scalar(Type::TypeID::STRING)); }
+| VOID_TYPE { $$ = std::move(Type::scalar(Type::TypeID::VOID)); }
+| IDENTIFIER { $$ = std::move(Type::klass(std::move($1))); }
 | array_type { $$ = std::move($1); }
 ;
 
 array_type:
-INT_TYPE '[' ']' { $$ = Type(Type::TypeID::ARRAY, Type::TypeID::INT); }
-| FLOAT_TYPE '[' ']' { $$ = Type(Type::TypeID::ARRAY, Type::TypeID::FLOAT); }
-| BOOL_TYPE '[' ']' { $$ = Type(Type::TypeID::ARRAY, Type::TypeID::BOOL); }
-| STRING_TYPE '[' ']' { $$ = Type(Type::TypeID::ARRAY, Type::TypeID::STRING); }
+'[' ']' type { $$ = std::move(Type::array(new Type($3))); }
 ;
 
 var_decl:
@@ -237,10 +234,10 @@ IDENTIFIER { $$ = new VarNode(std::move($1)); }
 ;
 
 scalar:
-INT { $$ = new ScalarNode(std::move(Type(Type::TypeID::INT)), $1); }
-| FLOAT { $$ = new ScalarNode(std::move(Type(Type::TypeID::FLOAT)), $1); }
-| BOOL { $$ = new ScalarNode(std::move(Type(Type::TypeID::BOOL)), $1); }
-| STRING { $$ = new ScalarNode(std::move(Type(Type::TypeID::STRING)), std::move($1)); }
+INT { $$ = new ScalarNode(std::move(Type::scalar(Type::TypeID::INT)), $1); }
+| FLOAT { $$ = new ScalarNode(std::move(Type::scalar(Type::TypeID::FLOAT)), $1); }
+| BOOL { $$ = new ScalarNode(std::move(Type::scalar(Type::TypeID::BOOL)), $1); }
+| STRING { $$ = new ScalarNode(std::move(Type::scalar(Type::TypeID::STRING)), std::move($1)); }
 | array_type '{' expr_list '}' { $$ = new ScalarNode(std::move($1), std::move($3)); }
 ;
 

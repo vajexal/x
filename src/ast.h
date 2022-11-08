@@ -53,25 +53,41 @@ namespace X {
     private:
         TypeID id;
         std::optional<std::string> className;
-        TypeID subtype;
+        Type *subtype = nullptr;
 
     public:
         Type() : id(TypeID::VOID) {} // need empty constructor for bison variant
-        explicit Type(TypeID typeID) : id(typeID) {
-            if (typeID == TypeID::CLASS) {
+
+        static Type scalar(TypeID typeID) {
+            if (typeID == TypeID::CLASS || typeID == TypeID::ARRAY) {
                 throw std::invalid_argument("invalid type for scalar");
             }
+
+            Type type;
+            type.id = typeID;
+
+            return std::move(type);
         }
-        explicit Type(std::string className) : id(TypeID::CLASS), className(std::move(className)) {}
-        Type(TypeID typeID, TypeID subtype) : id(typeID), subtype(subtype) {
-            if (typeID != TypeID::ARRAY) {
-                throw std::invalid_argument("invalid type for scalar");
-            }
+
+        static Type klass(std::string className) {
+            Type type;
+            type.id = TypeID::CLASS;
+            type.className = std::move(className);
+
+            return std::move(type);
+        }
+
+        static Type array(Type *subtype) {
+            Type type;
+            type.id = TypeID::ARRAY;
+            type.subtype = subtype;
+
+            return std::move(type);
         }
 
         TypeID getTypeID() const { return id; }
         const std::string &getClassName() const { return className.value(); }
-        TypeID getSubtype() const { return subtype; }
+        Type *getSubtype() const { return subtype; }
 
         bool operator==(const Type &other) const;
         bool operator!=(const Type &other) const;

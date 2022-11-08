@@ -67,9 +67,6 @@ namespace X::Runtime {
             auto fn = module.getOrInsertFunction(fnName, fnType).getCallee();
             fnDefinitions.emplace_back(llvm::cast<llvm::Function>(fn), fnPtr);
         }
-
-        ArrayRuntime arrayRuntime(context, builder, module);
-        arrayRuntime.add();
     }
 
     void Runtime::addDefinitions(llvm::ExecutionEngine &engine) {

@@ -14,14 +14,13 @@
 namespace X::Runtime {
     class ArrayRuntime {
         llvm::LLVMContext &context;
-        llvm::IRBuilder<> &builder;
         llvm::Module &module;
         Mangler mangler;
 
     public:
-        ArrayRuntime(llvm::LLVMContext &context, llvm::IRBuilder<> &builder, llvm::Module &module) : context(context), builder(builder), module(module) {}
+        ArrayRuntime(llvm::LLVMContext &context, llvm::Module &module) : context(context), module(module) {}
 
-        void add();
+        llvm::StructType *add(llvm::Type *type);
 
     private:
         void addConstructor(llvm::StructType *arrayType, llvm::Type *elemType);
@@ -36,7 +35,7 @@ namespace X::Runtime {
         static inline const std::string CLASS_NAME = "Array";
         static inline const int MIN_CAP = 8;
 
-        static std::string getClassName(Type::TypeID typeID);
+        static std::string getClassName(const Type *type);
         static std::string getClassName(llvm::Type *type);
 
         static bool isArrayType(llvm::Type *type);

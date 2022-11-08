@@ -18,7 +18,7 @@ namespace X::Codegen {
         return nullptr;
     }
 
-    llvm::Type *Codegen::mapType(const Type &type) const {
+    llvm::Type *Codegen::mapType(const Type &type) {
         switch (type.getTypeID()) {
             case Type::TypeID::INT:
                 return llvm::Type::getInt64Ty(context);
@@ -29,8 +29,7 @@ namespace X::Codegen {
             case Type::TypeID::STRING:
                 return llvm::StructType::getTypeByName(context, Runtime::String::CLASS_NAME)->getPointerTo();
             case Type::TypeID::ARRAY:
-                // todo cache
-                return llvm::StructType::getTypeByName(context, Runtime::Array::getClassName(type.getSubtype()))->getPointerTo();
+                return getArrayForType(type.getSubtype())->getPointerTo();
             case Type::TypeID::VOID:
                 return llvm::Type::getVoidTy(context);
             case Type::TypeID::CLASS: {
@@ -43,7 +42,7 @@ namespace X::Codegen {
         }
     }
 
-    llvm::Constant *Codegen::getDefaultValue(const Type &type) const {
+    llvm::Constant *Codegen::getDefaultValue(const Type &type) {
         switch (type.getTypeID()) {
             case Type::TypeID::INT:
                 return llvm::ConstantInt::getSigned(llvm::Type::getInt64Ty(context), 0);
@@ -210,13 +209,15 @@ namespace X::Codegen {
         }
     }
 
-    llvm::StructType *Codegen::getArrayForType(llvm::Type *type) const {
+    llvm::StructType *Codegen::getArrayForType(const Type *type) {
+        // todo cache
         const auto &arrayClassName = Runtime::Array::getClassName(type);
-        return llvm::StructType::getTypeByName(context, arrayClassName);
-    }
-
-    llvm::StructType *Codegen::getArrayForType(Type::TypeID typeID) const {
-        const auto &arrayClassName = Runtime::Array::getClassName(typeID);
-        return llvm::StructType::getTypeByName(context, arrayClassName);
+        auto arrayType = llvm::StructType::getTypeByName(context, arrayClassName);
+        if (!arrayType) {
+            // gen array type
+            auto subtype = mapType(*type);
+            return arrayRuntime.add(subtype);
+        }
+        return arrayType;
     }
 }

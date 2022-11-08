@@ -59,7 +59,7 @@ namespace X::Codegen {
                 checkConstructor(method, name);
             }
             auto &fnName = mangler.mangleMethod(mangledName, fn->getName());
-            std::optional<Type> thisType = method->getIsStatic() ? std::nullopt : std::optional<Type>(std::move(Type(name)));
+            std::optional<Type> thisType = method->getIsStatic() ? std::nullopt : std::optional<Type>(Type::klass(name));
             genFn(fnName, fn->getArgs(), fn->getReturnType(), fn->getBody(), thisType);
             if (!isConstructor) {
                 self->methods[fn->getName()] = {method->getAccessModifier()};
