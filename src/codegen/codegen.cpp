@@ -2,7 +2,6 @@
 
 #include <fmt/core.h>
 
-#include "runtime/runtime.h"
 #include "utils.h"
 
 namespace X::Codegen {
@@ -210,8 +209,12 @@ namespace X::Codegen {
     }
 
     llvm::StructType *Codegen::getArrayForType(const Type *type) {
-        // todo cache
+        if (type->getTypeID() == Type::TypeID::ARRAY) {
+            throw CodegenException("multidimensional arrays are forbidden");
+        }
+
         const auto &arrayClassName = Runtime::Array::getClassName(type);
+        // todo cache
         auto arrayType = llvm::StructType::getTypeByName(context, arrayClassName);
         if (!arrayType) {
             // gen array type
