@@ -33,7 +33,7 @@ namespace X::Codegen {
                 return llvm::Type::getVoidTy(context);
             case Type::TypeID::CLASS: {
                 auto &className = type.getClassName();
-                auto classDecl = getClass(mangler.mangleClass(className));
+                auto &classDecl = getClass(mangler.mangleClass(className));
                 return classDecl.type->getPointerTo();
             }
             default:
@@ -67,7 +67,7 @@ namespace X::Codegen {
 
         if (that) {
             auto classType = deref(that->getType());
-            auto classDecl = getClass(classType->getStructName().str());
+            auto &classDecl = getClass(classType->getStructName().str());
             auto prop = classDecl.props.find(name);
             if (prop != classDecl.props.end()) {
                 auto ptr = builder.CreateStructGEP(classDecl.type, that, prop->second.pos);
@@ -150,13 +150,13 @@ namespace X::Codegen {
                 return builder.CreateFCmpONE(value, llvm::ConstantFP::get(llvm::Type::getFloatTy(context), 0));
             default:
                 if (Runtime::String::isStringType(value->getType())) {
-                    auto stringIsEmptyFnName = mangler.mangleMethod(Runtime::String::CLASS_NAME, "isEmpty");
+                    const auto &stringIsEmptyFnName = mangler.mangleMethod(Runtime::String::CLASS_NAME, "isEmpty");
                     auto callee = module.getFunction(stringIsEmptyFnName);
                     auto val = builder.CreateCall(callee, {value});
                     return negate(val);
                 } else if (Runtime::Array::isArrayType(value->getType())) {
                     auto arrType = deref(value->getType());
-                    auto arrayIsEmptyFnName = mangler.mangleMethod(arrType->getStructName().str(), "isEmpty");
+                    const auto &arrayIsEmptyFnName = mangler.mangleMethod(arrType->getStructName().str(), "isEmpty");
                     auto callee = module.getFunction(arrayIsEmptyFnName);
                     auto val = builder.CreateCall(callee, {value});
                     return negate(val);
