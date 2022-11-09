@@ -156,6 +156,11 @@ namespace X::Codegen {
     public:
         InvalidArrayAccessException() : CodegenException("invalid array exception") {}
     };
+
+    class InvalidOpTypeException : public CodegenException {
+    public:
+        InvalidOpTypeException() : CodegenException("invalid operation type") {}
+    };
 }
 
 #endif //X_CODEGEN_H

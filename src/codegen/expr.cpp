@@ -76,7 +76,7 @@ namespace X::Codegen {
                 expr = downcastToBool(expr);
                 return negate(expr);
             default:
-                throw CodegenException("invalid op type");
+                throw InvalidOpTypeException();
         }
     }
 
@@ -100,7 +100,7 @@ namespace X::Codegen {
                 case OpType::NOT_EQUAL:
                     return negate(compareStrings(lhs, rhs));
                 default:
-                    throw CodegenException("invalid op type");
+                    throw InvalidOpTypeException();
             }
         }
 
@@ -110,46 +110,64 @@ namespace X::Codegen {
             std::tie(lhs, rhs) = upcast(lhs, rhs);
         }
 
-        using binaryExprGenerator = std::function<llvm::Value *(llvm::Value *, llvm::Value *)>;
-
-        // todo maybe refactor to switches
-        static std::map<llvm::Type::TypeID, std::map<OpType, binaryExprGenerator>> binaryExprGeneratorMap{
-                {llvm::Type::TypeID::IntegerTyID, {
-                        {OpType::PLUS, [this](llvm::Value *lhs, llvm::Value *rhs) { return builder.CreateAdd(lhs, rhs); }},
-                        {OpType::MINUS, [this](llvm::Value *lhs, llvm::Value *rhs) { return builder.CreateSub(lhs, rhs); }},
-                        {OpType::MUL, [this](llvm::Value *lhs, llvm::Value *rhs) { return builder.CreateMul(lhs, rhs); }},
-                        {OpType::EQUAL, [this](llvm::Value *lhs, llvm::Value *rhs) { return builder.CreateICmpEQ(lhs, rhs); }},
-                        {OpType::NOT_EQUAL, [this](llvm::Value *lhs, llvm::Value *rhs) { return builder.CreateICmpNE(lhs, rhs); }},
-                        {OpType::SMALLER, [this](llvm::Value *lhs, llvm::Value *rhs) { return builder.CreateICmpSLT(lhs, rhs); }},
-                        {OpType::SMALLER_OR_EQUAL, [this](llvm::Value *lhs, llvm::Value *rhs) { return builder.CreateICmpSLE(lhs, rhs); }},
-                        {OpType::GREATER, [this](llvm::Value *lhs, llvm::Value *rhs) { return builder.CreateICmpSGT(lhs, rhs); }},
-                        {OpType::GREATER_OR_EQUAL, [this](llvm::Value *lhs, llvm::Value *rhs) { return builder.CreateICmpSGE(lhs, rhs); }}
-                }},
-                {llvm::Type::TypeID::FloatTyID, {
-                        {OpType::PLUS, [this](llvm::Value *lhs, llvm::Value *rhs) { return builder.CreateFAdd(lhs, rhs); }},
-                        {OpType::MINUS, [this](llvm::Value *lhs, llvm::Value *rhs) { return builder.CreateFSub(lhs, rhs); }},
-                        {OpType::MUL, [this](llvm::Value *lhs, llvm::Value *rhs) { return builder.CreateFMul(lhs, rhs); }},
-                        {OpType::DIV, [this](llvm::Value *lhs, llvm::Value *rhs) { return builder.CreateFDiv(lhs, rhs); }},
-                        {OpType::EQUAL, [this](llvm::Value *lhs, llvm::Value *rhs) { return builder.CreateFCmpOEQ(lhs, rhs); }},
-                        {OpType::NOT_EQUAL, [this](llvm::Value *lhs, llvm::Value *rhs) { return builder.CreateFCmpONE(lhs, rhs); }},
-                        {OpType::SMALLER, [this](llvm::Value *lhs, llvm::Value *rhs) { return builder.CreateFCmpOLT(lhs, rhs); }},
-                        {OpType::SMALLER_OR_EQUAL, [this](llvm::Value *lhs, llvm::Value *rhs) { return builder.CreateFCmpOLE(lhs, rhs); }},
-                        {OpType::GREATER, [this](llvm::Value *lhs, llvm::Value *rhs) { return builder.CreateFCmpOGT(lhs, rhs); }},
-                        {OpType::GREATER_OR_EQUAL, [this](llvm::Value *lhs, llvm::Value *rhs) { return builder.CreateFCmpOGE(lhs, rhs); }}
-                }}
-        };
-
-        auto typeGeneratorMap = binaryExprGeneratorMap.find(lhs->getType()->getTypeID());
-        if (typeGeneratorMap == binaryExprGeneratorMap.end()) {
-            throw CodegenException("invalid type");
+        switch (lhs->getType()->getTypeID()) {
+            case llvm::Type::TypeID::IntegerTyID: {
+                switch (node->getType()) {
+                    case OpType::PLUS:
+                        return builder.CreateAdd(lhs, rhs);
+                    case OpType::MINUS:
+                        return builder.CreateSub(lhs, rhs);
+                    case OpType::MUL:
+                        return builder.CreateMul(lhs, rhs);
+                    case OpType::EQUAL:
+                        return builder.CreateICmpEQ(lhs, rhs);
+                    case OpType::NOT_EQUAL:
+                        return builder.CreateICmpNE(lhs, rhs);
+                    case OpType::SMALLER:
+                        return builder.CreateICmpSLT(lhs, rhs);
+                    case OpType::SMALLER_OR_EQUAL:
+                        return builder.CreateICmpSLE(lhs, rhs);
+                    case OpType::GREATER:
+                        return builder.CreateICmpSGT(lhs, rhs);
+                    case OpType::GREATER_OR_EQUAL:
+                        return builder.CreateICmpSGE(lhs, rhs);
+                    default:
+                        throw InvalidOpTypeException();
+                }
+                break;
+            }
+            case llvm::Type::TypeID::FloatTyID: {
+                switch (node->getType()) {
+                    case OpType::PLUS:
+                        return builder.CreateFAdd(lhs, rhs);
+                    case OpType::MINUS:
+                        return builder.CreateFSub(lhs, rhs);
+                    case OpType::MUL:
+                        return builder.CreateFMul(lhs, rhs);
+                    case OpType::DIV:
+                        return builder.CreateFDiv(lhs, rhs);
+                    case OpType::EQUAL:
+                        return builder.CreateFCmpOEQ(lhs, rhs);
+                    case OpType::NOT_EQUAL:
+                        return builder.CreateFCmpONE(lhs, rhs);
+                    case OpType::SMALLER:
+                        return builder.CreateFCmpOLT(lhs, rhs);
+                    case OpType::SMALLER_OR_EQUAL:
+                        return builder.CreateFCmpOLE(lhs, rhs);
+                    case OpType::GREATER:
+                        return builder.CreateFCmpOGT(lhs, rhs);
+                    case OpType::GREATER_OR_EQUAL:
+                        return builder.CreateFCmpOGE(lhs, rhs);
+                    default:
+                        throw InvalidOpTypeException();
+                }
+                break;
+            }
+            default:
+                throw CodegenException("invalid type");
         }
 
-        auto exprGenerator = typeGeneratorMap->second.find(node->getType());
-        if (exprGenerator == typeGeneratorMap->second.end()) {
-            throw CodegenException("invalid op type");
-        }
-
-        return exprGenerator->second(lhs, rhs);
+        return nullptr;
     }
 
     llvm::Value *Codegen::gen(VarNode *node) {
