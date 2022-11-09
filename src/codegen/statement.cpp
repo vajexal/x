@@ -157,26 +157,38 @@ namespace X::Codegen {
 
     llvm::Value *Codegen::gen(AssignArrNode *node) {
         auto arr = node->getArr()->gen(*this);
+        auto arrType = deref(arr->getType());
+        if (!Runtime::Array::isArrayType(arrType)) {
+            throw InvalidArrayAccessException();
+        }
+
         auto idx = node->getIdx()->gen(*this);
         auto expr = node->getExpr()->gen(*this);
-        auto arrType = deref(arr->getType());
+
         auto arrSetFn = module.getFunction(mangler.mangleMethod(arrType->getStructName().str(), "set[]"));
         if (!arrSetFn) {
-            throw CodegenException("invalid [] operation");
+            throw InvalidArrayAccessException();
         }
         builder.CreateCall(arrSetFn, {arr, idx, expr});
+
         return nullptr;
     }
 
     llvm::Value *Codegen::gen(AppendArrNode *node) {
         auto arr = node->getArr()->gen(*this);
-        auto expr = node->getExpr()->gen(*this);
         auto arrType = deref(arr->getType());
+        if (!Runtime::Array::isArrayType(arrType)) {
+            throw InvalidArrayAccessException();
+        }
+
+        auto expr = node->getExpr()->gen(*this);
+
         auto arrAppendFn = module.getFunction(mangler.mangleMethod(arrType->getStructName().str(), "append[]"));
         if (!arrAppendFn) {
-            throw CodegenException("invalid [] operation");
+            throw InvalidArrayAccessException();
         }
         builder.CreateCall(arrAppendFn, {arr, expr});
+
         return nullptr;
     }
 }

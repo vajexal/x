@@ -199,7 +199,7 @@ namespace X::Codegen {
         auto arrType = deref(arr->getType());
         auto arrSetFn = module.getFunction(mangler.mangleMethod(arrType->getStructName().str(), "set[]"));
         if (!arrSetFn) {
-            throw CodegenException("invalid [] operation");
+            throw InvalidArrayAccessException();
         }
 
         for (auto i = 0; i < values.size(); i++) {

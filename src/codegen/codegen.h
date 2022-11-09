@@ -108,6 +108,7 @@ namespace X::Codegen {
         std::pair<llvm::Type *, llvm::Value *> getProp(llvm::Value *obj, const std::string &name) const;
         std::pair<llvm::Type *, llvm::Value *> getStaticProp(const std::string &className, const std::string &propName) const;
         const ClassDecl &getClass(const std::string &mangledName) const;
+        bool isObject(llvm::Value *value) const;
         llvm::AllocaInst *createAlloca(llvm::Type *type, const std::string &name = "") const;
         AccessModifier getMethodAccessModifier(const std::string &mangledClassName, const std::string &methodName) const;
         llvm::Function *getConstructor(const std::string &mangledClassName) const;
@@ -144,6 +145,16 @@ namespace X::Codegen {
     class MethodNotFoundException : public CodegenException {
     public:
         MethodNotFoundException(const std::string &methodName) : CodegenException("method not found: " + methodName) {}
+    };
+
+    class InvalidObjectAccessException : public CodegenException {
+    public:
+        InvalidObjectAccessException() : CodegenException("invalid object exception") {}
+    };
+
+    class InvalidArrayAccessException : public CodegenException {
+    public:
+        InvalidArrayAccessException() : CodegenException("invalid array exception") {}
     };
 }
 

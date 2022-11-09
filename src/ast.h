@@ -545,11 +545,11 @@ namespace X {
     };
 
     class FetchPropNode : public ExprNode {
-        VarNode *obj;
+        ExprNode *obj;
         std::string name;
 
     public:
-        FetchPropNode(VarNode *obj, std::string name) : obj(obj), name(std::move(name)) {}
+        FetchPropNode(ExprNode *obj, std::string name) : obj(obj), name(std::move(name)) {}
         ~FetchPropNode() {
             delete obj;
         }
@@ -557,7 +557,7 @@ namespace X {
         void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
 
-        VarNode *getObj() const { return obj; }
+        ExprNode *getObj() const { return obj; }
         const std::string &getName() const { return name; }
     };
 
@@ -576,24 +576,24 @@ namespace X {
     };
 
     class MethodCallNode : public ExprNode {
-        VarNode *obj;
+        ExprNode *obj;
         std::string name;
         ExprList args;
 
     public:
-        MethodCallNode(VarNode *obj, std::string name, ExprList args) : obj(obj), name(std::move(name)), args(std::move(args)) {}
+        MethodCallNode(ExprNode *obj, std::string name, ExprList args) : obj(obj), name(std::move(name)), args(std::move(args)) {}
         ~MethodCallNode() {
             delete obj;
 
-            for (auto expr: args) {
-                delete expr;
+            for (auto arg: args) {
+                delete arg;
             }
         }
 
         void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
 
-        VarNode *getObj() const { return obj; }
+        ExprNode *getObj() const { return obj; }
         const std::string &getName() const { return name; }
         const ExprList &getArgs() const { return args; }
     };
@@ -622,12 +622,12 @@ namespace X {
     };
 
     class AssignPropNode : public Node {
-        VarNode *obj;
+        ExprNode *obj;
         std::string name;
         ExprNode *expr;
 
     public:
-        AssignPropNode(VarNode *obj, std::string name, ExprNode *expr) : obj(obj), name(std::move(name)), expr(expr) {}
+        AssignPropNode(ExprNode *obj, std::string name, ExprNode *expr) : obj(obj), name(std::move(name)), expr(expr) {}
         ~AssignPropNode() {
             delete obj;
             delete expr;
@@ -636,7 +636,7 @@ namespace X {
         void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
 
-        VarNode *getObj() const { return obj; }
+        ExprNode *getObj() const { return obj; }
         const std::string &getName() const { return name; }
         ExprNode *getExpr() const { return expr; }
     };
@@ -705,11 +705,11 @@ namespace X {
     };
 
     class FetchArrNode : public ExprNode {
-        VarNode *arr;
+        ExprNode *arr;
         ExprNode *idx;
 
     public:
-        FetchArrNode(VarNode *arr, ExprNode *idx) : arr(arr), idx(idx) {}
+        FetchArrNode(ExprNode *arr, ExprNode *idx) : arr(arr), idx(idx) {}
         ~FetchArrNode() {
             delete arr;
             delete idx;
@@ -718,17 +718,17 @@ namespace X {
         void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
 
-        VarNode *getArr() const { return arr; }
+        ExprNode *getArr() const { return arr; }
         ExprNode *getIdx() const { return idx; }
     };
 
     class AssignArrNode : public Node {
-        VarNode *arr;
+        ExprNode *arr;
         ExprNode *idx;
         ExprNode *expr;
 
     public:
-        AssignArrNode(VarNode *arr, ExprNode *idx, ExprNode *expr) : arr(arr), idx(idx), expr(expr) {}
+        AssignArrNode(ExprNode *arr, ExprNode *idx, ExprNode *expr) : arr(arr), idx(idx), expr(expr) {}
         ~AssignArrNode() {
             delete arr;
             delete idx;
@@ -738,17 +738,17 @@ namespace X {
         void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
 
-        VarNode *getArr() const { return arr; }
+        ExprNode *getArr() const { return arr; }
         ExprNode *getIdx() const { return idx; }
         ExprNode *getExpr() const { return expr; }
     };
 
     class AppendArrNode : public Node {
-        VarNode *arr;
+        ExprNode *arr;
         ExprNode *expr;
 
     public:
-        AppendArrNode(VarNode *arr, ExprNode *expr) : arr(arr), expr(expr) {}
+        AppendArrNode(ExprNode *arr, ExprNode *expr) : arr(arr), expr(expr) {}
         ~AppendArrNode() {
             delete arr;
             delete expr;
@@ -757,7 +757,7 @@ namespace X {
         void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
 
-        VarNode *getArr() const { return arr; }
+        ExprNode *getArr() const { return arr; }
         ExprNode *getExpr() const { return expr; }
     };
 }

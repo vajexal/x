@@ -75,6 +75,9 @@ namespace X::Codegen {
 
     llvm::Value *Codegen::gen(FetchPropNode *node) {
         auto obj = node->getObj()->gen(*this);
+        if (!isObject(obj)) {
+            throw InvalidObjectAccessException();
+        }
         auto &propName = node->getName();
         auto [type, ptr] = getProp(obj, propName);
         return builder.CreateLoad(type, ptr, propName);
@@ -87,6 +90,10 @@ namespace X::Codegen {
 
     llvm::Value *Codegen::gen(MethodCallNode *node) {
         auto obj = node->getObj()->gen(*this);
+        if (!isObject(obj)) {
+            throw InvalidObjectAccessException();
+        }
+
         auto &methodName = node->getName();
 
         if (methodName == CONSTRUCTOR_FN_NAME) {
@@ -120,6 +127,10 @@ namespace X::Codegen {
 
     llvm::Value *Codegen::gen(AssignPropNode *node) {
         auto obj = node->getObj()->gen(*this);
+        if (!isObject(obj)) {
+            throw InvalidObjectAccessException();
+        }
+
         auto value = node->getExpr()->gen(*this);
         auto [type, ptr] = getProp(obj, node->getName());
         builder.CreateStore(value, ptr);
@@ -159,7 +170,7 @@ namespace X::Codegen {
     std::pair<llvm::Type *, llvm::Value *> Codegen::getProp(llvm::Value *obj, const std::string &name) const {
         auto type = deref(obj->getType());
         if (!type->isStructTy()) {
-            throw CodegenException("invalid obj operand");
+            throw InvalidObjectAccessException();
         }
 
         auto className = type->getStructName();
@@ -209,6 +220,11 @@ namespace X::Codegen {
             throw CodegenException("class not found: " + mangler.unmangleClass(mangledName));
         }
         return classDecl->second;
+    }
+
+    bool Codegen::isObject(llvm::Value *value) const {
+        auto type = deref(value->getType());
+        return type->isStructTy();
     }
 
     AccessModifier Codegen::getMethodAccessModifier(const std::string &mangledClassName, const std::string &methodName) const {

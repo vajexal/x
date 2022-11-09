@@ -160,12 +160,18 @@ namespace X::Codegen {
 
     llvm::Value *Codegen::gen(FetchArrNode *node) {
         auto arr = node->getArr()->gen(*this);
-        auto idx = node->getIdx()->gen(*this);
         auto arrType = deref(arr->getType());
+        if (!Runtime::Array::isArrayType(arrType)) {
+            throw InvalidArrayAccessException();
+        }
+
+        auto idx = node->getIdx()->gen(*this);
+
         auto arrGetFn = module.getFunction(mangler.mangleMethod(arrType->getStructName().str(), "get[]"));
         if (!arrGetFn) {
-            throw CodegenException("invalid [] operation");
+            throw InvalidArrayAccessException();
         }
+
         return builder.CreateCall(arrGetFn, {arr, idx});
     }
 }

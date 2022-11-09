@@ -13,3 +13,24 @@ TEST_F(ArrayTest, general) {
 )code";
     checkCode(code, "10");
 }
+
+TEST_F(ArrayTest, arbitraryArrayType) {
+    auto code = R"code(
+class Foo {
+    public int val
+
+    public fn construct(int v) void {
+        val = v
+    }
+}
+
+fn main() int {
+    []Foo a = []Foo{new Foo(123)}
+
+    println(a[0].val)
+
+    return 0
+}
+)code";
+    checkProgram(code, "123");
+}

@@ -90,6 +90,7 @@
 %nterm <DeclareNode *> var_decl
 %nterm <VarNode *> identifier
 %nterm <ScalarNode *> scalar
+%nterm <ExprNode *> dereferenceable
 %nterm <std::vector<ExprNode *>> expr_list
 %nterm <std::vector<ExprNode *>> non_empty_expr_list
 %nterm <IfNode *> if_statement
@@ -157,8 +158,7 @@ statement newlines { $$ = $1; }
 ;
 
 top_statement:
-statement { $$ = $1; }
-| class_decl { $$ = $1; }
+class_decl { $$ = $1; }
 | interface_decl { $$ = $1; }
 | fn_def { $$ = $1; }
 ;
@@ -167,10 +167,10 @@ statement:
 expr { $$ = $1; }
 | var_decl { $$ = $1; }
 | IDENTIFIER '=' expr { $$ = new AssignNode(std::move($1), $3); }
-| identifier '.' IDENTIFIER '=' expr { $$ = new AssignPropNode($1, std::move($3), $5); }
+| dereferenceable '.' IDENTIFIER '=' expr { $$ = new AssignPropNode($1, std::move($3), $5); }
 | IDENTIFIER SCOPE IDENTIFIER '=' expr { $$ = new AssignStaticPropNode(std::move($1), std::move($3), $5); }
-| identifier '[' expr ']' '=' expr { $$ = new AssignArrNode($1, $3, $6); }
-| identifier '[' ']' '=' expr { $$ = new AppendArrNode($1, $5); }
+| dereferenceable '[' expr ']' '=' expr { $$ = new AssignArrNode($1, $3, $6); }
+| dereferenceable '[' ']' '=' expr { $$ = new AppendArrNode($1, $5); }
 | if_statement { $$ = $1; }
 | while_statement { $$ = $1; }
 | BREAK { $$ = new BreakNode; }
@@ -200,13 +200,10 @@ INC identifier { $$ = new UnaryNode(OpType::PRE_INC, $2); }
 | expr SMALLER_OR_EQUAL expr { $$ = new BinaryNode(OpType::SMALLER_OR_EQUAL, $1, $3); }
 | expr '>' expr { $$ = new BinaryNode(OpType::GREATER, $1, $3); }
 | expr GREATER_OR_EQUAL expr { $$ = new BinaryNode(OpType::GREATER_OR_EQUAL, $1, $3); }
-| scalar { $$ = $1; }
-| identifier { $$ = $1; }
+| scalar { $$ = std::move($1); }
+| dereferenceable { $$ = std::move($1); }
 | IDENTIFIER '(' expr_list ')' { $$ = new FnCallNode(std::move($1), std::move($3)); }
-| identifier '.' IDENTIFIER { $$ = new FetchPropNode($1, std::move($3)); }
-| identifier '.' IDENTIFIER '(' expr_list ')' { $$ = new MethodCallNode($1, std::move($3), std::move($5)); }
 | IDENTIFIER SCOPE IDENTIFIER { $$ = new FetchStaticPropNode(std::move($1), std::move($3)); }
-| identifier '[' expr ']' { $$ = new FetchArrNode($1, $3); }
 | IDENTIFIER SCOPE IDENTIFIER '(' expr_list ')' { $$ = new StaticMethodCallNode(std::move($1), std::move($3), std::move($5)); }
 | NEW IDENTIFIER '(' expr_list ')' { $$ = new NewNode(std::move($2), std::move($4)); }
 ;
@@ -249,6 +246,13 @@ expr_list:
 non_empty_expr_list:
 expr { $$ = std::vector<ExprNode *>(); $$.push_back($1); }
 | non_empty_expr_list ',' expr { $1.push_back($3); $$ = std::move($1); }
+;
+
+dereferenceable:
+identifier { $$ = std::move($1); }
+| dereferenceable '.' IDENTIFIER { $$ = new FetchPropNode($1, std::move($3)); }
+| dereferenceable '[' expr ']' { $$ = new FetchArrNode($1, $3); }
+| dereferenceable '.' IDENTIFIER '(' expr_list ')' { $$ = new MethodCallNode($1, std::move($3), std::move($5)); }
 ;
 
 if_statement:
