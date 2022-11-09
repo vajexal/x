@@ -62,8 +62,8 @@ namespace X::Codegen {
         std::map<std::string, llvm::AllocaInst *> namedValues;
         std::stack<Loop> loops;
 
-        llvm::Value *that;
-        ClassDecl *self; // current class in static context
+        llvm::Value *that = nullptr;
+        ClassDecl *self = nullptr; // current class in static context
         std::map<std::string, ClassDecl> classes;
 
     public:

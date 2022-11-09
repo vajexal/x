@@ -95,3 +95,47 @@ fn main() int {
         ASSERT_STREQ(e.what(), "class Foo not found");
     }
 }
+
+TEST_F(ClassTest, propAccess) {
+    checkProgram(R"code(
+class Foo {
+    int val
+
+    public fn isValPositive() bool {
+        return val > 0
+    }
+}
+
+fn main() int {
+    Foo foo = new Foo()
+
+    foo.val = 123
+    println(foo.val)
+    println(foo.isValPositive())
+
+    return 0
+}
+)code", R"output(123
+true)output");
+}
+
+TEST_F(ClassTest, staticPropAccess) {
+    checkProgram(R"code(
+class Foo {
+    static int val
+
+    public static fn isValPositive() bool {
+        return val > 0
+    }
+}
+
+fn main() int {
+    Foo::val = 123
+    println(Foo::val)
+    println(Foo::isValPositive())
+
+    return 0
+}
+)code", R"output(123
+true)output");
+}
