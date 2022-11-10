@@ -76,14 +76,11 @@
 %token PRIVATE "private"
 %token ABSTRACT "abstract"
 
-%nterm <StatementListNode *> wrapped_top_statement_list
 %nterm <StatementListNode *> top_statement_list
-%nterm <Node *> wrapped_top_statement
 %nterm <Node *> top_statement
-%nterm <StatementListNode *> wrapped_statement_list
 %nterm <StatementListNode *> statement_list
-%nterm <Node *> wrapped_statement
 %nterm <Node *> statement
+%nterm <CommentNode *> maybe_comment
 %nterm <ExprNode *> expr
 %nterm <Type> type
 %nterm <Type> array_type
@@ -118,7 +115,7 @@
 %%
 
 start:
-wrapped_top_statement_list { driver.root = $1; }
+top_statement_list { driver.root = $1; }
 ;
 
 newlines:
@@ -126,41 +123,36 @@ newlines:
 | newlines '\n'
 ;
 
-maybe_newlines:
-%empty
-| maybe_newlines '\n'
-;
-
-wrapped_top_statement_list:
-maybe_newlines top_statement_list { $$ = $2; }
+maybe_comment:
+%empty { $$ = nullptr; }
+| COMMENT { $$ = new CommentNode(std::move($1)); }
 ;
 
 top_statement_list:
 %empty { $$ = new StatementListNode; }
-| top_statement_list wrapped_top_statement { $1->add($2); $$ = $1; }
-;
-
-wrapped_top_statement:
-top_statement newlines { $$ = $1; }
-;
-
-wrapped_statement_list:
-maybe_newlines statement_list { $$ = $2; }
+| top_statement_list top_statement maybe_comment '\n' {
+    $1->add($2);
+    if ($3) $1->add($3);
+    $$ = $1;
+}
+| top_statement_list '\n' { $$ = $1; }
 ;
 
 statement_list:
 %empty { $$ = new StatementListNode; }
-| statement_list wrapped_statement { $1->add($2); $$ = $1; }
-;
-
-wrapped_statement:
-statement newlines { $$ = $1; }
+| statement_list statement maybe_comment '\n' {
+    $1->add($2);
+    if ($3) $1->add($3);
+    $$ = $1;
+}
+| statement_list '\n' { $$ = $1; }
 ;
 
 top_statement:
 class_decl { $$ = $1; }
 | interface_decl { $$ = $1; }
 | fn_def { $$ = $1; }
+| COMMENT { $$ = new CommentNode(std::move($1)); }
 ;
 
 statement:
@@ -256,16 +248,16 @@ identifier { $$ = std::move($1); }
 ;
 
 if_statement:
-IF expr '{' wrapped_statement_list '}' { $$ = new IfNode($2, $4); }
-| IF expr '{' wrapped_statement_list '}' ELSE '{' wrapped_statement_list '}' { $$ = new IfNode($2, $4, $8); }
+IF expr '{' statement_list '}' { $$ = new IfNode($2, $4); }
+| IF expr '{' statement_list '}' ELSE '{' statement_list '}' { $$ = new IfNode($2, $4, $8); }
 ;
 
 while_statement:
-WHILE expr '{' wrapped_statement_list '}' { $$ = new WhileNode($2, $4); }
+WHILE expr '{' statement_list '}' { $$ = new WhileNode($2, $4); }
 ;
 
 fn_def:
-FN IDENTIFIER '(' decl_arg_list ')' type '{' wrapped_statement_list '}' { $$ = new FnDefNode(std::move($2), std::move($4), std::move($6), $8); }
+FN IDENTIFIER '(' decl_arg_list ')' type '{' statement_list '}' { $$ = new FnDefNode(std::move($2), std::move($4), std::move($6), $8); }
 ;
 
 fn_decl:
