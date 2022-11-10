@@ -1,0 +1,37 @@
+name: Build
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Set up Homebrew
+        uses: Homebrew/actions/setup-homebrew@master
+
+      - name: Setup
+        run: |
+          brew install llvm bison re2c fmt googletest
+
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Build
+        run: |
+          re2c lexer.l -o lexer.cpp -ci -W
+          bison -d parser.y -v -W
+          mkdir build
+          cd build
+          cmake ..
+          cmake --build . --target x_test -j $(nproc)
+
+      - name: Run tests
+        working-directory: build
+        run: ctest
+        env:
+          CTEST_OUTPUT_ON_FAILURE: True
