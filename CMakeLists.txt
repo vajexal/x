@@ -66,7 +66,8 @@ add_executable(x_test ${X_SOURCES}
         tests/check_interfaces_test.cpp
         tests/check_abstract_classes_test.cpp
         tests/class_test.cpp
-        tests/flow_test.cpp)
+        tests/flow_test.cpp
+        tests/tour_test.cpp)
 target_link_libraries(x_test GTest::gtest_main ${X_LIBS})
 
 include(GoogleTest)
