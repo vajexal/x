@@ -12,7 +12,7 @@ namespace X::Runtime {
         return String_create(s.c_str());
     }
 
-    String *castFloatToString(float value) {
+    String *castFloatToString(double value) {
         // we use ostringstream here because std::to_string may yield unexpected results (for example trailing zeros)
         std::ostringstream os;
         os << value;

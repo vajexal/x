@@ -62,7 +62,7 @@
 %token GREATER_OR_EQUAL ">="
 %token <std::string> COMMENT
 %token <int> INT
-%token <float> FLOAT
+%token <double> FLOAT
 %token <bool> BOOL
 %token <std::string> STRING
 %token CLASS "class"

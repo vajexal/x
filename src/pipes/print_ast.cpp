@@ -21,10 +21,10 @@ namespace X::Pipes {
 
         switch (node->getType().getTypeID()) {
             case Type::TypeID::INT:
-                std::cout << std::get<int>(value);
+                std::cout << std::get<int64_t>(value);
                 break;
             case Type::TypeID::FLOAT:
-                std::cout << std::get<float>(value);
+                std::cout << std::get<double>(value);
                 break;
             case Type::TypeID::BOOL:
                 std::cout << std::get<bool>(value);

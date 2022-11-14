@@ -14,7 +14,7 @@ namespace X {
     class ExprNode;
 
     using ExprList = std::vector<ExprNode *>;
-    using ScalarValue = std::variant<int, float, bool, std::string, ExprList>;
+    using ScalarValue = std::variant<int64_t, double, bool, std::string, ExprList>;
 
     enum class OpType {
         PRE_INC,

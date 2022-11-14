@@ -6,7 +6,7 @@
 namespace X::Runtime {
     String *castBoolToString(bool value);
     String *castIntToString(int64_t value);
-    String *castFloatToString(float value);
+    String *castFloatToString(double value);
 }
 
 #endif //X_CASTS_H

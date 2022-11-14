@@ -323,7 +323,7 @@ namespace X::Runtime {
             return CLASS_NAME + ".int";
         }
 
-        if (type->isFloatTy()) {
+        if (type->isDoubleTy()) {
             return CLASS_NAME + ".float";
         }
 

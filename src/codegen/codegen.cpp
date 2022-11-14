@@ -32,7 +32,7 @@ namespace X::Codegen {
             case Type::TypeID::INT:
                 return llvm::Type::getInt64Ty(context);
             case Type::TypeID::FLOAT:
-                return llvm::Type::getFloatTy(context);
+                return llvm::Type::getDoubleTy(context);
             case Type::TypeID::BOOL:
                 return llvm::Type::getInt1Ty(context);
             case Type::TypeID::STRING:
@@ -56,7 +56,7 @@ namespace X::Codegen {
             case Type::TypeID::INT:
                 return llvm::ConstantInt::getSigned(llvm::Type::getInt64Ty(context), 0);
             case Type::TypeID::FLOAT:
-                return llvm::ConstantFP::get(llvm::Type::getFloatTy(context), 0);
+                return llvm::ConstantFP::get(llvm::Type::getDoubleTy(context), 0);
             case Type::TypeID::BOOL:
                 return llvm::ConstantInt::get(llvm::Type::getInt1Ty(context), 0);
             case Type::TypeID::STRING:
@@ -74,7 +74,7 @@ namespace X::Codegen {
             case Type::TypeID::INT:
                 return llvm::ConstantInt::getSigned(llvm::Type::getInt64Ty(context), 0);
             case Type::TypeID::FLOAT:
-                return llvm::ConstantFP::get(llvm::Type::getFloatTy(context), 0);
+                return llvm::ConstantFP::get(llvm::Type::getDoubleTy(context), 0);
             case Type::TypeID::BOOL:
                 return llvm::ConstantInt::get(llvm::Type::getInt1Ty(context), 0);
             case Type::TypeID::STRING:
@@ -147,12 +147,12 @@ namespace X::Codegen {
     }
 
     std::pair<llvm::Value *, llvm::Value *> Codegen::upcast(llvm::Value *a, llvm::Value *b) const {
-        if (a->getType()->isFloatTy() && b->getType()->isIntegerTy()) {
-            return {a, builder.CreateSIToFP(b, llvm::Type::getFloatTy(context))};
+        if (a->getType()->isDoubleTy() && b->getType()->isIntegerTy()) {
+            return {a, builder.CreateSIToFP(b, llvm::Type::getDoubleTy(context))};
         }
 
-        if (a->getType()->isIntegerTy() && b->getType()->isFloatTy()) {
-            return {builder.CreateSIToFP(a, llvm::Type::getFloatTy(context)), b};
+        if (a->getType()->isIntegerTy() && b->getType()->isDoubleTy()) {
+            return {builder.CreateSIToFP(a, llvm::Type::getDoubleTy(context)), b};
         }
 
         return {a, b};
@@ -160,11 +160,11 @@ namespace X::Codegen {
 
     std::pair<llvm::Value *, llvm::Value *> Codegen::forceUpcast(llvm::Value *a, llvm::Value *b) const {
         if (a->getType()->isIntegerTy()) {
-            a = builder.CreateSIToFP(a, llvm::Type::getFloatTy(context));
+            a = builder.CreateSIToFP(a, llvm::Type::getDoubleTy(context));
         }
 
         if (b->getType()->isIntegerTy()) {
-            b = builder.CreateSIToFP(b, llvm::Type::getFloatTy(context));
+            b = builder.CreateSIToFP(b, llvm::Type::getDoubleTy(context));
         }
 
         return {a, b};
@@ -178,8 +178,8 @@ namespace X::Codegen {
         switch (value->getType()->getTypeID()) {
             case llvm::Type::TypeID::IntegerTyID:
                 return builder.CreateICmpNE(value, llvm::ConstantInt::getSigned(llvm::Type::getInt64Ty(context), 0));
-            case llvm::Type::TypeID::FloatTyID:
-                return builder.CreateFCmpONE(value, llvm::ConstantFP::get(llvm::Type::getFloatTy(context), 0));
+            case llvm::Type::TypeID::DoubleTyID:
+                return builder.CreateFCmpONE(value, llvm::ConstantFP::get(llvm::Type::getDoubleTy(context), 0));
             default:
                 if (Runtime::String::isStringType(value->getType())) {
                     const auto &stringIsEmptyFnName = mangler.mangleMethod(Runtime::String::CLASS_NAME, "isEmpty");
@@ -209,7 +209,7 @@ namespace X::Codegen {
                 auto callee = module.getFunction(mangler.mangleInternalFunction("castIntToString"));
                 return builder.CreateCall(callee, {value});
             }
-            case llvm::Type::TypeID::FloatTyID: {
+            case llvm::Type::TypeID::DoubleTyID: {
                 auto callee = module.getFunction(mangler.mangleInternalFunction("castFloatToString"));
                 return builder.CreateCall(callee, {value});
             }

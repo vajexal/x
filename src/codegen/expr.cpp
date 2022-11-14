@@ -10,9 +10,9 @@ namespace X::Codegen {
 
         switch (type.getTypeID()) {
             case Type::TypeID::INT:
-                return llvm::ConstantInt::getSigned(llvm::Type::getInt64Ty(context), std::get<int>(value));
+                return llvm::ConstantInt::getSigned(llvm::Type::getInt64Ty(context), std::get<int64_t>(value));
             case Type::TypeID::FLOAT:
-                return llvm::ConstantFP::get(llvm::Type::getFloatTy(context), std::get<float>(value));
+                return llvm::ConstantFP::get(llvm::Type::getDoubleTy(context), std::get<double>(value));
             case Type::TypeID::BOOL:
                 return llvm::ConstantInt::get(llvm::Type::getInt1Ty(context), std::get<bool>(value));
             case Type::TypeID::STRING: {
@@ -57,10 +57,10 @@ namespace X::Codegen {
                                 builder.CreateAdd(expr, llvm::ConstantInt::getSigned(llvm::Type::getInt64Ty(context), 1)) :
                                 builder.CreateSub(expr, llvm::ConstantInt::getSigned(llvm::Type::getInt64Ty(context), 1));
                         break;
-                    case llvm::Type::TypeID::FloatTyID:
+                    case llvm::Type::TypeID::DoubleTyID:
                         value = opType == OpType::PRE_INC || opType == OpType::POST_INC ?
-                                builder.CreateFAdd(expr, llvm::ConstantFP::get(llvm::Type::getFloatTy(context), 1)) :
-                                builder.CreateFSub(expr, llvm::ConstantFP::get(llvm::Type::getFloatTy(context), 1));
+                                builder.CreateFAdd(expr, llvm::ConstantFP::get(llvm::Type::getDoubleTy(context), 1)) :
+                                builder.CreateFSub(expr, llvm::ConstantFP::get(llvm::Type::getDoubleTy(context), 1));
                         break;
                     default:
                         throw InvalidTypeException();
@@ -136,7 +136,7 @@ namespace X::Codegen {
                 }
                 break;
             }
-            case llvm::Type::TypeID::FloatTyID: {
+            case llvm::Type::TypeID::DoubleTyID: {
                 switch (node->getType()) {
                     case OpType::PLUS:
                         return builder.CreateFAdd(lhs, rhs);

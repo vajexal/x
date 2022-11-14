@@ -30,7 +30,7 @@ namespace X::Runtime {
                 {mangler.mangleInternalFunction("castIntToString"), stringType->getPointerTo(),
                  {llvm::Type::getInt64Ty(context)}, reinterpret_cast<void *>(castIntToString)},
                 {mangler.mangleInternalFunction("castFloatToString"), stringType->getPointerTo(),
-                 {llvm::Type::getFloatTy(context)}, reinterpret_cast<void *>(castFloatToString)},
+                 {llvm::Type::getDoubleTy(context)}, reinterpret_cast<void *>(castFloatToString)},
                 {mangler.mangleInternalFunction("compareStrings"), llvm::Type::getInt1Ty(context),
                  {stringType->getPointerTo(), stringType->getPointerTo()}, reinterpret_cast<void *>(compareStrings)},
                 {mangler.mangleMethod(String::CLASS_NAME, "construct"),
