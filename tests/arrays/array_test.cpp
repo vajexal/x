@@ -24,12 +24,10 @@ class Foo {
     }
 }
 
-fn main() int {
+fn main() void {
     []Foo a = []Foo{new Foo(123)}
 
     println(a[0].val)
-
-    return 0
 }
 )code";
     checkProgram(code, "123");

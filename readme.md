@@ -202,7 +202,7 @@ class GlobalCounter {
 }
 
 // entry point for the program
-fn main() int {
+fn main() void {
     // println outputs a line to stdout
     println("hello world")
 
@@ -222,8 +222,6 @@ fn main() int {
     GlobalCounter::value = 123
     println(GlobalCounter::value) // 123
     GlobalCounter::resetCounter() // GlobalCounter::value == 0
-
-    return 0
 }
 ```
 

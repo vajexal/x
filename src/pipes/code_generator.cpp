@@ -46,7 +46,7 @@ namespace X::Pipes {
         if (!mainFn) {
             throw CodeGeneratorException("main function not found");
         }
-        auto fn = reinterpret_cast<int (*)()>(engine->getFunctionAddress(mainFn->getName().str()));
+        auto fn = reinterpret_cast<void (*)()>(engine->getFunctionAddress(mainFn->getName().str()));
 
         fn();
 

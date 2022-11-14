@@ -10,8 +10,7 @@ TEST_P(CheckAbstractClassesTest, abstract_classes) {
 
     try {
         compiler.compile(code + R"code(
-fn main() int {
-    return 0
+fn main() void {
 }
 )code");
         FAIL() << "expected CheckAbstractClassesException";

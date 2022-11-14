@@ -13,10 +13,8 @@ class Foo {
     }
 }
 
-fn main() int {
+fn main() void {
     Foo foo = new Foo(10)
-
-    return 0
 }
 )code", "10");
 }
@@ -32,10 +30,8 @@ class Foo {
 class Bar extends Foo {
 }
 
-fn main() int {
+fn main() void {
     Bar bar = new Bar(10)
-
-    return 0
 }
 )code", "10");
 }
@@ -46,10 +42,8 @@ TEST_F(ClassTest, constructorArgsMismatch) {
 class Foo {
 }
 
-fn main() int {
+fn main() void {
     Foo foo = new Foo(10)
-
-    return 0
 }
 )code");
         FAIL() << "expected CodegenException";
@@ -66,12 +60,10 @@ class Foo {
     }
 }
 
-fn main() int {
+fn main() void {
     Foo foo = new Foo()
 
     foo.construct()
-
-    return 0
 }
 )code");
         FAIL() << "expected CodegenException";
@@ -86,8 +78,7 @@ TEST_F(ClassTest, inheritance) {
 class Bar extends Foo {
 }
 
-fn main() int {
-    return 0
+fn main() void {
 }
 )code");
         FAIL() << "expected CodegenException";
@@ -106,14 +97,12 @@ class Foo {
     }
 }
 
-fn main() int {
+fn main() void {
     Foo foo = new Foo()
 
     foo.val = 123
     println(foo.val)
     println(foo.isValPositive())
-
-    return 0
 }
 )code", R"output(123
 true)output");
@@ -129,12 +118,10 @@ class Foo {
     }
 }
 
-fn main() int {
+fn main() void {
     Foo::val = 123
     println(Foo::val)
     println(Foo::isValPositive())
-
-    return 0
 }
 )code", R"output(123
 true)output");

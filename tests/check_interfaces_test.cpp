@@ -10,8 +10,7 @@ TEST_P(CheckInterfacesTest, interfaces) {
 
     try {
         compiler.compile(code + R"code(
-fn main() int {
-    return 0
+fn main() void {
 }
 )code");
         FAIL() << "expected CheckInterfacesException";

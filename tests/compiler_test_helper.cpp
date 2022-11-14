@@ -2,9 +2,8 @@
 
 void CompilerTest::checkCode(const std::string &code, const std::string &expectedOutput) {
     auto program = R"code(
-fn main() int {
+fn main() void {
     )code" + code + R"code(
-    return 0
 }
 )code";
 
