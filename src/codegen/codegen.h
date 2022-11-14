@@ -104,6 +104,8 @@ namespace X::Codegen {
     private:
         llvm::Type *mapType(const Type &type);
         llvm::Constant *getDefaultValue(const Type &type);
+        /// differs from getDefaultValue because getDefaultValue returns constant and createDefaultValue can emit instructions
+        llvm::Value *createDefaultValue(const Type &type);
         std::pair<llvm::Type *, llvm::Value *> getVar(std::string &name) const;
         std::pair<llvm::Type *, llvm::Value *> getProp(llvm::Value *obj, const std::string &name) const;
         std::pair<llvm::Type *, llvm::Value *> getStaticProp(const std::string &className, const std::string &propName) const;
@@ -160,6 +162,11 @@ namespace X::Codegen {
     class InvalidOpTypeException : public CodegenException {
     public:
         InvalidOpTypeException() : CodegenException("invalid operation type") {}
+    };
+
+    class InvalidTypeException : public CodegenException {
+    public:
+        InvalidTypeException() : CodegenException("invalid type") {}
     };
 }
 

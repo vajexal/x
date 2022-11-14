@@ -5,14 +5,19 @@
 namespace X::Codegen {
     llvm::Value *Codegen::gen(DeclareNode *node) {
         if (node->getType().getTypeID() == Type::TypeID::VOID) {
-            throw CodegenException("invalid type");
+            throw InvalidTypeException();
         }
 
         auto type = mapType(node->getType());
         auto &name = node->getName();
         auto stackVar = createAlloca(type, name);
-        auto value = node->getExpr()->gen(*this);
+
+        auto value = node->getExpr() ?
+                     node->getExpr()->gen(*this) :
+                     createDefaultValue(node->getType());
+
         builder.CreateStore(value, stackVar);
+
         namedValues[name] = stackVar;
         return nullptr;
     }

@@ -62,7 +62,9 @@ namespace X::Pipes {
     void PrintAst::printNode(DeclareNode *node, int level) {
         std::cout << node->getType() << ' ' << node->getName() << " = " << std::endl;
 
-        node->getExpr()->print(*this, level + 1);
+        if (node->getExpr()) {
+            node->getExpr()->print(*this, level + 1);
+        }
     }
 
     void PrintAst::printNode(AssignNode *node, int level) {

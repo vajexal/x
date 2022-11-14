@@ -13,8 +13,7 @@ class Foo {
 
 fn types() void {
     // variable declaration and assigment.
-    // For now we can't declare without assigment :/
-    int i = 2
+    int i // i == 0
     float f = 3.14
     bool b = false // or "true"    
 

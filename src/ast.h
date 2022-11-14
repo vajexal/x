@@ -200,9 +200,11 @@ namespace X {
         ExprNode *expr;
 
     public:
-        DeclareNode(Type type, std::string name, ExprNode *expr) : type(std::move(type)), name(std::move(name)), expr(expr) {}
+        DeclareNode(Type type, std::string name, ExprNode *expr = nullptr) : type(std::move(type)), name(std::move(name)), expr(expr) {}
         ~DeclareNode() {
-            delete expr;
+            if (expr) {
+                delete expr;
+            }
         }
 
         void print(Pipes::PrintAst &astPrinter, int level = 0) override;

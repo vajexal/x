@@ -132,4 +132,8 @@ namespace X::Runtime {
         type = deref(type);
         return type->isStructTy() && type->getStructName() == Runtime::String::CLASS_NAME;
     }
+
+    String *createEmptyString() {
+        return String_new();
+    }
 }

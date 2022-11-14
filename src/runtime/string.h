@@ -30,6 +30,8 @@ namespace X::Runtime {
     bool String_startsWith(String *that, String *other);
     bool String_endsWith(String *that, String *other);
     String *String_substring(String *that, int64_t offset, int64_t length);
+
+    String *createEmptyString();
 }
 
 #endif //X_STRING_H

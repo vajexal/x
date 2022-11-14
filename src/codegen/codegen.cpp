@@ -37,7 +37,7 @@ namespace X::Codegen {
                 return classDecl.type->getPointerTo();
             }
             default:
-                throw CodegenException("invalid type");
+                throw InvalidTypeException();
         }
     }
 
@@ -55,7 +55,29 @@ namespace X::Codegen {
             case Type::TypeID::ARRAY:
                 return llvm::ConstantPointerNull::get(getArrayForType(type.getSubtype())->getPointerTo());
             default:
-                throw CodegenException("invalid type");
+                throw InvalidTypeException();
+        }
+    }
+
+    llvm::Value *Codegen::createDefaultValue(const Type &type) {
+        switch (type.getTypeID()) {
+            case Type::TypeID::INT:
+                return llvm::ConstantInt::getSigned(llvm::Type::getInt64Ty(context), 0);
+            case Type::TypeID::FLOAT:
+                return llvm::ConstantFP::get(llvm::Type::getFloatTy(context), 0);
+            case Type::TypeID::BOOL:
+                return llvm::ConstantInt::get(llvm::Type::getInt1Ty(context), 0);
+            case Type::TypeID::STRING:
+                return builder.CreateCall(module.getFunction(mangler.mangleInternalFunction("createEmptyString")));
+            case Type::TypeID::ARRAY: {
+                auto arrType = getArrayForType(type.getSubtype());
+                auto arr = createAlloca(arrType);
+                auto len = llvm::ConstantInt::getSigned(llvm::Type::getInt64Ty(context), 0);
+                builder.CreateCall(getConstructor(arrType->getName().str()), {arr, len});
+                return arr;
+            }
+            default:
+                throw InvalidTypeException();
         }
     }
 
@@ -161,7 +183,7 @@ namespace X::Codegen {
                     auto val = builder.CreateCall(callee, {value});
                     return negate(val);
                 }
-                throw CodegenException("invalid type");
+                throw InvalidTypeException();
         }
     }
 

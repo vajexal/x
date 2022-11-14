@@ -63,7 +63,7 @@ namespace X::Codegen {
                                 builder.CreateFSub(expr, llvm::ConstantFP::get(llvm::Type::getFloatTy(context), 1));
                         break;
                     default:
-                        throw CodegenException("invalid type");
+                        throw InvalidTypeException();
                 }
 
                 auto name = dynamic_cast<VarNode *>(node->getExpr())->getName(); // todo
@@ -164,7 +164,7 @@ namespace X::Codegen {
                 break;
             }
             default:
-                throw CodegenException("invalid type");
+                throw InvalidTypeException();
         }
 
         return nullptr;

@@ -58,6 +58,7 @@ namespace X::Runtime {
                 {mangler.mangleMethod(String::CLASS_NAME, "substring"),
                  stringType->getPointerTo(), {stringType->getPointerTo(), llvm::Type::getInt64Ty(context), llvm::Type::getInt64Ty(context)},
                  reinterpret_cast<void *>(String_substring)},
+                {mangler.mangleInternalFunction("createEmptyString"), stringType->getPointerTo(), {}, reinterpret_cast<void *>(createEmptyString)},
         };
 
         fnDefinitions.reserve(functions.size());
