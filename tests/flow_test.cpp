@@ -1,5 +1,7 @@
 #include "compiler_test_helper.h"
 
+#include "codegen/codegen.h"
+
 class FlowTest : public CompilerTest {
 };
 
@@ -15,6 +17,7 @@ TEST_F(FlowTest, branching) {
         println(3)
     }
 )code";
+
     checkCode(code, "2");
 }
 
@@ -35,5 +38,20 @@ TEST_F(FlowTest, loop) {
     }
     println(i)
 )code";
+
     checkCode(code, "10");
+}
+
+TEST_F(FlowTest, deadCode) {
+    try {
+        compiler.compile(R"code(
+fn main() void {
+    while true {
+        break
+        continue
+    }
+}
+)code");
+        FAIL() << "expected DeadCodeException";
+    } catch (const Codegen::DeadCodeException &e) {}
 }

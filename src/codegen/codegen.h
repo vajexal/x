@@ -168,6 +168,11 @@ namespace X::Codegen {
     public:
         InvalidTypeException() : CodegenException("invalid type") {}
     };
+
+    class DeadCodeException : public CodegenException {
+    public:
+        DeadCodeException() : CodegenException("dead code") {}
+    };
 }
 
 #endif //X_CODEGEN_H
