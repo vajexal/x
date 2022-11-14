@@ -93,7 +93,9 @@ namespace X::Codegen {
         parentFunction->getBasicBlockList().push_back(loopBB);
         builder.SetInsertPoint(loopBB);
         node->getBody()->gen(*this);
-        builder.CreateBr(loopStartBB);
+        if (!node->getBody()->isLastNodeTerminate()) {
+            builder.CreateBr(loopStartBB);
+        }
 
         parentFunction->getBasicBlockList().push_back(loopEndBB);
         builder.SetInsertPoint(loopEndBB);
