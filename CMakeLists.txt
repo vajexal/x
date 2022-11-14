@@ -63,6 +63,7 @@ add_executable(x_test ${X_SOURCES}
         tests/arrays/is_empty_test.cpp
         tests/arrays/append_test.cpp
         tests/statement_test.cpp
+        tests/expr_test.cpp
         tests/flow_test.cpp
         tests/operators_test.cpp
         tests/class_test.cpp

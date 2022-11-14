@@ -186,6 +186,7 @@ INC identifier { $$ = new UnaryNode(OpType::PRE_INC, $2); }
 | expr '-' expr { $$ = new BinaryNode(OpType::MINUS, $1, $3); }
 | expr '*' expr { $$ = new BinaryNode(OpType::MUL, $1, $3); }
 | expr '/' expr { $$ = new BinaryNode(OpType::DIV, $1, $3); }
+| '(' expr ')' { $$ = $2; }
 | '!' expr { $$ = new UnaryNode(OpType::NOT, $2); }
 | expr POW expr { $$ = new BinaryNode(OpType::POW, $1, $3); }
 | expr EQUAL expr { $$ = new BinaryNode(OpType::EQUAL, $1, $3); }
