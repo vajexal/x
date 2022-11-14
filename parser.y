@@ -262,11 +262,11 @@ else_statement:
 ;
 
 while_statement:
-WHILE expr '{' statement_list '}' { $$ = new WhileNode($2, $4); }
+WHILE expr '{' '\n' statement_list '}' { $$ = new WhileNode($2, $5); }
 ;
 
 fn_def:
-FN IDENTIFIER '(' decl_arg_list ')' type '{' statement_list '}' { $$ = new FnDefNode(std::move($2), std::move($4), std::move($6), $8); }
+FN IDENTIFIER '(' decl_arg_list ')' type '{' '\n' statement_list '}' { $$ = new FnDefNode(std::move($2), std::move($4), std::move($6), $9); }
 ;
 
 fn_decl:
