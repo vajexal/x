@@ -84,11 +84,28 @@ fn flow() void {
     // will print "then"
     if true {
         println("then")
+    }
+
+    // will print "else"
+    if false {
+        println("then")
     } else {
         println("else")
     }
 
-    int i = 0
+    // will print "2"
+    int i = 2
+    if i == 0 {
+        println(0)
+    } else if i == 1 {
+        println(1)
+    } else if i == 2 {
+        println(2)
+    } else {
+        println(10)
+    }
+
+    i = 0
     while true {
         i++
 
@@ -236,6 +253,8 @@ false
 10
 4
 then
+else
+2
 10
 string is not empty
 array is not empty

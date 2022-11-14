@@ -38,6 +38,7 @@ yy::parser::symbol_type yylex(Driver &driver) {
       "default" { return yy::parser::make_DEFAULT(); }
       "if" { return yy::parser::make_IF(); }
       "else" { return yy::parser::make_ELSE(); }
+      "else if" { return yy::parser::make_ELSE_IF(); }
       "while" { return yy::parser::make_WHILE(); }
       "continue" { return yy::parser::make_CONTINUE(); }
       "break" { return yy::parser::make_BREAK(); }

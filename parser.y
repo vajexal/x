@@ -44,6 +44,7 @@
 %token DEFAULT "default"
 %token IF "if"
 %token ELSE "else"
+%token ELSE_IF "else if"
 %token WHILE "while"
 %token IN "in"
 %token CONTINUE "continue"
@@ -91,6 +92,7 @@
 %nterm <std::vector<ExprNode *>> expr_list
 %nterm <std::vector<ExprNode *>> non_empty_expr_list
 %nterm <IfNode *> if_statement
+%nterm <StatementListNode *> else_statement
 %nterm <WhileNode *> while_statement
 %nterm <FnDeclNode *> fn_decl
 %nterm <FnDefNode *> fn_def
@@ -249,8 +251,14 @@ identifier { $$ = std::move($1); }
 ;
 
 if_statement:
-IF expr '{' statement_list '}' { $$ = new IfNode($2, $4); }
-| IF expr '{' statement_list '}' ELSE '{' statement_list '}' { $$ = new IfNode($2, $4, $8); }
+IF expr '{' '\n' statement_list '}' else_statement { $$ = new IfNode($2, $5, $7); }
+;
+
+else_statement:
+%empty { $$ = nullptr; }
+| ELSE '{' '\n' statement_list '}' { $$ = $4; }
+/* todo left recursion */
+| ELSE_IF expr '{' '\n' statement_list '}' else_statement { $$ = new StatementListNode; $$->add(new IfNode($2, $5, $7)); }
 ;
 
 while_statement:
