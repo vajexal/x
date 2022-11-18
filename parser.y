@@ -122,11 +122,6 @@ start:
 top_statement_list { driver.root = $1; }
 ;
 
-newlines:
-'\n'
-| newlines '\n'
-;
-
 maybe_comment:
 %empty { $$ = nullptr; }
 | COMMENT { $$ = new CommentNode(std::move($1)); }
@@ -297,7 +292,7 @@ type IDENTIFIER { $$ = new ArgNode(std::move($1), std::move($2)); }
 ;
 
 class_decl:
-abstract_modifier CLASS IDENTIFIER extends implements '{' newlines class_members_list '}' { $$ = new ClassNode(std::move($3), $8, std::move($4), std::move($5), $1); }
+abstract_modifier CLASS IDENTIFIER extends implements '{' '\n' class_members_list '}' { $$ = new ClassNode(std::move($3), $8, std::move($4), std::move($5), $1); }
 ;
 
 abstract_modifier:
@@ -317,9 +312,10 @@ implements:
 
 class_members_list:
 %empty { $$ = new ClassMembersNode; }
-| class_members_list prop_decl newlines { $1->addProp($2); $$ = $1; }
-| class_members_list method_def newlines { $1->addMethod($2); $$ = $1; }
-| class_members_list ABSTRACT method_decl newlines { $1->addAbstractMethod($3); $$ = $1; }
+| class_members_list '\n' { $$ = $1; }
+| class_members_list prop_decl '\n' { $1->addProp($2); $$ = $1; }
+| class_members_list method_def '\n' { $1->addMethod($2); $$ = $1; }
+| class_members_list ABSTRACT method_decl '\n' { $1->addAbstractMethod($3); $$ = $1; }
 ;
 
 prop_decl:
@@ -348,7 +344,7 @@ IDENTIFIER { $$ = std::vector<std::string>(); $$.push_back(std::move($1)); }
 ;
 
 interface_decl:
-INTERFACE IDENTIFIER extends_list '{' newlines interface_methods_list '}' { $$ = new InterfaceNode(std::move($2), std::move($3), std::move($6)); }
+INTERFACE IDENTIFIER extends_list '{' '\n' interface_methods_list '}' { $$ = new InterfaceNode(std::move($2), std::move($3), std::move($6)); }
 ;
 
 extends_list:
@@ -357,8 +353,9 @@ extends_list:
 ;
 
 interface_methods_list:
-method_decl newlines { $$ = std::vector<MethodDeclNode *>(); $$.push_back($1); }
-| interface_methods_list method_decl newlines { $$ = $1; $$.push_back($2); }
+interface_methods_list '\n' { $$ = $1; }
+| method_decl '\n' { $$ = std::vector<MethodDeclNode *>(); $$.push_back($1); }
+| interface_methods_list method_decl '\n' { $$ = $1; $$.push_back($2); }
 ;
 
 method_decl:
