@@ -94,6 +94,21 @@ namespace X::Pipes {
         node->getBody()->print(*this, level + 1);
     }
 
+    void PrintAst::printNode(ForNode *node, int level) {
+        std::cout << "for " << node->getVal() << " in" << std::endl;
+
+        node->getExpr()->print(*this, level + 1);
+        node->getBody()->print(*this, level + 1);
+    }
+
+    void PrintAst::printNode(BreakNode *node, int level) {
+        std::cout << "break" << std::endl;
+    }
+
+    void PrintAst::printNode(ContinueNode *node, int level) {
+        std::cout << "continue" << std::endl;
+    }
+
     void PrintAst::printNode(ArgNode *node, int level) {
         std::cout << "arg " << node->getType() << ' ' << node->getName() << std::endl;
     }
@@ -135,14 +150,6 @@ namespace X::Pipes {
         std::cout << "println" << std::endl;
 
         node->getVal()->print(*this, level + 1);
-    }
-
-    void PrintAst::printNode(BreakNode *node, int level) {
-        std::cout << "break" << std::endl;
-    }
-
-    void PrintAst::printNode(ContinueNode *node, int level) {
-        std::cout << "continue" << std::endl;
     }
 
     void PrintAst::printNode(CommentNode *node, int level) {

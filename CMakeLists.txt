@@ -64,7 +64,9 @@ add_executable(x_test ${X_SOURCES}
         tests/arrays/append_test.cpp
         tests/statement_test.cpp
         tests/expr_test.cpp
-        tests/flow_test.cpp
+        tests/if_test.cpp
+        tests/while_test.cpp
+        tests/for_test.cpp
         tests/operators_test.cpp
         tests/class_test.cpp
         tests/check_interfaces_test.cpp

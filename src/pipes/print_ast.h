@@ -31,14 +31,15 @@ namespace X::Pipes {
         void printNode(VarNode *node, int level);
         void printNode(IfNode *node, int level);
         void printNode(WhileNode *node, int level);
+        void printNode(ForNode *node, int level);
+        void printNode(BreakNode *node, int level);
+        void printNode(ContinueNode *node, int level);
         void printNode(ArgNode *node, int level);
         void printNode(FnDeclNode *node, int level);
         void printNode(FnDefNode *node, int level);
         void printNode(FnCallNode *node, int level);
         void printNode(ReturnNode *node, int level);
         void printNode(PrintlnNode *node, int level);
-        void printNode(BreakNode *node, int level);
-        void printNode(ContinueNode *node, int level);
         void printNode(CommentNode *node, int level);
         void printNode(ClassNode *node, int level);
         void printNode(ClassMembersNode *node, int level);

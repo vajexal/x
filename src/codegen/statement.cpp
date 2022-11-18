@@ -105,6 +105,118 @@ namespace X::Codegen {
         return nullptr;
     }
 
+    llvm::Value *Codegen::gen(ForNode *node) {
+        auto &valVarName = node->getVal();
+        auto arr = node->getExpr()->gen(*this);
+        if (!arr) {
+            throw InvalidTypeException();
+        }
+        auto arrType = deref(arr->getType());
+        if (!Runtime::Array::isArrayType(arrType)) {
+            // todo expected type
+            throw InvalidTypeException();
+        }
+
+        auto parentFunction = builder.GetInsertBlock()->getParent();
+        auto loopInitBB = llvm::BasicBlock::Create(context, "loopInit", parentFunction);
+        auto loopCondBB = llvm::BasicBlock::Create(context, "loopCond");
+        auto loopBB = llvm::BasicBlock::Create(context, "loop");
+        auto loopPostBB = llvm::BasicBlock::Create(context, "loopPost");
+        auto loopEndBB = llvm::BasicBlock::Create(context, "loopEnd");
+
+        loops.emplace(loopPostBB, loopEndBB);
+
+        builder.CreateBr(loopInitBB);
+
+        // init
+        builder.SetInsertPoint(loopInitBB);
+
+        // init index
+        auto idxType = llvm::Type::getInt64Ty(context);
+        auto idxVar = createAlloca(idxType, "i");
+        auto idxStartValue = llvm::ConstantInt::getSigned(idxType, 0);
+        builder.CreateStore(idxStartValue, idxVar);
+
+        // init val
+        if (namedValues.contains(valVarName)) {
+            throw VarAlreadyExistsException(valVarName);
+        }
+        auto valVarType = arrayRuntime.getContainedType(llvm::cast<llvm::StructType>(arrType));
+        if (!valVarType) {
+            throw InvalidTypeException();
+        }
+        auto valVar = createAlloca(valVarType, valVarName);
+        namedValues[valVarName] = valVar;
+
+        // init stop value
+        auto arrayLenFn = module.getFunction(mangler.mangleMethod(arrType->getStructName().str(), "length"));
+        auto arrayLen = builder.CreateCall(arrayLenFn, {arr});
+
+        builder.CreateBr(loopCondBB);
+
+        // cond
+        parentFunction->getBasicBlockList().push_back(loopCondBB);
+        builder.SetInsertPoint(loopCondBB);
+
+        llvm::Value *idx = builder.CreateLoad(idxType, idxVar);
+        auto cond = builder.CreateICmpSLT(idx, arrayLen);
+        builder.CreateCondBr(cond, loopBB, loopEndBB);
+
+        // body
+        parentFunction->getBasicBlockList().push_back(loopBB);
+        builder.SetInsertPoint(loopBB);
+
+        // set val
+        auto arrayGetFn = module.getFunction(mangler.mangleMethod(arrType->getStructName().str(), "get[]"));
+        auto val = builder.CreateCall(arrayGetFn, {arr, idx});
+        builder.CreateStore(val, valVar);
+
+        // gen body
+        node->getBody()->gen(*this);
+        if (!node->getBody()->isLastNodeTerminate()) {
+            builder.CreateBr(loopPostBB);
+        }
+
+        // post
+        parentFunction->getBasicBlockList().push_back(loopPostBB);
+        builder.SetInsertPoint(loopPostBB);
+
+        idx = builder.CreateAdd(idx, llvm::ConstantInt::getSigned(llvm::Type::getInt64Ty(context), 1));
+        builder.CreateStore(idx, idxVar);
+        builder.CreateBr(loopCondBB);
+
+        // end
+        parentFunction->getBasicBlockList().push_back(loopEndBB);
+        builder.SetInsertPoint(loopEndBB);
+
+        namedValues.erase(valVarName);
+        loops.pop();
+
+        return nullptr;
+    }
+
+    llvm::Value *Codegen::gen(BreakNode *node) {
+        if (loops.empty()) {
+            throw CodegenException("using break outside of loop");
+        }
+
+        auto loop = loops.top();
+        builder.CreateBr(loop.end);
+
+        return nullptr;
+    }
+
+    llvm::Value *Codegen::gen(ContinueNode *node) {
+        if (loops.empty()) {
+            throw CodegenException("using continue outside of loop");
+        }
+
+        auto loop = loops.top();
+        builder.CreateBr(loop.start);
+
+        return nullptr;
+    }
+
     llvm::Value *Codegen::gen(ReturnNode *node) {
         if (!node->getVal()) {
             builder.CreateRetVoid();
@@ -132,28 +244,6 @@ namespace X::Codegen {
 
         auto callee = module.getFunction("println");
         builder.CreateCall(callee, {value});
-
-        return nullptr;
-    }
-
-    llvm::Value *Codegen::gen(BreakNode *node) {
-        if (loops.empty()) {
-            throw CodegenException("using break outside of loop");
-        }
-
-        auto loop = loops.top();
-        builder.CreateBr(loop.end);
-
-        return nullptr;
-    }
-
-    llvm::Value *Codegen::gen(ContinueNode *node) {
-        if (loops.empty()) {
-            throw CodegenException("using continue outside of loop");
-        }
-
-        auto loop = loops.top();
-        builder.CreateBr(loop.start);
 
         return nullptr;
     }

@@ -137,7 +137,7 @@ namespace X::Codegen {
             }
         }
 
-        throw CodegenException("var not found: " + name);
+        throw VarNotFoundException(name);
     }
 
     llvm::AllocaInst *Codegen::createAlloca(llvm::Type *type, const std::string &name) const {
@@ -227,19 +227,6 @@ namespace X::Codegen {
         return builder.CreateXor(value, llvm::ConstantInt::getTrue(context));
     }
 
-    void Codegen::fillArray(llvm::Value *arr, const std::vector<llvm::Value *> &values) {
-        auto arrType = deref(arr->getType());
-        auto arrSetFn = module.getFunction(mangler.mangleMethod(arrType->getStructName().str(), "set[]"));
-        if (!arrSetFn) {
-            throw InvalidArrayAccessException();
-        }
-
-        for (auto i = 0; i < values.size(); i++) {
-            auto index = llvm::ConstantInt::getSigned(llvm::Type::getInt64Ty(context), i);
-            builder.CreateCall(arrSetFn, {arr, index, values[i]});
-        }
-    }
-
     llvm::StructType *Codegen::getArrayForType(const Type *type) {
         if (type->getTypeID() == Type::TypeID::ARRAY) {
             throw CodegenException("multidimensional arrays are forbidden");
@@ -254,5 +241,18 @@ namespace X::Codegen {
             return arrayRuntime.add(subtype);
         }
         return arrayType;
+    }
+
+    void Codegen::fillArray(llvm::Value *arr, const std::vector<llvm::Value *> &values) {
+        auto arrType = deref(arr->getType());
+        auto arrSetFn = module.getFunction(mangler.mangleMethod(arrType->getStructName().str(), "set[]"));
+        if (!arrSetFn) {
+            throw InvalidArrayAccessException();
+        }
+
+        for (auto i = 0; i < values.size(); i++) {
+            auto index = llvm::ConstantInt::getSigned(llvm::Type::getInt64Ty(context), i);
+            builder.CreateCall(arrSetFn, {arr, index, values[i]});
+        }
     }
 }

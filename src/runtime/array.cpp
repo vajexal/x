@@ -5,10 +5,11 @@
 
 namespace X::Runtime {
     llvm::StructType *ArrayRuntime::add(llvm::Type *type) {
+        const auto &arrayTypeName = Array::getClassName(type);
         auto arrayType = llvm::StructType::create(
                 context,
                 {type->getPointerTo(), llvm::Type::getInt64Ty(context), llvm::Type::getInt64Ty(context)},
-                Array::getClassName(type)
+                arrayTypeName
         );
 
         addConstructor(arrayType, type);
@@ -18,7 +19,14 @@ namespace X::Runtime {
         addIsEmpty(arrayType, type);
         addAppend(arrayType, type);
 
+        containedTypes[arrayTypeName] = type;
+
         return arrayType;
+    }
+
+    llvm::Type *ArrayRuntime::getContainedType(llvm::StructType *arrayType) const {
+        auto type = containedTypes.find(arrayType->getName().str());
+        return type != containedTypes.end() ? type->second : nullptr;
     }
 
     void ArrayRuntime::addConstructor(llvm::StructType *arrayType, llvm::Type *elemType) {

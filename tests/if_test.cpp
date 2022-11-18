@@ -1,16 +1,14 @@
 #include "compiler_test_helper.h"
 
-#include "codegen/codegen.h"
-
-class FlowTest : public CompilerTest {
+class IfTest : public CompilerTest {
 };
 
-TEST_P(FlowTest, branching) {
+TEST_P(IfTest, branching) {
     auto [code, expectedOutput] = GetParam();
     checkCode(code, expectedOutput);
 }
 
-INSTANTIATE_TEST_SUITE_P(Code, FlowTest, testing::Values(
+INSTANTIATE_TEST_SUITE_P(Code, IfTest, testing::Values(
         std::make_pair(
                 R"code(
     if true {
@@ -56,38 +54,3 @@ INSTANTIATE_TEST_SUITE_P(Code, FlowTest, testing::Values(
 )code",
                 "10")
 ));
-
-TEST_F(FlowTest, loop) {
-    auto code = R"code(
-    int i = 0
-    while true {
-        if i < 5 {
-            i = i + 2
-            continue
-        }
-
-        i++
-
-        if i >= 10 {
-            break
-        }
-    }
-    println(i)
-)code";
-
-    checkCode(code, "10");
-}
-
-TEST_F(FlowTest, deadCode) {
-    try {
-        compiler.compile(R"code(
-fn main() void {
-    while true {
-        break
-        continue
-    }
-}
-)code");
-        FAIL() << "expected DeadCodeException";
-    } catch (const Codegen::DeadCodeException &e) {}
-}

@@ -111,6 +111,7 @@ namespace X {
     void VarNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<VarNode>(this, level); }
     void IfNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<IfNode>(this, level); }
     void WhileNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<WhileNode>(this, level); }
+    void ForNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<ForNode>(this, level); }
     void ArgNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<ArgNode>(this, level); }
     void FnDeclNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<FnDeclNode>(this, level); }
     void FnDefNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<FnDefNode>(this, level); }
@@ -146,14 +147,15 @@ namespace X {
     llvm::Value *VarNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
     llvm::Value *IfNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
     llvm::Value *WhileNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
+    llvm::Value *ForNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
+    llvm::Value *BreakNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
+    llvm::Value *ContinueNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
     llvm::Value *ArgNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
     llvm::Value *FnDeclNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
     llvm::Value *FnDefNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
     llvm::Value *FnCallNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
     llvm::Value *ReturnNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
     llvm::Value *PrintlnNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
-    llvm::Value *BreakNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
-    llvm::Value *ContinueNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
     llvm::Value *CommentNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
     llvm::Value *ClassNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
     llvm::Value *ClassMembersNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }

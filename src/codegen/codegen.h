@@ -80,13 +80,14 @@ namespace X::Codegen {
         llvm::Value *gen(VarNode *node);
         llvm::Value *gen(IfNode *node);
         llvm::Value *gen(WhileNode *node);
+        llvm::Value *gen(ForNode *node);
+        llvm::Value *gen(BreakNode *node);
+        llvm::Value *gen(ContinueNode *node);
         llvm::Value *gen(FnDeclNode *node);
         llvm::Value *gen(FnDefNode *node);
         llvm::Value *gen(FnCallNode *node);
         llvm::Value *gen(ReturnNode *node);
         llvm::Value *gen(PrintlnNode *node);
-        llvm::Value *gen(BreakNode *node);
-        llvm::Value *gen(ContinueNode *node);
         llvm::Value *gen(CommentNode *node);
         llvm::Value *gen(ClassNode *node);
         llvm::Value *gen(FetchPropNode *node);
@@ -142,6 +143,16 @@ namespace X::Codegen {
         const char *what() const noexcept override {
             return message.c_str();
         }
+    };
+
+    class VarNotFoundException : public CodegenException {
+    public:
+        VarNotFoundException(const std::string &varName) : CodegenException("var not found: " + varName) {}
+    };
+
+    class VarAlreadyExistsException : public CodegenException {
+    public:
+        VarAlreadyExistsException(const std::string &varName) : CodegenException("var already exists: " + varName) {}
     };
 
     class MethodNotFoundException : public CodegenException {

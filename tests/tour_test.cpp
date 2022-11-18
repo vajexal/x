@@ -125,8 +125,15 @@ fn flow() void {
         println("string is not empty")
     }
 
-    if []int{1, 2, 3} {
+    []int a = []int{1, 2, 3}
+    if a {
         println("array is not empty")
+    }
+
+    // for construction iterates over array. On each iteration the value of current element is assigned to val
+    for val in a {
+        // it's possible to use break and continue inside of for construction (like in while construction)
+        println(val)
     }
 }
 
@@ -258,6 +265,9 @@ else
 10
 string is not empty
 array is not empty
+1
+2
+3
 6.28
 Luna
 meow!

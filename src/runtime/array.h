@@ -1,6 +1,7 @@
 #ifndef X_ARRAY_H
 #define X_ARRAY_H
 
+#include <map>
 #include <string>
 
 #include "llvm/IR/LLVMContext.h"
@@ -17,10 +18,14 @@ namespace X::Runtime {
         llvm::Module &module;
         Mangler mangler;
 
+        // array type name -> contained llvm type
+        std::map<std::string, llvm::Type *> containedTypes;
+
     public:
         ArrayRuntime(llvm::LLVMContext &context, llvm::Module &module) : context(context), module(module) {}
 
         llvm::StructType *add(llvm::Type *type);
+        llvm::Type *getContainedType(llvm::StructType *arrayType) const;
 
     private:
         void addConstructor(llvm::StructType *arrayType, llvm::Type *elemType);

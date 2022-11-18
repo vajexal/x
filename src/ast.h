@@ -283,6 +283,26 @@ namespace X {
         StatementListNode *getBody() const { return body; }
     };
 
+    class ForNode : public Node {
+        std::string val;
+        ExprNode *expr;
+        StatementListNode *body;
+
+    public:
+        ForNode(std::string val, ExprNode *expr, StatementListNode *body) : val(std::move(val)), expr(expr), body(body) {}
+        ~ForNode() {
+            delete expr;
+            delete body;
+        }
+
+        void print(Pipes::PrintAst &astPrinter, int level = 0) override;
+        llvm::Value *gen(Codegen::Codegen &codegen) override;
+
+        const std::string &getVal() const { return val; }
+        ExprNode *getExpr() const { return expr; }
+        StatementListNode *getBody() const { return body; }
+    };
+
     class ArgNode : public Node {
         Type type;
         std::string name;

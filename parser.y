@@ -46,6 +46,7 @@
 %token ELSE "else"
 %token ELSE_IF "else if"
 %token WHILE "while"
+%token FOR "for"
 %token IN "in"
 %token CONTINUE "continue"
 %token BREAK "break"
@@ -94,6 +95,7 @@
 %nterm <IfNode *> if_statement
 %nterm <StatementListNode *> else_statement
 %nterm <WhileNode *> while_statement
+%nterm <ForNode *> for_statement
 %nterm <FnDeclNode *> fn_decl
 %nterm <FnDefNode *> fn_def
 %nterm <std::vector<ArgNode *>> decl_arg_list
@@ -167,6 +169,7 @@ expr { $$ = $1; }
 | dereferenceable '[' ']' '=' expr { $$ = new AppendArrNode($1, $5); }
 | if_statement { $$ = $1; }
 | while_statement { $$ = $1; }
+| for_statement { $$ = $1; }
 | BREAK { $$ = new BreakNode; }
 | CONTINUE { $$ = new ContinueNode; }
 | RETURN { $$ = new ReturnNode; }
@@ -264,6 +267,10 @@ else_statement:
 
 while_statement:
 WHILE expr '{' '\n' statement_list '}' { $$ = new WhileNode($2, $5); }
+;
+
+for_statement:
+FOR IDENTIFIER IN expr '{' '\n' statement_list '}' { $$ = new ForNode(std::move($2), $4, $7); }
 ;
 
 fn_def:
