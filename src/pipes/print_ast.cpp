@@ -95,7 +95,13 @@ namespace X::Pipes {
     }
 
     void PrintAst::printNode(ForNode *node, int level) {
-        std::cout << "for " << node->getVal() << " in" << std::endl;
+        std::cout << "for ";
+
+        if (node->hasIdx()) {
+            std::cout << node->getIdx() << ", ";
+        }
+
+        std::cout << node->getVal() << " in" << std::endl;
 
         node->getExpr()->print(*this, level + 1);
         node->getBody()->print(*this, level + 1);

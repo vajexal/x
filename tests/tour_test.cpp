@@ -130,10 +130,17 @@ fn flow() void {
         println("array is not empty")
     }
 
-    // for construction iterates over array. On each iteration the value of current element is assigned to val
+    // for construction iterates over array. On each iteration the value of current element is assigned to val.
+    // Will print 1, 2, 3
     for val in a {
         // it's possible to use break and continue inside of for construction (like in while construction)
         println(val)
+    }
+
+    // it's possible to specify index name. Index modification won't affect iteration
+    // Will print 0, 1, 2
+    for index, val in a {
+        println(index)
     }
 }
 
@@ -268,6 +275,9 @@ array is not empty
 1
 2
 3
+0
+1
+2
 6.28
 Luna
 meow!

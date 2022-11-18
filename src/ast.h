@@ -284,12 +284,15 @@ namespace X {
     };
 
     class ForNode : public Node {
+        std::optional<std::string> idx;
         std::string val;
         ExprNode *expr;
         StatementListNode *body;
 
     public:
         ForNode(std::string val, ExprNode *expr, StatementListNode *body) : val(std::move(val)), expr(expr), body(body) {}
+        ForNode(std::string idx, std::string val, ExprNode *expr, StatementListNode *body) :
+                idx(std::move(idx)), val(std::move(val)), expr(expr), body(body) {}
         ~ForNode() {
             delete expr;
             delete body;
@@ -298,9 +301,12 @@ namespace X {
         void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
 
+        const std::string &getIdx() const { return idx.value(); }
         const std::string &getVal() const { return val; }
         ExprNode *getExpr() const { return expr; }
         StatementListNode *getBody() const { return body; }
+
+        bool hasIdx() const { return idx.has_value(); }
     };
 
     class ArgNode : public Node {

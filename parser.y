@@ -271,6 +271,7 @@ WHILE expr '{' '\n' statement_list '}' { $$ = new WhileNode($2, $5); }
 
 for_statement:
 FOR IDENTIFIER IN expr '{' '\n' statement_list '}' { $$ = new ForNode(std::move($2), $4, $7); }
+| FOR IDENTIFIER ',' IDENTIFIER IN expr '{' '\n' statement_list '}' { $$ = new ForNode(std::move($2), std::move($4), $6, $9); }
 ;
 
 fn_def:

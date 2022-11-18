@@ -106,6 +106,7 @@ namespace X::Codegen {
     }
 
     llvm::Value *Codegen::gen(ForNode *node) {
+        llvm::AllocaInst *idxVar = nullptr;
         auto &valVarName = node->getVal();
         auto arr = node->getExpr()->gen(*this);
         if (!arr) {
@@ -131,11 +132,21 @@ namespace X::Codegen {
         // init
         builder.SetInsertPoint(loopInitBB);
 
-        // init index
-        auto idxType = llvm::Type::getInt64Ty(context);
-        auto idxVar = createAlloca(idxType, "i");
-        auto idxStartValue = llvm::ConstantInt::getSigned(idxType, 0);
-        builder.CreateStore(idxStartValue, idxVar);
+        // init iter
+        auto iterType = llvm::Type::getInt64Ty(context);
+        auto iterVar = createAlloca(iterType, "i");
+        auto iterStartValue = llvm::ConstantInt::getSigned(iterType, 0);
+        builder.CreateStore(iterStartValue, iterVar);
+
+        // init idx
+        if (node->hasIdx()) {
+            auto &idxVarName = node->getIdx();
+            if (namedValues.contains(idxVarName)) {
+                throw VarAlreadyExistsException(idxVarName);
+            }
+            idxVar = createAlloca(iterType, idxVarName);
+            namedValues[idxVarName] = idxVar;
+        }
 
         // init val
         if (namedValues.contains(valVarName)) {
@@ -158,17 +169,22 @@ namespace X::Codegen {
         parentFunction->getBasicBlockList().push_back(loopCondBB);
         builder.SetInsertPoint(loopCondBB);
 
-        llvm::Value *idx = builder.CreateLoad(idxType, idxVar);
-        auto cond = builder.CreateICmpSLT(idx, arrayLen);
+        llvm::Value *iter = builder.CreateLoad(iterType, iterVar);
+        auto cond = builder.CreateICmpSLT(iter, arrayLen);
         builder.CreateCondBr(cond, loopBB, loopEndBB);
 
         // body
         parentFunction->getBasicBlockList().push_back(loopBB);
         builder.SetInsertPoint(loopBB);
 
+        // set idx
+        if (node->hasIdx()) {
+            builder.CreateStore(iter, idxVar);
+        }
+
         // set val
         auto arrayGetFn = module.getFunction(mangler.mangleMethod(arrType->getStructName().str(), "get[]"));
-        auto val = builder.CreateCall(arrayGetFn, {arr, idx});
+        auto val = builder.CreateCall(arrayGetFn, {arr, iter});
         builder.CreateStore(val, valVar);
 
         // gen body
@@ -181,8 +197,8 @@ namespace X::Codegen {
         parentFunction->getBasicBlockList().push_back(loopPostBB);
         builder.SetInsertPoint(loopPostBB);
 
-        idx = builder.CreateAdd(idx, llvm::ConstantInt::getSigned(llvm::Type::getInt64Ty(context), 1));
-        builder.CreateStore(idx, idxVar);
+        iter = builder.CreateAdd(iter, llvm::ConstantInt::getSigned(llvm::Type::getInt64Ty(context), 1));
+        builder.CreateStore(iter, iterVar);
         builder.CreateBr(loopCondBB);
 
         // end

@@ -54,10 +54,29 @@ INSTANTIATE_TEST_SUITE_P(Code, ForTest, testing::Values(
     }
 )code", R"output(1
 3
-4)output")
+4)output"),
+        std::make_pair(
+                R"code(
+    []float a = []float{1.23, 3.14, 6.28}
+    for i, val in a {
+        println(i)
+    }
+)code", R"output(0
+1
+2)output"),
+        std::make_pair(
+                R"code(
+    []float a = []float{1.23, 3.14, 6.28}
+    for i, val in a {
+        i++
+        println(val)
+    }
+)code", R"output(1.23
+3.14
+6.28)output")
 ));
 
-TEST_F(ForTest, usingValVarOutsideOfFor) {
+TEST_F(ForTest, useValVarOutsideOfFor) {
     try {
         compiler.compile(R"code(
 fn main() void {
@@ -71,6 +90,38 @@ fn main() void {
         FAIL() << "expected VarNotFoundException";
     } catch (const Codegen::VarNotFoundException &e) {
         ASSERT_STREQ(e.what(), "var not found: val");
+    }
+}
+
+TEST_F(ForTest, overrideVar) {
+    try {
+        compiler.compile(R"code(
+fn main() void {
+    int val
+    []int a = []int{}
+    for val in a {
+    }
+}
+)code");
+        FAIL() << "expected VarAlreadyExistsException";
+    } catch (const Codegen::VarAlreadyExistsException &e) {
+        ASSERT_STREQ(e.what(), "var already exists: val");
+    }
+}
+
+TEST_F(ForTest, overrideIdxVar) {
+    try {
+        compiler.compile(R"code(
+fn main() void {
+    int i
+    []int a = []int{}
+    for i, val in a {
+    }
+}
+)code");
+        FAIL() << "expected VarAlreadyExistsException";
+    } catch (const Codegen::VarAlreadyExistsException &e) {
+        ASSERT_STREQ(e.what(), "var already exists: i");
     }
 }
 
