@@ -81,6 +81,7 @@
 %nterm <StatementListNode *> top_statement_list
 %nterm <Node *> top_statement
 %nterm <StatementListNode *> statement_list
+%nterm <StatementListNode *> statement_block
 %nterm <Node *> statement
 %nterm <CommentNode *> maybe_comment
 %nterm <ExprNode *> expr
@@ -105,7 +106,9 @@
 %nterm <bool> abstract_modifier
 %nterm <std::string> extends
 %nterm <std::vector<std::string>> implements
-%nterm <ClassMembersNode *> class_members_list
+%nterm <StatementListNode *> class_members_list
+%nterm <StatementListNode *> class_members_block
+%nterm <Node *> class_member
 %nterm <PropDeclNode *> prop_decl
 %nterm <MethodDefNode *> method_def
 %nterm <AccessModifier> access_modifier
@@ -113,7 +116,8 @@
 %nterm <std::vector<std::string>> class_name_list
 %nterm <InterfaceNode *> interface_decl
 %nterm <std::vector<std::string>> extends_list
-%nterm <std::vector<MethodDeclNode *>> interface_methods_list
+%nterm <StatementListNode *> interface_methods_list
+%nterm <StatementListNode *> interface_methods_block
 %nterm <MethodDeclNode *> method_decl
 
 %%
@@ -152,6 +156,13 @@ class_decl { $$ = $1; }
 | interface_decl { $$ = $1; }
 | fn_def { $$ = $1; }
 | COMMENT { $$ = new CommentNode(std::move($1)); }
+;
+
+statement_block:
+'{' maybe_comment '\n' statement_list '}' {
+    if ($2) $4->prepend($2);
+    $$ = $4;
+}
 ;
 
 statement:
@@ -250,27 +261,27 @@ identifier { $$ = std::move($1); }
 ;
 
 if_statement:
-IF expr '{' '\n' statement_list '}' else_statement { $$ = new IfNode($2, $5, $7); }
+IF expr statement_block else_statement { $$ = new IfNode($2, $3, $4); }
 ;
 
 else_statement:
 %empty { $$ = nullptr; }
-| ELSE '{' '\n' statement_list '}' { $$ = $4; }
+| ELSE statement_block { $$ = $2; }
 /* todo left recursion */
-| ELSE_IF expr '{' '\n' statement_list '}' else_statement { $$ = new StatementListNode; $$->add(new IfNode($2, $5, $7)); }
+| ELSE_IF expr statement_block else_statement { $$ = new StatementListNode; $$->add(new IfNode($2, $3, $4)); }
 ;
 
 while_statement:
-WHILE expr '{' '\n' statement_list '}' { $$ = new WhileNode($2, $5); }
+WHILE expr statement_block { $$ = new WhileNode($2, $3); }
 ;
 
 for_statement:
-FOR IDENTIFIER IN expr '{' '\n' statement_list '}' { $$ = new ForNode(std::move($2), $4, $7); }
-| FOR IDENTIFIER ',' IDENTIFIER IN expr '{' '\n' statement_list '}' { $$ = new ForNode(std::move($2), std::move($4), $6, $9); }
+FOR IDENTIFIER IN expr statement_block { $$ = new ForNode(std::move($2), $4, $5); }
+| FOR IDENTIFIER ',' IDENTIFIER IN expr statement_block { $$ = new ForNode(std::move($2), std::move($4), $6, $7); }
 ;
 
 fn_def:
-FN IDENTIFIER '(' decl_arg_list ')' type '{' '\n' statement_list '}' { $$ = new FnDefNode(std::move($2), std::move($4), std::move($6), $9); }
+FN IDENTIFIER '(' decl_arg_list ')' type statement_block { $$ = new FnDefNode(std::move($2), std::move($4), std::move($6), $7); }
 ;
 
 fn_decl:
@@ -292,7 +303,7 @@ type IDENTIFIER { $$ = new ArgNode(std::move($1), std::move($2)); }
 ;
 
 class_decl:
-abstract_modifier CLASS IDENTIFIER extends implements '{' '\n' class_members_list '}' { $$ = new ClassNode(std::move($3), $8, std::move($4), std::move($5), $1); }
+abstract_modifier CLASS IDENTIFIER extends implements class_members_block { $$ = new ClassNode(std::move($3), $6, std::move($4), std::move($5), $1); }
 ;
 
 abstract_modifier:
@@ -310,12 +321,29 @@ implements:
 | IMPLEMENTS class_name_list { $$ = $2; }
 ;
 
+class_members_block:
+'{' maybe_comment '\n' class_members_list '}' {
+    if ($2) $4->prepend($2);
+    $$ = $4;
+}
+;
+
 class_members_list:
-%empty { $$ = new ClassMembersNode; }
+%empty { $$ = new StatementListNode; }
+| class_members_list class_member maybe_comment '\n' {
+    $1->add($2);
+    if ($3) $1->add($3);
+    $$ = $1;
+}
 | class_members_list '\n' { $$ = $1; }
-| class_members_list prop_decl '\n' { $1->addProp($2); $$ = $1; }
-| class_members_list method_def '\n' { $1->addMethod($2); $$ = $1; }
-| class_members_list ABSTRACT method_decl '\n' { $1->addAbstractMethod($3); $$ = $1; }
+;
+
+class_member:
+COMMENT { $$ = new CommentNode(std::move($1)); }
+| prop_decl { $$ = $1; }
+| method_def { $$ = $1; }
+/* todo move ABSTRACT to method_decl, check here that we add only abstract method and check that interface method decl isn't abstract */
+| ABSTRACT method_decl { $2->setAbstract(); $$ = $2; }
 ;
 
 prop_decl:
@@ -344,7 +372,7 @@ IDENTIFIER { $$ = std::vector<std::string>(); $$.push_back(std::move($1)); }
 ;
 
 interface_decl:
-INTERFACE IDENTIFIER extends_list '{' '\n' interface_methods_list '}' { $$ = new InterfaceNode(std::move($2), std::move($3), std::move($6)); }
+INTERFACE IDENTIFIER extends_list interface_methods_block { $$ = new InterfaceNode(std::move($2), std::move($3), $4); }
 ;
 
 extends_list:
@@ -352,10 +380,21 @@ extends_list:
 | EXTENDS class_name_list { $$ = std::move($2); }
 ;
 
+interface_methods_block:
+'{' maybe_comment '\n' interface_methods_list '}' {
+    if ($2) $4->prepend($2);
+    $$ = $4;
+}
+;
+
 interface_methods_list:
-interface_methods_list '\n' { $$ = $1; }
-| method_decl '\n' { $$ = std::vector<MethodDeclNode *>(); $$.push_back($1); }
-| interface_methods_list method_decl '\n' { $$ = $1; $$.push_back($2); }
+%empty { $$ = new StatementListNode; }
+| interface_methods_list method_decl maybe_comment '\n' {
+    $1->add($2);
+    if ($3) $1->add($3);
+    $$ = $1;
+}
+| interface_methods_list '\n' { $$ = $1; }
 ;
 
 method_decl:

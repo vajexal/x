@@ -187,22 +187,7 @@ namespace X::Pipes {
 
         std::cout << std::endl;
 
-        node->getMembers()->print(*this, level + 1);
-    }
-
-    void PrintAst::printNode(ClassMembersNode *node, int level) {
-        for (auto &prop: node->getProps()) {
-            prop->print(*this, level);
-        }
-
-        for (auto &method: node->getMethods()) {
-            method->print(*this, level);
-        }
-
-        for (auto &method: node->getAbstractMethods()) {
-            std::cout << "abstract ";
-            method->print(*this, level);
-        }
+        node->getBody()->print(*this, level + 1);
     }
 
     void PrintAst::printNode(PropDeclNode *node, int level) {
@@ -275,6 +260,10 @@ namespace X::Pipes {
     }
 
     void PrintAst::printNode(MethodDeclNode *node, int level) {
+        if (node->getIsAbstract()) {
+            std::cout << "abstract ";
+        }
+
         std::cout << node->getAccessModifier() << ' ';
 
         if (node->getIsStatic()) {
@@ -301,9 +290,7 @@ namespace X::Pipes {
 
         std::cout << std::endl;
 
-        for (auto &method: node->getMethods()) {
-            method->print(*this, level);
-        }
+        node->getBody()->print(*this, level);
     }
 
     void PrintAst::printNode(FetchArrNode *node, int level) {

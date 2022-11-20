@@ -4,6 +4,7 @@
 #include <iostream>
 #include <utility>
 #include <vector>
+#include <deque>
 #include <variant>
 #include <optional>
 #include <string>
@@ -138,7 +139,7 @@ namespace X {
     };
 
     class StatementListNode : public Node {
-        std::vector<Node *> children;
+        std::deque<Node *> children;
 
     public:
         ~StatementListNode() {
@@ -151,10 +152,9 @@ namespace X {
         llvm::Value *gen(Codegen::Codegen &codegen) override;
 
         void add(Node *node) { children.push_back(node); }
-        bool isLastNodeTerminate() const {
-            return !children.empty() && children.back()->isTerminate();
-        }
-        const std::vector<Node *> &getChildren() const { return children; }
+        void prepend(Node *node) { children.push_front(node); }
+        bool isLastNodeTerminate() const;
+        const std::deque<Node *> &getChildren() const { return children; }
     };
 
     class UnaryNode : public ExprNode {
@@ -477,6 +477,7 @@ namespace X {
 
     class MethodDeclNode : public Node {
         FnDeclNode *fnDecl;
+        bool isAbstract;
         AccessModifier accessModifier;
         bool isStatic;
 
@@ -491,6 +492,8 @@ namespace X {
         llvm::Value *gen(Codegen::Codegen &codegen) override;
 
         FnDeclNode *getFnDecl() const { return fnDecl; }
+        bool getIsAbstract() const { return isAbstract; }
+        void setAbstract() { isAbstract = true; } // todo remove this method
         bool getIsStatic() const { return isStatic; }
         AccessModifier getAccessModifier() const { return accessModifier; }
 
@@ -519,29 +522,37 @@ namespace X {
     };
 
     class ClassMembersNode : public Node {
+        std::deque<Node *> children;
         std::vector<PropDeclNode *> props;
         std::vector<MethodDefNode *> methods;
         std::vector<MethodDeclNode *> abstractMethods;
 
     public:
         ~ClassMembersNode() {
-            for (auto prop: props) {
-                delete prop;
-            }
-            for (auto method: methods) {
-                delete method;
-            }
-            for (auto method: abstractMethods) {
-                delete method;
+            for (auto child: children) {
+                delete child;
             }
         }
 
         void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
 
-        void addProp(PropDeclNode *prop) { props.push_back(prop); }
-        void addMethod(MethodDefNode *fnDef) { methods.push_back(fnDef); }
-        void addAbstractMethod(MethodDeclNode *fnDecl) { abstractMethods.push_back(fnDecl); }
+        void addComment(CommentNode *node) {
+            children.push_back(node);
+        }
+        void addProp(PropDeclNode *prop) {
+            children.push_back(prop);
+            props.push_back(prop);
+        }
+        void addMethod(MethodDefNode *fnDef) {
+            children.push_back(fnDef);
+            methods.push_back(fnDef);
+        }
+        void addAbstractMethod(MethodDeclNode *fnDecl) {
+            children.push_back(fnDecl);
+            abstractMethods.push_back(fnDecl);
+        }
+        const std::deque<Node *> &getChildren() const { return children; }
         const std::vector<PropDeclNode *> &getProps() const { return props; }
         const std::vector<MethodDefNode *> &getMethods() const { return methods; }
         const std::vector<MethodDeclNode *> &getAbstractMethods() const { return abstractMethods; }
@@ -549,23 +560,28 @@ namespace X {
 
     class ClassNode : public Node {
         std::string name;
-        ClassMembersNode *members;
+        StatementListNode *body;
+        std::vector<PropDeclNode *> props;
+        std::vector<MethodDefNode *> methods;
+        std::vector<MethodDeclNode *> abstractMethods;
         std::string parent;
         std::vector<std::string> interfaces;
         bool abstract;
 
     public:
-        ClassNode(std::string name, ClassMembersNode *members, std::string parent, std::vector<std::string> interfaces, bool abstract) :
-                name(std::move(name)), members(members), parent(std::move(parent)), interfaces(std::move(interfaces)), abstract(abstract) {}
+        ClassNode(std::string name, StatementListNode *body, std::string parent, std::vector<std::string> interfaces, bool abstract);
         ~ClassNode() {
-            delete members;
+            delete body;
         }
 
         void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
 
         const std::string &getName() const { return name; }
-        ClassMembersNode *getMembers() { return members; }
+        StatementListNode *getBody() { return body; }
+        const std::vector<PropDeclNode *> &getProps() const { return props; }
+        const std::vector<MethodDefNode *> &getMethods() const { return methods; }
+        const std::vector<MethodDeclNode *> &getAbstractMethods() const { return abstractMethods; }
         const std::string &getParent() const { return parent; }
         const std::vector<std::string> &getInterfaces() const { return interfaces; }
         bool isAbstract() const { return abstract; }
@@ -712,11 +728,11 @@ namespace X {
     class InterfaceNode : public Node {
         std::string name;
         std::vector<std::string> parents;
+        StatementListNode *body;
         std::vector<MethodDeclNode *> methods;
 
     public:
-        InterfaceNode(std::string name, std::vector<std::string> parents, std::vector<MethodDeclNode *> methods) :
-                name(std::move(name)), parents(std::move(parents)), methods(std::move(methods)) {}
+        InterfaceNode(std::string name, std::vector<std::string> parents, StatementListNode *body);
         ~InterfaceNode() {
             for (auto method: methods) {
                 delete method;
@@ -728,6 +744,7 @@ namespace X {
 
         const std::string &getName() const { return name; }
         const std::vector<std::string> &getParents() const { return parents; }
+        StatementListNode *getBody() const { return body; }
         const std::vector<MethodDeclNode *> &getMethods() const { return methods; }
         bool hasParents() const { return !parents.empty(); }
     };

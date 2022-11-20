@@ -9,9 +9,8 @@ namespace X::Codegen {
     llvm::Value *Codegen::gen(ClassNode *node) {
         auto &name = node->getName();
         const auto &mangledName = mangler.mangleClass(name);
-        auto members = node->getMembers();
         std::vector<llvm::Type *> props;
-        props.reserve(members->getProps().size());
+        props.reserve(node->getProps().size());
         ClassDecl classDecl;
         uint64_t propIndex = 0;
 
@@ -29,7 +28,7 @@ namespace X::Codegen {
             classDecl.parent = &parentClassDecl->second;
         }
 
-        for (auto prop: members->getProps()) {
+        for (auto prop: node->getProps()) {
             if (prop->getType().getTypeID() == Type::TypeID::VOID) {
                 throw InvalidTypeException();
             }
@@ -52,7 +51,7 @@ namespace X::Codegen {
         classes[mangledName] = std::move(classDecl);
         self = &classes[mangledName];
 
-        for (auto method: members->getMethods()) {
+        for (auto method: node->getMethods()) {
             auto fn = method->getFnDef();
             auto isConstructor = fn->getName() == CONSTRUCTOR_FN_NAME;
             if (isConstructor) {

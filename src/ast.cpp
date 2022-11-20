@@ -102,6 +102,42 @@ namespace X {
         return !(*this == other);
     }
 
+    bool StatementListNode::isLastNodeTerminate() const {
+        for (auto it = children.crbegin(); it != children.crend(); it++) {
+            if (dynamic_cast<CommentNode *>(*it)) {
+                continue;
+            }
+
+            return (*it)->isTerminate();
+        }
+
+        return false;
+    }
+
+    ClassNode::ClassNode(std::string name, StatementListNode *body, std::string parent, std::vector<std::string> interfaces, bool abstract) :
+            name(std::move(name)), body(body), parent(std::move(parent)), interfaces(std::move(interfaces)), abstract(abstract) {
+        for (auto child: body->getChildren()) {
+            if (auto propDeclNode = dynamic_cast<PropDeclNode *>(child)) {
+                props.push_back(propDeclNode);
+            } else if (auto methodDefNode = dynamic_cast<MethodDefNode *>(child)) {
+                methods.push_back(methodDefNode);
+            } else if (auto methodDeclNode = dynamic_cast<MethodDeclNode *>(child)) {
+                if (methodDeclNode->getIsAbstract()) {
+                    abstractMethods.push_back(methodDeclNode);
+                }
+            }
+        }
+    }
+
+    InterfaceNode::InterfaceNode(std::string name, std::vector<std::string> parents, StatementListNode *body) :
+            name(std::move(name)), parents(std::move(parents)), body(body) {
+        for (auto child: body->getChildren()) {
+            if (auto methodDeclNode = dynamic_cast<MethodDeclNode *>(child)) {
+                methods.push_back(methodDeclNode);
+            }
+        }
+    }
+
     void ScalarNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<ScalarNode>(this, level); }
     void StatementListNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<StatementListNode>(this, level); }
     void UnaryNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<UnaryNode>(this, level); }
@@ -122,7 +158,6 @@ namespace X {
     void ContinueNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<ContinueNode>(this, level); }
     void CommentNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<CommentNode>(this, level); }
     void ClassNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<ClassNode>(this, level); }
-    void ClassMembersNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<ClassMembersNode>(this, level); }
     void PropDeclNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<PropDeclNode>(this, level); }
     void MethodDefNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<MethodDefNode>(this, level); }
     void FetchPropNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<FetchPropNode>(this, level); }
@@ -158,7 +193,6 @@ namespace X {
     llvm::Value *PrintlnNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
     llvm::Value *CommentNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
     llvm::Value *ClassNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
-    llvm::Value *ClassMembersNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
     llvm::Value *PropDeclNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
     llvm::Value *MethodDefNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
     llvm::Value *FetchPropNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }

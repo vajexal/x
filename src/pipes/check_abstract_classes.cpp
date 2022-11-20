@@ -19,7 +19,7 @@ namespace X::Pipes {
         auto &className = node->getName();
         auto &parentClassName = node->getParent();
 
-        if (!node->getMembers()->getAbstractMethods().empty() && !node->isAbstract()) {
+        if (!node->getAbstractMethods().empty() && !node->isAbstract()) {
             throw CheckAbstractClassesException(fmt::format("class {} must be declared abstract", className));
         }
 
@@ -34,7 +34,7 @@ namespace X::Pipes {
             }
 
             auto &abstractMethods = classAbstractMethods[className];
-            for (auto methodDecl: node->getMembers()->getAbstractMethods()) {
+            for (auto methodDecl: node->getAbstractMethods()) {
                 abstractMethods[methodDecl->getFnDecl()->getName()] = methodDecl;
             }
 
@@ -46,7 +46,7 @@ namespace X::Pipes {
             return;
         }
 
-        auto classMethods = node->getMembers()->getMethods();
+        auto classMethods = node->getMethods();
         for (auto &[methodName, methodDecl]: classAbstractMethods[parentClassName]) {
             // todo optimize
             auto methodDef = std::find_if(classMethods.cbegin(), classMethods.cend(), [methodName = methodName](MethodDefNode *method) {

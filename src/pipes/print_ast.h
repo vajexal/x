@@ -42,7 +42,6 @@ namespace X::Pipes {
         void printNode(PrintlnNode *node, int level);
         void printNode(CommentNode *node, int level);
         void printNode(ClassNode *node, int level);
-        void printNode(ClassMembersNode *node, int level);
         void printNode(PropDeclNode *node, int level);
         void printNode(MethodDefNode *node, int level);
         void printNode(FetchPropNode *node, int level);

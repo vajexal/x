@@ -10,17 +10,11 @@ namespace X::Codegen {
     }
 
     llvm::Value *Codegen::gen(StatementListNode *node) {
-        bool hasTerminate = false;
-
         for (auto child: node->getChildren()) {
             child->gen(*this);
 
-            if (hasTerminate) {
-                throw DeadCodeException();
-            }
-
             if (child->isTerminate()) {
-                hasTerminate = true;
+                break;
             }
         }
 

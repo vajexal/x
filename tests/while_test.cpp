@@ -25,17 +25,3 @@ TEST_F(WhileTest, loop) {
 
     checkCode(code, "10");
 }
-
-TEST_F(WhileTest, deadCode) {
-    try {
-        compiler.compile(R"code(
-fn main() void {
-    while true {
-        break
-        continue
-    }
-}
-)code");
-        FAIL() << "expected DeadCodeException";
-    } catch (const Codegen::DeadCodeException &e) {}
-}

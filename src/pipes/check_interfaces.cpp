@@ -51,7 +51,7 @@ namespace X::Pipes {
     }
 
     void CheckInterfaces::checkClass(ClassNode *node) {
-        auto classMethods = node->getMembers()->getMethods();
+        auto classMethods = node->getMethods();
 
         for (auto &interfaceName: node->getInterfaces()) {
             auto methods = interfaceMethods.find(interfaceName);
