@@ -1,6 +1,8 @@
 #include "ast.h"
+
 #include "pipes/print_ast.h"
 #include "codegen/codegen.h"
+#include "utils.h"
 
 namespace X {
     std::ostream &operator<<(std::ostream &out, OpType type) {
@@ -104,7 +106,7 @@ namespace X {
 
     bool StatementListNode::isLastNodeTerminate() const {
         for (auto it = children.crbegin(); it != children.crend(); it++) {
-            if (dynamic_cast<CommentNode *>(*it)) {
+            if (isa<CommentNode>(*it)) {
                 continue;
             }
 
@@ -148,6 +150,7 @@ namespace X {
     void IfNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<IfNode>(this, level); }
     void WhileNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<WhileNode>(this, level); }
     void ForNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<ForNode>(this, level); }
+    void RangeNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<RangeNode>(this, level); }
     void ArgNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<ArgNode>(this, level); }
     void FnDeclNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<FnDeclNode>(this, level); }
     void FnDefNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<FnDefNode>(this, level); }
@@ -183,6 +186,7 @@ namespace X {
     llvm::Value *IfNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
     llvm::Value *WhileNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
     llvm::Value *ForNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
+    llvm::Value *RangeNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
     llvm::Value *BreakNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
     llvm::Value *ContinueNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
     llvm::Value *ArgNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }

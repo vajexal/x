@@ -17,6 +17,9 @@ namespace X::Runtime {
         auto stringType = llvm::StructType::create(
                 context, {llvm::Type::getInt8PtrTy(context), llvm::Type::getInt64Ty(context)}, String::CLASS_NAME);
 
+        auto rangeType = llvm::StructType::create(
+                context, {llvm::Type::getInt64Ty(context), llvm::Type::getInt64Ty(context), llvm::Type::getInt64Ty(context)}, Range::CLASS_NAME);
+
         // function name, return type, param types, function pointer
         std::vector<std::tuple<std::string, llvm::Type *, llvm::ArrayRef<llvm::Type *>, void *>> functions{
                 {mangler.mangleInternalFunction("malloc"),
@@ -25,6 +28,9 @@ namespace X::Runtime {
                  {llvm::Type::getInt8PtrTy(context), llvm::Type::getInt64Ty(context)}, reinterpret_cast<void *>(std::realloc)},
                 {"exit", llvm::Type::getVoidTy(context), {llvm::Type::getInt64Ty(context)}, reinterpret_cast<void *>(std::exit)},
                 {"println", llvm::Type::getVoidTy(context), {stringType->getPointerTo()}, reinterpret_cast<void *>(println)},
+
+                // string
+
                 {mangler.mangleInternalFunction("castBoolToString"), stringType->getPointerTo(),
                  {llvm::Type::getInt1Ty(context)}, reinterpret_cast<void *>(castBoolToString)},
                 {mangler.mangleInternalFunction("castIntToString"), stringType->getPointerTo(),
@@ -59,6 +65,14 @@ namespace X::Runtime {
                  stringType->getPointerTo(), {stringType->getPointerTo(), llvm::Type::getInt64Ty(context), llvm::Type::getInt64Ty(context)},
                  reinterpret_cast<void *>(String_substring)},
                 {mangler.mangleInternalFunction("createEmptyString"), stringType->getPointerTo(), {}, reinterpret_cast<void *>(createEmptyString)},
+
+                // range
+                {mangler.mangleMethod(Range::CLASS_NAME, "create"),
+                 rangeType->getPointerTo(), {llvm::Type::getInt64Ty(context), llvm::Type::getInt64Ty(context), llvm::Type::getInt64Ty(context)}, reinterpret_cast<void *>(Range_create)},
+                {mangler.mangleMethod(Range::CLASS_NAME, "length"),
+                 llvm::Type::getInt64Ty(context), {rangeType->getPointerTo()}, reinterpret_cast<void *>(Range_length)},
+                {mangler.mangleMethod(Range::CLASS_NAME, "get[]"),
+                 llvm::Type::getInt64Ty(context), {rangeType->getPointerTo(), llvm::Type::getInt64Ty(context)}, reinterpret_cast<void *>(Range_get)},
         };
 
         fnDefinitions.reserve(functions.size());

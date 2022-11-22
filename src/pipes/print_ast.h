@@ -32,6 +32,7 @@ namespace X::Pipes {
         void printNode(IfNode *node, int level);
         void printNode(WhileNode *node, int level);
         void printNode(ForNode *node, int level);
+        void printNode(RangeNode *node, int level);
         void printNode(BreakNode *node, int level);
         void printNode(ContinueNode *node, int level);
         void printNode(ArgNode *node, int level);

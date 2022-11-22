@@ -309,6 +309,28 @@ namespace X {
         bool hasIdx() const { return idx.has_value(); }
     };
 
+    class RangeNode : public ExprNode {
+        ExprNode *start = nullptr;
+        ExprNode *stop;
+        ExprNode *step = nullptr;
+
+    public:
+        RangeNode(ExprNode *stop) : stop(stop) {}
+        RangeNode(ExprNode *start, ExprNode *stop, ExprNode *step = nullptr) : start(start), stop(stop), step(step) {}
+        ~RangeNode() {
+            delete start;
+            delete stop;
+            delete step;
+        }
+
+        void print(Pipes::PrintAst &astPrinter, int level = 0) override;
+        llvm::Value *gen(Codegen::Codegen &codegen) override;
+
+        ExprNode *getStart() const { return start; }
+        ExprNode *getStop() const { return stop; }
+        ExprNode *getStep() const { return step; }
+    };
+
     class ArgNode : public Node {
         Type type;
         std::string name;

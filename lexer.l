@@ -42,6 +42,7 @@ yy::parser::symbol_type yylex(Driver &driver) {
       "while" { return yy::parser::make_WHILE(); }
       "for" { return yy::parser::make_FOR(); }
       "in" { return yy::parser::make_IN(); }
+      "range" { return yy::parser::make_RANGE(); }
       "continue" { return yy::parser::make_CONTINUE(); }
       "break" { return yy::parser::make_BREAK(); }
       "return" { return yy::parser::make_RETURN(); }

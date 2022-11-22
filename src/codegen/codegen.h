@@ -52,6 +52,7 @@ namespace X::Codegen {
 
     class Codegen {
         static inline const std::string CONSTRUCTOR_FN_NAME = "construct";
+        static inline const int INTEGER_BIT_WIDTH = 64;
 
         llvm::LLVMContext &context;
         llvm::IRBuilder<> &builder;
@@ -81,6 +82,7 @@ namespace X::Codegen {
         llvm::Value *gen(IfNode *node);
         llvm::Value *gen(WhileNode *node);
         llvm::Value *gen(ForNode *node);
+        llvm::Value *gen(RangeNode *node);
         llvm::Value *gen(BreakNode *node);
         llvm::Value *gen(ContinueNode *node);
         llvm::Value *gen(FnDeclNode *node);

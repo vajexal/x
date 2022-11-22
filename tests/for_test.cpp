@@ -73,7 +73,70 @@ INSTANTIATE_TEST_SUITE_P(Code, ForTest, testing::Values(
     }
 )code", R"output(1.23
 3.14
-6.28)output")
+6.28)output"),
+        std::make_pair(
+                R"code(
+    for i in range(3) {
+        println(i)
+    }
+)code", R"output(0
+1
+2)output"),
+        std::make_pair(
+                R"code(
+    for i in range(1, 5) {
+        println(i)
+    }
+)code", R"output(1
+2
+3
+4)output"),
+        std::make_pair(
+                R"code(
+    for i in range(0) {
+        println(i)
+    }
+)code", ""),
+        std::make_pair(
+                R"code(
+    for i in range(-3) {
+        println(i)
+    }
+)code", ""),
+        std::make_pair(
+                R"code(
+    for i in range(1, 0) {
+        println(i)
+    }
+)code", ""),
+        std::make_pair(
+                R"code(
+    for i in range(1, 10, 3) {
+        println(i)
+    }
+)code", R"output(1
+4
+7)output"),
+        std::make_pair(
+                R"code(
+    for i in range(5, -5, -3) {
+        println(i)
+    }
+)code", R"output(5
+2
+-1
+-4)output"),
+        std::make_pair(
+                R"code(
+    for i in range(0, 30, 5) {
+        println(i)
+    }
+)code", R"output(0
+5
+10
+15
+20
+25)output")
 ));
 
 TEST_F(ForTest, useValVarOutsideOfFor) {
@@ -131,6 +194,48 @@ TEST_F(ForTest, forOverPrimitive) {
 fn main() void {
     int a
     for val in a {
+    }
+}
+)code");
+        FAIL() << "expected InvalidTypeException";
+    } catch (const Codegen::InvalidTypeException &e) {
+        // todo excepted type
+    }
+}
+
+TEST_F(ForTest, invalidStopValueForRange) {
+    try {
+        compiler.compile(R"code(
+fn main() void {
+    for i in range(3.14) {
+    }
+}
+)code");
+        FAIL() << "expected InvalidTypeException";
+    } catch (const Codegen::InvalidTypeException &e) {
+        // todo excepted type
+    }
+}
+
+TEST_F(ForTest, invalidStartValueForRange) {
+    try {
+        compiler.compile(R"code(
+fn main() void {
+    for i in range(false, 10) {
+    }
+}
+)code");
+        FAIL() << "expected InvalidTypeException";
+    } catch (const Codegen::InvalidTypeException &e) {
+        // todo excepted type
+    }
+}
+
+TEST_F(ForTest, invalidStepValueForRange) {
+    try {
+        compiler.compile(R"code(
+fn main() void {
+    for i in range(0, 3, "step") {
     }
 }
 )code");

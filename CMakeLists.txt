@@ -29,6 +29,7 @@ set(X_SOURCES lexer.cpp
         src/runtime/runtime.cpp
         src/runtime/string.cpp
         src/runtime/array.cpp
+        src/runtime/range.cpp
         src/runtime/casts.cpp
         src/compiler.cpp
         src/pipes/parse_code.cpp

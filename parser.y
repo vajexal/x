@@ -48,6 +48,7 @@
 %token WHILE "while"
 %token FOR "for"
 %token IN "in"
+%token RANGE "range"
 %token CONTINUE "continue"
 %token BREAK "break"
 %token RETURN "return"
@@ -97,6 +98,7 @@
 %nterm <StatementListNode *> else_statement
 %nterm <WhileNode *> while_statement
 %nterm <ForNode *> for_statement
+%nterm <RangeNode *> range
 %nterm <FnDeclNode *> fn_decl
 %nterm <FnDefNode *> fn_def
 %nterm <std::vector<ArgNode *>> decl_arg_list
@@ -278,6 +280,13 @@ WHILE expr statement_block { $$ = new WhileNode($2, $3); }
 for_statement:
 FOR IDENTIFIER IN expr statement_block { $$ = new ForNode(std::move($2), $4, $5); }
 | FOR IDENTIFIER ',' IDENTIFIER IN expr statement_block { $$ = new ForNode(std::move($2), std::move($4), $6, $7); }
+| FOR IDENTIFIER IN range statement_block { $$ = new ForNode(std::move($2), $4, $5); }
+;
+
+range:
+RANGE '(' expr ')' { $$ = new RangeNode($3); }
+| RANGE '(' expr ',' expr ')' { $$ = new RangeNode($3, $5); }
+| RANGE '(' expr ',' expr ',' expr ')' { $$ = new RangeNode($3, $5, $7); }
 ;
 
 fn_def:

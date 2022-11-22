@@ -107,6 +107,18 @@ namespace X::Pipes {
         node->getBody()->print(*this, level + 1);
     }
 
+    void PrintAst::printNode(RangeNode *node, int level) {
+        std::cout << "range";
+
+        if (node->getStart()) {
+            node->getStart()->print(*this, level + 1);
+        }
+        node->getStop()->print(*this, level + 1);
+        if (node->getStep()) {
+            node->getStep()->print(*this, level + 1);
+        }
+    }
+
     void PrintAst::printNode(BreakNode *node, int level) {
         std::cout << "break" << std::endl;
     }

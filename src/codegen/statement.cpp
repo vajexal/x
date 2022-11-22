@@ -108,12 +108,13 @@ namespace X::Codegen {
     llvm::Value *Codegen::gen(ForNode *node) {
         llvm::AllocaInst *idxVar = nullptr;
         auto &valVarName = node->getVal();
-        auto arr = node->getExpr()->gen(*this);
-        if (!arr) {
+        auto isRange = isa<RangeNode>(node->getExpr());
+        auto expr = node->getExpr()->gen(*this);
+        if (!expr) {
             throw InvalidTypeException();
         }
-        auto arrType = deref(arr->getType());
-        if (!Runtime::Array::isArrayType(arrType)) {
+        auto exprType = deref(expr->getType());
+        if (!Runtime::Array::isArrayType(exprType) && !isRange) {
             // todo expected type
             throw InvalidTypeException();
         }
@@ -152,7 +153,9 @@ namespace X::Codegen {
         if (namedValues.contains(valVarName)) {
             throw VarAlreadyExistsException(valVarName);
         }
-        auto valVarType = arrayRuntime.getContainedType(llvm::cast<llvm::StructType>(arrType));
+        auto valVarType = isRange ?
+                          llvm::Type::getInt64Ty(context) :
+                          arrayRuntime.getContainedType(llvm::cast<llvm::StructType>(exprType));
         if (!valVarType) {
             throw InvalidTypeException();
         }
@@ -160,8 +163,8 @@ namespace X::Codegen {
         namedValues[valVarName] = valVar;
 
         // init stop value
-        auto arrayLenFn = module.getFunction(mangler.mangleMethod(arrType->getStructName().str(), "length"));
-        auto arrayLen = builder.CreateCall(arrayLenFn, {arr});
+        auto lengthFn = module.getFunction(mangler.mangleMethod(exprType->getStructName().str(), "length"));
+        auto iterStopValue = builder.CreateCall(lengthFn, {expr});
 
         builder.CreateBr(loopCondBB);
 
@@ -170,7 +173,7 @@ namespace X::Codegen {
         builder.SetInsertPoint(loopCondBB);
 
         llvm::Value *iter = builder.CreateLoad(iterType, iterVar);
-        auto cond = builder.CreateICmpSLT(iter, arrayLen);
+        auto cond = builder.CreateICmpSLT(iter, iterStopValue);
         builder.CreateCondBr(cond, loopBB, loopEndBB);
 
         // body
@@ -183,8 +186,8 @@ namespace X::Codegen {
         }
 
         // set val
-        auto arrayGetFn = module.getFunction(mangler.mangleMethod(arrType->getStructName().str(), "get[]"));
-        auto val = builder.CreateCall(arrayGetFn, {arr, iter});
+        auto getFn = module.getFunction(mangler.mangleMethod(exprType->getStructName().str(), "get[]"));
+        auto val = builder.CreateCall(getFn, {expr, iter});
         builder.CreateStore(val, valVar);
 
         // gen body
@@ -197,7 +200,7 @@ namespace X::Codegen {
         parentFunction->getBasicBlockList().push_back(loopPostBB);
         builder.SetInsertPoint(loopPostBB);
 
-        iter = builder.CreateAdd(iter, llvm::ConstantInt::getSigned(llvm::Type::getInt64Ty(context), 1));
+        iter = builder.CreateAdd(iter, llvm::ConstantInt::getSigned(iterType, 1));
         builder.CreateStore(iter, iterVar);
         builder.CreateBr(loopCondBB);
 
@@ -205,10 +208,37 @@ namespace X::Codegen {
         parentFunction->getBasicBlockList().push_back(loopEndBB);
         builder.SetInsertPoint(loopEndBB);
 
+        if (node->hasIdx()) {
+            namedValues.erase(node->getIdx());
+        }
         namedValues.erase(valVarName);
         loops.pop();
 
         return nullptr;
+    }
+
+    llvm::Value *Codegen::gen(RangeNode *node) {
+        auto start = node->getStart() ?
+                     node->getStart()->gen(*this) :
+                     llvm::ConstantInt::getSigned(llvm::Type::getInt64Ty(context), 0);
+        if (!start->getType()->isIntegerTy(INTEGER_BIT_WIDTH)) {
+            throw InvalidTypeException();
+        }
+
+        auto stop = node->getStop()->gen(*this);
+        if (!stop->getType()->isIntegerTy(INTEGER_BIT_WIDTH)) {
+            throw InvalidTypeException();
+        }
+
+        auto step = node->getStep() ?
+                    node->getStep()->gen(*this) :
+                    llvm::ConstantInt::getSigned(llvm::Type::getInt64Ty(context), 1);
+        if (!step->getType()->isIntegerTy(INTEGER_BIT_WIDTH)) {
+            throw InvalidTypeException();
+        }
+
+        auto rangeCreateFn = module.getFunction(mangler.mangleMethod(Runtime::Range::CLASS_NAME, "create"));
+        return builder.CreateCall(rangeCreateFn, {start, stop, step});
     }
 
     llvm::Value *Codegen::gen(BreakNode *node) {
