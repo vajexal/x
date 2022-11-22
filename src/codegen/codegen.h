@@ -119,6 +119,7 @@ namespace X::Codegen {
         llvm::Function *getConstructor(const std::string &mangledClassName) const;
         void checkConstructor(MethodDefNode *node, const std::string &className) const;
         llvm::Value *callMethod(llvm::Value *obj, const std::string &methodName, const std::vector<ExprNode *> &args);
+        llvm::Value *newObj(llvm::StructType *type);
 
         std::pair<llvm::Value *, llvm::Value *> upcast(llvm::Value *a, llvm::Value *b) const;
         std::pair<llvm::Value *, llvm::Value *> forceUpcast(llvm::Value *a, llvm::Value *b) const;

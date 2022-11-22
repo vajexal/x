@@ -140,6 +140,25 @@ namespace X::Codegen {
         return tmpBuilder.CreateAlloca(type, nullptr, name);
     }
 
+    // allocates object on heap
+    llvm::Value *Codegen::newObj(llvm::StructType *type) {
+        auto mallocFn = module.getFunction(mangler.mangleInternalFunction("malloc"));
+        auto mallocSizeType = llvm::Type::getInt64Ty(context);
+        auto typeSize = module.getDataLayout().getTypeAllocSize(type);
+        if (typeSize.isScalable()) {
+            throw CodegenException("can't calc class size");
+        }
+        auto allocSize = builder.getInt64(typeSize.getFixedSize());
+
+        auto obj = llvm::CallInst::CreateMalloc(
+                builder.GetInsertBlock(), mallocSizeType, type, allocSize, nullptr, mallocFn);
+        builder.Insert(obj);
+
+        builder.CreateMemSet(obj, llvm::ConstantInt::getSigned(llvm::Type::getInt8Ty(context), 0), allocSize, llvm::None);
+
+        return obj;
+    }
+
     std::pair<llvm::Value *, llvm::Value *> Codegen::upcast(llvm::Value *a, llvm::Value *b) const {
         if (a->getType()->isDoubleTy() && b->getType()->isIntegerTy()) {
             return {a, builder.CreateSIToFP(b, llvm::Type::getDoubleTy(context))};

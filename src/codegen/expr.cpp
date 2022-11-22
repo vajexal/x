@@ -16,7 +16,7 @@ namespace X::Codegen {
             case Type::TypeID::BOOL:
                 return llvm::ConstantInt::get(llvm::Type::getInt1Ty(context), std::get<bool>(value));
             case Type::TypeID::STRING: {
-                auto str = createAlloca(llvm::StructType::getTypeByName(context, Runtime::String::CLASS_NAME));
+                auto str = newObj(llvm::StructType::getTypeByName(context, Runtime::String::CLASS_NAME));
                 auto dataPtr = builder.CreateGlobalStringPtr(std::get<std::string>(value));
                 builder.CreateCall(getConstructor(Runtime::String::CLASS_NAME), {str, dataPtr});
                 return str;
@@ -30,7 +30,7 @@ namespace X::Codegen {
                 }
                 // todo check all elem types are the same
                 auto arrType = getArrayForType(type.getSubtype());
-                auto arr = createAlloca(arrType);
+                auto arr = newObj(arrType);
                 auto len = llvm::ConstantInt::getSigned(llvm::Type::getInt64Ty(context), (int64_t)exprList.size());
                 builder.CreateCall(getConstructor(arrType->getName().str()), {arr, len});
                 fillArray(arr, arrayValues);

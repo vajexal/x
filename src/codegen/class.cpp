@@ -150,7 +150,8 @@ namespace X::Codegen {
             throw CodegenException("cannot instantiate abstract class " + node->getName());
         }
 
-        auto obj = builder.CreateAlloca(classDecl.type);
+        auto obj = newObj(classDecl.type);
+
         try {
             callMethod(obj, CONSTRUCTOR_FN_NAME, node->getArgs());
         } catch (const MethodNotFoundException &e) {

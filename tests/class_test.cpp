@@ -126,3 +126,32 @@ fn main() void {
 )code", R"output(123
 true)output");
 }
+
+TEST_F(ClassTest, allocateObjectsOnHeap) {
+    checkProgram(R"code(
+class Greeter {
+    []string names
+
+    fn construct([]string _names) void {
+        names = _names
+    }
+
+    public fn greet() void {
+        for name in names {
+            println("hey " + name)
+        }
+    }
+}
+
+fn foo() Greeter {
+    return new Greeter([]string{"Ron", "Billy"})
+}
+
+fn main() void {
+    Greeter greeter = foo()
+
+    greeter.greet()
+}
+)code", R"output(hey Ron
+hey Billy)output");
+}
