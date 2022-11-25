@@ -15,21 +15,24 @@ namespace X::Codegen {
 
     llvm::Value *Codegen::gen(FnCallNode *node) {
         auto &name = node->getName();
+        auto &args = node->getArgs();
         auto callee = module.getFunction(name);
         if (!callee) {
             throw CodegenException("called function is not found: " + name);
         }
-        if (callee->arg_size() != node->getArgs().size()) {
-            throw CodegenException("callee args mismatch");
+        if (callee->arg_size() != args.size()) {
+            throw CodegenException("callee llvmArgs mismatch");
         }
 
-        std::vector<llvm::Value *> args;
-        args.reserve(node->getArgs().size());
-        for (auto arg: node->getArgs()) {
-            args.push_back(arg->gen(*this));
+        std::vector<llvm::Value *> llvmArgs;
+        llvmArgs.reserve(args.size());
+        for (auto i = 0; i < args.size(); i++) {
+            auto val = args[i]->gen(*this);
+            val = castTo(val, callee->getArg(i)->getType());
+            llvmArgs.push_back(val);
         }
 
-        return builder.CreateCall(callee, args);
+        return builder.CreateCall(callee, llvmArgs);
     }
 
     void Codegen::genFn(

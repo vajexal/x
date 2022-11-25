@@ -16,6 +16,8 @@ namespace X::Codegen {
                      node->getExpr()->gen(*this) :
                      createDefaultValue(node->getType());
 
+        value = castTo(value, type);
+
         builder.CreateStore(value, stackVar);
 
         namedValues[name] = stackVar;
@@ -26,7 +28,10 @@ namespace X::Codegen {
         auto name = node->getName();
         auto [type, var] = getVar(name);
         auto value = node->getExpr()->gen(*this);
+
+        value = castTo(value, type);
         builder.CreateStore(value, var);
+
         return nullptr;
     }
 
@@ -307,6 +312,8 @@ namespace X::Codegen {
 
         auto idx = node->getIdx()->gen(*this);
         auto expr = node->getExpr()->gen(*this);
+        auto arrElemType = arrayRuntime.getContainedType(llvm::cast<llvm::StructType>(arrType));
+        expr = castTo(expr, arrElemType);
 
         auto arrSetFn = module.getFunction(mangler.mangleMethod(arrType->getStructName().str(), "set[]"));
         if (!arrSetFn) {
@@ -325,6 +332,8 @@ namespace X::Codegen {
         }
 
         auto expr = node->getExpr()->gen(*this);
+        auto arrElemType = arrayRuntime.getContainedType(llvm::cast<llvm::StructType>(arrType));
+        expr = castTo(expr, arrElemType);
 
         auto arrAppendFn = module.getFunction(mangler.mangleMethod(arrType->getStructName().str(), "append[]"));
         if (!arrAppendFn) {

@@ -125,6 +125,8 @@ namespace X::Codegen {
         std::pair<llvm::Value *, llvm::Value *> forceUpcast(llvm::Value *a, llvm::Value *b) const;
         llvm::Value *downcastToBool(llvm::Value *value) const;
         llvm::Value *castToString(llvm::Value *value) const;
+        bool instanceof(llvm::StructType *instanceType, llvm::StructType *type) const;
+        llvm::Value *castTo(llvm::Value *value, llvm::Type *expectedType) const;
 
         void genFn(const std::string &name, const std::vector<ArgNode *> &args, const Type &returnType, StatementListNode *body,
                    std::optional<Type> thisType = std::nullopt);

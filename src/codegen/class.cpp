@@ -104,6 +104,7 @@ namespace X::Codegen {
 
     llvm::Value *Codegen::gen(StaticMethodCallNode *node) {
         auto &methodName = node->getMethodName();
+        auto &args = node->getArgs();
         const auto &className = mangler.mangleClass(node->getClassName());
         auto &classDecl = getClass(className);
         auto [callee, thisType] = findMethod(classDecl.type, methodName);
@@ -115,13 +116,15 @@ namespace X::Codegen {
             throw CodegenException("callee args mismatch");
         }
 
-        std::vector<llvm::Value *> args;
-        args.reserve(node->getArgs().size());
-        for (auto arg: node->getArgs()) {
-            args.push_back(arg->gen(*this));
+        std::vector<llvm::Value *> llvmArgs;
+        llvmArgs.reserve(args.size());
+        for (auto i = 0; i < args.size(); i++) {
+            auto val = args[i]->gen(*this);
+            val = castTo(val, callee->getArg(i)->getType());
+            llvmArgs.push_back(val);
         }
 
-        return builder.CreateCall(callee, args);
+        return builder.CreateCall(callee, llvmArgs);
     }
 
     llvm::Value *Codegen::gen(AssignPropNode *node) {
@@ -132,14 +135,20 @@ namespace X::Codegen {
 
         auto value = node->getExpr()->gen(*this);
         auto [type, ptr] = getProp(obj, node->getName());
+
+        value = castTo(value, type);
         builder.CreateStore(value, ptr);
+
         return nullptr;
     }
 
     llvm::Value *Codegen::gen(AssignStaticPropNode *node) {
         auto value = node->getExpr()->gen(*this);
         auto [type, ptr] = getStaticProp(node->getClassName(), node->getPropName());
+
+        value = castTo(value, type);
         builder.CreateStore(value, ptr);
+
         return nullptr;
     }
 
@@ -274,8 +283,10 @@ namespace X::Codegen {
         std::vector<llvm::Value *> llvmArgs;
         llvmArgs.reserve(args.size() + 1);
         llvmArgs.push_back(obj);
-        for (auto arg: args) {
-            llvmArgs.push_back(arg->gen(*this));
+        for (auto i = 0; i < args.size(); i++) {
+            auto val = args[i]->gen(*this);
+            val = castTo(val, callee->getArg(i + 1)->getType()); // skip "this"
+            llvmArgs.push_back(val);
         }
 
         return builder.CreateCall(callee, llvmArgs);

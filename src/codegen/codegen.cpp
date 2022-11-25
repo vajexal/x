@@ -231,6 +231,41 @@ namespace X::Codegen {
         return value;
     }
 
+    bool Codegen::instanceof(llvm::StructType *instanceType, llvm::StructType *type) const {
+        auto currentClassDecl = &getClass(instanceType->getStructName().str());
+        auto expectedClassDecl = &getClass(type->getStructName().str());
+
+        while (currentClassDecl) {
+            if (currentClassDecl == expectedClassDecl) {
+                return true;
+            }
+
+            currentClassDecl = currentClassDecl->parent;
+        }
+
+        return false;
+    }
+
+    llvm::Value *Codegen::castTo(llvm::Value *value, llvm::Type *expectedType) const {
+        if (value->getType() == expectedType) {
+            return value;
+        }
+
+        if (expectedType->isDoubleTy() && value->getType()->isIntegerTy(INTEGER_BIT_WIDTH)) {
+            return builder.CreateSIToFP(value, expectedType);
+        }
+
+        auto type = deref(value->getType());
+        auto expectedClassType = deref(expectedType);
+        if (type->isStructTy() && expectedClassType->isStructTy()) {
+            if (instanceof(llvm::cast<llvm::StructType>(type), llvm::cast<llvm::StructType>(expectedClassType))) {
+                return builder.CreateBitCast(value, expectedType);
+            }
+        }
+
+        return value;
+    }
+
     llvm::Value *Codegen::compareStrings(llvm::Value *first, llvm::Value *second) const {
         auto callee = module.getFunction(mangler.mangleInternalFunction("compareStrings"));
         return builder.CreateCall(callee, {first, second});
