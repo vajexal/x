@@ -21,7 +21,7 @@ namespace X::Codegen {
             throw CodegenException("called function is not found: " + name);
         }
         if (callee->arg_size() != args.size()) {
-            throw CodegenException("callee llvmArgs mismatch");
+            throw CodegenException("callee args mismatch");
         }
 
         std::vector<llvm::Value *> llvmArgs;
@@ -35,24 +35,10 @@ namespace X::Codegen {
         return builder.CreateCall(callee, llvmArgs);
     }
 
-    void Codegen::genFn(
-            const std::string &name, const std::vector<ArgNode *> &args, const Type &returnType, StatementListNode *body, std::optional<Type> thisType) {
+    void Codegen::genFn(const std::string &name, const std::vector<ArgNode *> &args, const Type &returnType, StatementListNode *body,
+                        llvm::StructType *thisType) {
         size_t paramsOffset = thisType ? 1 : 0; // this is special
-        std::vector<llvm::Type *> paramTypes;
-        paramTypes.reserve(args.size() + paramsOffset);
-        if (thisType) {
-            paramTypes.push_back(mapType(thisType.value()));
-        }
-        for (auto arg: args) {
-            if (arg->getType().getTypeID() == Type::TypeID::VOID) {
-                throw InvalidTypeException();
-            }
-
-            paramTypes.push_back(mapType(arg->getType()));
-        }
-
-        auto retType = mapType(returnType);
-        auto fnType = llvm::FunctionType::get(retType, paramTypes, false);
+        auto fnType = genFnType(args, returnType, thisType);
         auto fn = llvm::Function::Create(fnType, llvm::Function::ExternalLinkage, name, module);
         if (thisType) {
             fn->getArg(0)->setName("this");
@@ -87,5 +73,24 @@ namespace X::Codegen {
         }
 
         that = nullptr;
+    }
+
+    llvm::FunctionType *Codegen::genFnType(const std::vector<ArgNode *> &args, const Type &returnType, llvm::StructType *thisType) {
+        size_t paramsOffset = thisType ? 1 : 0; // this is special
+        std::vector<llvm::Type *> paramTypes;
+        paramTypes.reserve(args.size() + paramsOffset);
+        if (thisType) {
+            paramTypes.push_back(thisType->getPointerTo());
+        }
+        for (auto arg: args) {
+            if (arg->getType().getTypeID() == Type::TypeID::VOID) {
+                throw InvalidTypeException();
+            }
+
+            paramTypes.push_back(mapType(arg->getType()));
+        }
+
+        auto retType = mapType(returnType);
+        return llvm::FunctionType::get(retType, paramTypes, false);
     }
 }

@@ -4,6 +4,8 @@
 #include <map>
 #include <stack>
 #include <vector>
+#include <tuple>
+#include <fmt/core.h>
 
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/IRBuilder.h"
@@ -15,6 +17,7 @@
 #include "llvm/IR/Constant.h"
 
 #include "ast.h"
+#include "compiler_runtime.h"
 #include "mangler.h"
 #include "runtime/runtime.h"
 
@@ -39,6 +42,8 @@ namespace X::Codegen {
 
     struct Method {
         AccessModifier accessModifier;
+        bool isVirtual;
+        uint64_t vtablePos;
     };
 
     struct ClassDecl {
@@ -48,6 +53,7 @@ namespace X::Codegen {
         std::map<std::string, Method> methods;
         ClassDecl *parent = nullptr;
         bool isAbstract;
+        llvm::StructType *vtableType = nullptr;
     };
 
     class Codegen {
@@ -57,6 +63,7 @@ namespace X::Codegen {
         llvm::LLVMContext &context;
         llvm::IRBuilder<> &builder;
         llvm::Module &module;
+        CompilerRuntime &compilerRuntime;
         Mangler mangler;
         Runtime::ArrayRuntime arrayRuntime;
 
@@ -68,8 +75,8 @@ namespace X::Codegen {
         std::map<std::string, ClassDecl> classes;
 
     public:
-        Codegen(llvm::LLVMContext &context, llvm::IRBuilder<> &builder, llvm::Module &module) :
-                context(context), builder(builder), module(module), arrayRuntime(Runtime::ArrayRuntime(context, module)) {}
+        Codegen(llvm::LLVMContext &context, llvm::IRBuilder<> &builder, llvm::Module &module, CompilerRuntime &compilerRuntime) :
+                context(context), builder(builder), module(module), compilerRuntime(compilerRuntime), arrayRuntime(Runtime::ArrayRuntime(context, module)) {}
 
         llvm::Value *gen(Node *node);
         llvm::Value *gen(StatementListNode *node);
@@ -115,11 +122,12 @@ namespace X::Codegen {
         const ClassDecl &getClass(const std::string &mangledName) const;
         bool isObject(llvm::Value *value) const;
         llvm::AllocaInst *createAlloca(llvm::Type *type, const std::string &name = "") const;
-        AccessModifier getMethodAccessModifier(const std::string &mangledClassName, const std::string &methodName) const;
         llvm::Function *getConstructor(const std::string &mangledClassName) const;
         void checkConstructor(MethodDefNode *node, const std::string &className) const;
         llvm::Value *callMethod(llvm::Value *obj, const std::string &methodName, const std::vector<ExprNode *> &args);
         llvm::Value *newObj(llvm::StructType *type);
+        llvm::StructType *genVtable(ClassNode *classNode, llvm::StructType *klass, ClassDecl &classDecl);
+        void initVtable(llvm::Value *obj);
 
         std::pair<llvm::Value *, llvm::Value *> upcast(llvm::Value *a, llvm::Value *b) const;
         std::pair<llvm::Value *, llvm::Value *> forceUpcast(llvm::Value *a, llvm::Value *b) const;
@@ -129,8 +137,12 @@ namespace X::Codegen {
         llvm::Value *castTo(llvm::Value *value, llvm::Type *expectedType) const;
 
         void genFn(const std::string &name, const std::vector<ArgNode *> &args, const Type &returnType, StatementListNode *body,
-                   std::optional<Type> thisType = std::nullopt);
-        std::pair<llvm::Function *, llvm::Type *> findMethod(llvm::StructType *type, const std::string &methodName) const;
+                   llvm::StructType *thisType = nullptr);
+        llvm::FunctionType *genFnType(const std::vector<ArgNode *> &args, const Type &returnType, llvm::StructType *thisType = nullptr);
+        std::tuple<llvm::Value *, llvm::FunctionType *, llvm::Type *> findMethod(
+                llvm::StructType *type, const std::string &methodName, llvm::Value *obj = nullptr) const;
+        // find method in class only looking for generated funcs (ignoring internal classes, virtual funcs, access modifiers etc.)
+        llvm::Function *simpleFindMethod(llvm::StructType *type, const std::string &methodName) const;
         llvm::Value *compareStrings(llvm::Value *first, llvm::Value *second) const;
         llvm::Value *negate(llvm::Value *value) const;
 
@@ -158,6 +170,16 @@ namespace X::Codegen {
     class VarAlreadyExistsException : public CodegenException {
     public:
         VarAlreadyExistsException(const std::string &varName) : CodegenException("var already exists: " + varName) {}
+    };
+
+    class ClassNotFoundException : public CodegenException {
+    public:
+        ClassNotFoundException(const std::string &className) : CodegenException(fmt::format("class {} not found", className)) {}
+    };
+
+    class PropNotFoundException : public CodegenException {
+    public:
+        PropNotFoundException(const std::string &propName) : CodegenException("prop not found: " + propName) {}
     };
 
     class MethodNotFoundException : public CodegenException {

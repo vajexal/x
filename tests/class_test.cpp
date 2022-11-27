@@ -81,8 +81,8 @@ class Bar extends Foo {
 fn main() void {
 }
 )code");
-        FAIL() << "expected CodegenException";
-    } catch (const Codegen::CodegenException &e) {
+        FAIL() << "expected exception";
+    } catch (const std::exception &e) {
         ASSERT_STREQ(e.what(), "class Foo not found");
     }
 }
@@ -154,4 +154,59 @@ fn main() void {
 }
 )code", R"output(hey Ron
 hey Billy)output");
+}
+
+TEST_F(ClassTest, polymorphism) {
+    checkProgram(R"code(
+class Foo {
+    public fn a() void {
+        println("foo")
+    }
+}
+
+class Bar extends Foo {
+    public fn a() void {
+        println("bar")
+    }
+}
+
+fn check(Foo foo) void {
+    foo.a()
+}
+
+fn main() void {
+    Bar bar = new Bar()
+
+    check(bar)
+}
+)code", "bar");
+}
+
+TEST_F(ClassTest, polymorphism2) {
+    checkProgram(R"code(
+class Foo {
+    public fn a() void {
+        println("foo")
+    }
+}
+
+class Bar extends Foo {
+    public fn a() void {
+        println("bar")
+    }
+}
+
+class Baz extends Bar {
+}
+
+fn check(Foo foo) void {
+    foo.a()
+}
+
+fn main() void {
+    Baz baz = new Baz()
+
+    check(baz)
+}
+)code", "bar");
 }

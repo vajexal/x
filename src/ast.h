@@ -5,6 +5,7 @@
 #include <utility>
 #include <vector>
 #include <deque>
+#include <map>
 #include <variant>
 #include <optional>
 #include <string>
@@ -398,6 +399,9 @@ namespace X {
         const std::vector<ArgNode *> &getArgs() const { return args; }
         const Type &getReturnType() const { return returnType; }
         StatementListNode *getBody() const { return body; }
+
+        bool operator==(const FnDefNode &other) const;
+        bool operator!=(const FnDefNode &other) const;
     };
 
     class FnCallNode : public ExprNode {
@@ -541,6 +545,9 @@ namespace X {
         FnDefNode *getFnDef() const { return fnDef; }
         bool getIsStatic() const { return isStatic; }
         AccessModifier getAccessModifier() const { return accessModifier; }
+
+        bool operator==(const MethodDefNode &other) const;
+        bool operator!=(const MethodDefNode &other) const;
     };
 
     class ClassMembersNode : public Node {
@@ -584,7 +591,7 @@ namespace X {
         std::string name;
         StatementListNode *body;
         std::vector<PropDeclNode *> props;
-        std::vector<MethodDefNode *> methods;
+        std::map<std::string, MethodDefNode *> methods;
         std::vector<MethodDeclNode *> abstractMethods;
         std::string parent;
         std::vector<std::string> interfaces;
@@ -602,7 +609,7 @@ namespace X {
         const std::string &getName() const { return name; }
         StatementListNode *getBody() { return body; }
         const std::vector<PropDeclNode *> &getProps() const { return props; }
-        const std::vector<MethodDefNode *> &getMethods() const { return methods; }
+        const std::map<std::string, MethodDefNode *> &getMethods() const { return methods; }
         const std::vector<MethodDeclNode *> &getAbstractMethods() const { return abstractMethods; }
         const std::string &getParent() const { return parent; }
         const std::vector<std::string> &getInterfaces() const { return interfaces; }

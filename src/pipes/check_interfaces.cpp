@@ -60,21 +60,17 @@ namespace X::Pipes {
             }
 
             for (auto &[methodName, methodDecl]: methods->second) {
-                // todo optimize
-                auto classMethod = std::find_if(classMethods.cbegin(), classMethods.cend(), [methodName = methodName](MethodDefNode *method) {
-                    return method->getFnDef()->getName() == methodName;
-                });
+                auto classMethod = classMethods.find(methodName);
                 if (classMethod == classMethods.cend()) {
                     throw CheckInterfacesException(fmt::format("interface method {}::{} must be implemented", interfaceName, methodName));
                 }
 
-                if (!compareDeclAndDef(methodDecl, *classMethod)) {
+                if (!compareDeclAndDef(methodDecl, classMethod->second)) {
                     throw CheckInterfacesException(
                             fmt::format("declaration of {}::{} must be compatible with interface {}", node->getName(),
-                                        (*classMethod)->getFnDef()->getName(), interfaceName));
+                                        classMethod->second->getFnDef()->getName(), interfaceName));
                 }
             }
         }
     }
 }
-

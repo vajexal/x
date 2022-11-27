@@ -3,10 +3,16 @@
 
 #include "pipeline.h"
 
+#include "compiler_runtime.h"
+
 namespace X::Pipes {
     // todo rename
     class CodeGenerator : public Pipe {
+        CompilerRuntime &compilerRuntime;
+
     public:
+        CodeGenerator(CompilerRuntime &compilerRuntime) : compilerRuntime(compilerRuntime) {}
+
         StatementListNode *handle(StatementListNode *node) override;
     };
 

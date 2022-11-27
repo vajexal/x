@@ -96,11 +96,41 @@ namespace X {
         return !(*this == other);
     }
 
+    bool FnDefNode::operator==(const FnDefNode &other) const {
+        if (name != other.name || returnType != other.returnType) {
+            return false;
+        }
+
+        if (args.size() != other.args.size()) {
+            return false;
+        }
+
+        for (auto i = 0; i < args.size(); i++) {
+            if (*args[i] != *other.args[i]) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    bool FnDefNode::operator!=(const FnDefNode &other) const {
+        return !(*this == other);
+    }
+
     bool MethodDeclNode::operator==(const MethodDeclNode &other) const {
         return *fnDecl == *other.fnDecl && accessModifier == other.accessModifier && isStatic == other.isStatic;
     }
 
     bool MethodDeclNode::operator!=(const MethodDeclNode &other) const {
+        return !(*this == other);
+    }
+
+    bool MethodDefNode::operator==(const MethodDefNode &other) const {
+        return *fnDef == *other.fnDef && accessModifier == other.accessModifier && isStatic == other.isStatic;
+    }
+
+    bool MethodDefNode::operator!=(const MethodDefNode &other) const {
         return !(*this == other);
     }
 
@@ -122,7 +152,8 @@ namespace X {
             if (auto propDeclNode = dynamic_cast<PropDeclNode *>(child)) {
                 props.push_back(propDeclNode);
             } else if (auto methodDefNode = dynamic_cast<MethodDefNode *>(child)) {
-                methods.push_back(methodDefNode);
+                // todo check for duplicates
+                methods[methodDefNode->getFnDef()->getName()] = methodDefNode;
             } else if (auto methodDeclNode = dynamic_cast<MethodDeclNode *>(child)) {
                 if (methodDeclNode->getIsAbstract()) {
                     abstractMethods.push_back(methodDeclNode);

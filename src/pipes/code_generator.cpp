@@ -16,7 +16,7 @@ namespace X::Pipes {
         context.setOpaquePointers(false); // todo migrate to opaque pointers
         llvm::IRBuilder<> builder(context);
         llvm::Module module("Module", context);
-        Codegen::Codegen codegen(context, builder, module);
+        Codegen::Codegen codegen(context, builder, module, compilerRuntime);
         Runtime::Runtime runtime;
 
         llvm::InitializeNativeTarget();

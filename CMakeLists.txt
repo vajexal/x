@@ -34,9 +34,10 @@ set(X_SOURCES lexer.cpp
         src/compiler.cpp
         src/pipes/parse_code.cpp
         src/pipes/print_ast.cpp
-        src/pipes/code_generator.cpp
         src/pipes/check_interfaces.cpp
-        src/pipes/check_abstract_classes.cpp)
+        src/pipes/check_abstract_classes.cpp
+        src/pipes/check_virtual_methods.cpp
+        src/pipes/code_generator.cpp)
 
 set(X_LIBS LLVM fmt::fmt)
 

@@ -48,18 +48,15 @@ namespace X::Pipes {
 
         auto classMethods = node->getMethods();
         for (auto &[methodName, methodDecl]: classAbstractMethods[parentClassName]) {
-            // todo optimize
-            auto methodDef = std::find_if(classMethods.cbegin(), classMethods.cend(), [methodName = methodName](MethodDefNode *method) {
-                return method->getFnDef()->getName() == methodName;
-            });
+            auto methodDef = classMethods.find(methodName);
 
             if (methodDef == classMethods.cend()) {
                 throw CheckAbstractClassesException(fmt::format("abstract method {}::{} must be implemented", parentClassName, methodName));
             }
 
-            if (!compareDeclAndDef(methodDecl, *methodDef)) {
+            if (!compareDeclAndDef(methodDecl, methodDef->second)) {
                 throw CheckAbstractClassesException(fmt::format("declaration of {}::{} must be compatible with abstract class {}",
-                                                                className, (*methodDef)->getFnDef()->getName(), parentClassName));
+                                                                className, methodDef->second->getFnDef()->getName(), parentClassName));
             }
         }
     }
