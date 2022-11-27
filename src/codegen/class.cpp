@@ -15,6 +15,7 @@ namespace X::Codegen {
         ClassDecl classDecl;
         uint64_t propPos = 0;
 
+        classDecl.name = name;
         classDecl.isAbstract = node->isAbstract();
 
         if (node->hasParent()) {
@@ -107,28 +108,7 @@ namespace X::Codegen {
     }
 
     llvm::Value *Codegen::gen(StaticMethodCallNode *node) {
-        auto &methodName = node->getMethodName();
-        auto &args = node->getArgs();
-        const auto &className = mangler.mangleClass(node->getClassName());
-        auto &classDecl = getClass(className);
-        auto [fn, fnType, thisType] = findMethod(classDecl.type, methodName);
-        if (!fn) {
-            throw CodegenException("method not found: " + methodName);
-        }
-
-        if (fnType->getNumParams() != node->getArgs().size()) {
-            throw CodegenException("callee args mismatch");
-        }
-
-        std::vector<llvm::Value *> llvmArgs;
-        llvmArgs.reserve(args.size());
-        for (auto i = 0; i < args.size(); i++) {
-            auto val = args[i]->gen(*this);
-            val = castTo(val, fnType->getParamType(i));
-            llvmArgs.push_back(val);
-        }
-
-        return builder.CreateCall(fnType, fn, llvmArgs);
+        return callStaticMethod(node->getClassName(), node->getMethodName(), node->getArgs());
     }
 
     llvm::Value *Codegen::gen(AssignPropNode *node) {
@@ -191,15 +171,16 @@ namespace X::Codegen {
         auto &classDecl = getClass(type->getStructName().str());
         auto currentClassDecl = &classDecl;
         while (currentClassDecl) {
-            auto prop = currentClassDecl->props.find(name);
-            if (prop != currentClassDecl->props.end()) {
-                if (!that && prop->second.accessModifier != AccessModifier::PUBLIC) {
-                    throw CodegenException("cannot access private property: " + name);
+            auto propIt = currentClassDecl->props.find(name);
+            if (propIt != currentClassDecl->props.end()) {
+                if ((propIt->second.accessModifier == AccessModifier::PROTECTED && !that) ||
+                    (propIt->second.accessModifier == AccessModifier::PRIVATE && currentClassDecl != &classDecl)) {
+                    throw PropAccessException(name);
                 }
 
                 auto currentObj = currentClassDecl == &classDecl ? obj : builder.CreateBitCast(obj, currentClassDecl->type->getPointerTo());
-                auto ptr = builder.CreateStructGEP(currentClassDecl->type, currentObj, prop->second.pos);
-                return {prop->second.type, ptr};
+                auto ptr = builder.CreateStructGEP(currentClassDecl->type, currentObj, propIt->second.pos);
+                return {propIt->second.type, ptr};
             }
 
             currentClassDecl = currentClassDecl->parent;
@@ -209,15 +190,17 @@ namespace X::Codegen {
     }
 
     std::pair<llvm::Type *, llvm::Value *> Codegen::getStaticProp(const std::string &className, const std::string &propName) const {
-        auto currentClassDecl = &getClass(mangler.mangleClass(className));
+        auto &classDecl = getClass(mangler.mangleClass(className));
+        auto currentClassDecl = &classDecl;
         while (currentClassDecl) {
-            auto prop = currentClassDecl->staticProps.find(propName);
-            if (prop != currentClassDecl->staticProps.end()) {
-                if (!self && prop->second.accessModifier != AccessModifier::PUBLIC) {
-                    throw CodegenException("cannot access private property: " + propName);
+            auto propIt = currentClassDecl->staticProps.find(propName);
+            if (propIt != currentClassDecl->staticProps.end()) {
+                if ((propIt->second.accessModifier == AccessModifier::PROTECTED && !self) ||
+                    (propIt->second.accessModifier == AccessModifier::PRIVATE && currentClassDecl != &classDecl)) {
+                    throw PropAccessException(propName);
                 }
 
-                return {prop->second.var->getType()->getPointerElementType(), prop->second.var};
+                return {propIt->second.var->getType()->getPointerElementType(), propIt->second.var};
             }
 
             currentClassDecl = currentClassDecl->parent;
@@ -342,6 +325,29 @@ namespace X::Codegen {
         return builder.CreateCall(fnType, fn, llvmArgs);
     }
 
+    llvm::Value *Codegen::callStaticMethod(const std::string &className, const std::string &methodName, const std::vector<ExprNode *> &args) {
+        const auto &mangledClassName = mangler.mangleClass(className);
+        auto &classDecl = getClass(mangledClassName);
+        auto [fn, fnType, thisType] = findMethod(classDecl.type, methodName);
+        if (!fn) {
+            throw MethodNotFoundException(methodName);
+        }
+
+        if (fnType->getNumParams() != args.size()) {
+            throw CodegenException("callee args mismatch");
+        }
+
+        std::vector<llvm::Value *> llvmArgs;
+        llvmArgs.reserve(args.size());
+        for (auto i = 0; i < args.size(); i++) {
+            auto val = args[i]->gen(*this);
+            val = castTo(val, fnType->getParamType(i));
+            llvmArgs.push_back(val);
+        }
+
+        return builder.CreateCall(fnType, fn, llvmArgs);
+    }
+
     std::tuple<llvm::Value *, llvm::FunctionType *, llvm::Type *> Codegen::findMethod(
             llvm::StructType *type, const std::string &methodName, llvm::Value *obj) const {
         if (Runtime::String::isStringType(type) || Runtime::Array::isArrayType(type)) {
@@ -350,24 +356,26 @@ namespace X::Codegen {
             return {fn, fn->getFunctionType(), nullptr};
         }
 
-        auto currentClassDecl = &getClass(type->getName().str());
+        auto &classDecl = getClass(type->getName().str());
+        auto currentClassDecl = &classDecl;
         while (currentClassDecl) {
             const auto &className = currentClassDecl->type->getName().str();
-            auto it = currentClassDecl->methods.find(methodName);
-            if (it != currentClassDecl->methods.cend()) {
-                if (!that && it->second.accessModifier != AccessModifier::PUBLIC) {
-                    throw CodegenException("cannot access private method: " + methodName);
+            auto methodIt = currentClassDecl->methods.find(methodName);
+            if (methodIt != currentClassDecl->methods.cend()) {
+                if ((methodIt->second.accessModifier == AccessModifier::PROTECTED && !that) ||
+                    (methodIt->second.accessModifier == AccessModifier::PRIVATE && currentClassDecl != &classDecl)) {
+                    throw MethodAccessException(methodName);
                 }
 
-                if (it->second.isVirtual) {
+                if (methodIt->second.isVirtual) {
                     // get vtable
                     auto currentObj = builder.CreateBitCast(obj, currentClassDecl->type->getPointerTo());
                     auto vtablePos = currentClassDecl->parent ? 1 : 0;
                     auto vtablePtr = builder.CreateStructGEP(currentClassDecl->type, currentObj, vtablePos);
                     auto vtable = builder.CreateLoad(currentClassDecl->vtableType->getPointerTo(), vtablePtr);
                     // get method
-                    auto methodPtr = builder.CreateStructGEP(currentClassDecl->vtableType, vtable, it->second.vtablePos);
-                    auto methodType = currentClassDecl->vtableType->getElementType(it->second.vtablePos);
+                    auto methodPtr = builder.CreateStructGEP(currentClassDecl->vtableType, vtable, methodIt->second.vtablePos);
+                    auto methodType = currentClassDecl->vtableType->getElementType(methodIt->second.vtablePos);
                     auto method = builder.CreateLoad(methodType, methodPtr);
 
                     return {method, llvm::cast<llvm::FunctionType>(methodType->getPointerElementType()), currentClassDecl->type};

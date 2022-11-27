@@ -210,3 +210,99 @@ fn main() void {
 }
 )code", "bar");
 }
+
+TEST_F(ClassTest, privatePropAccess) {
+    try {
+        compiler.compile(R"code(
+class Foo {
+    private int a
+}
+
+class Bar extends Foo {
+    public fn b() void {
+        println(a)
+    }
+}
+
+fn main() void {
+    Bar bar = new Bar()
+    bar.b()
+}
+)code");
+        FAIL() << "expected PropAccessException";
+    } catch (const Codegen::PropAccessException &e) {
+        ASSERT_STREQ(e.what(), "cannot access private property: a");
+    }
+}
+
+TEST_F(ClassTest, privateStaticPropAccess) {
+    try {
+        compiler.compile(R"code(
+class Foo {
+    private static int a
+}
+
+class Bar extends Foo {
+    public static fn b() void {
+        println(a)
+    }
+}
+
+fn main() void {
+    Bar::b()
+}
+)code");
+        FAIL() << "expected PropAccessException";
+    } catch (const Codegen::PropAccessException &e) {
+        ASSERT_STREQ(e.what(), "cannot access private property: a");
+    }
+}
+
+TEST_F(ClassTest, privateMethodAccess) {
+    try {
+        compiler.compile(R"code(
+class Foo {
+    private fn a() void {
+    }
+}
+
+class Bar extends Foo {
+    public fn b() void {
+        a()
+    }
+}
+
+fn main() void {
+    Bar bar = new Bar()
+    bar.b()
+}
+)code");
+        FAIL() << "expected MethodAccessException";
+    } catch (const Codegen::MethodAccessException &e) {
+        ASSERT_STREQ(e.what(), "cannot access private method: a");
+    }
+}
+
+TEST_F(ClassTest, privateStaticMethodAccess) {
+    try {
+        compiler.compile(R"code(
+class Foo {
+    private static fn a() void {
+    }
+}
+
+class Bar extends Foo {
+    public static fn b() void {
+        a()
+    }
+}
+
+fn main() void {
+    Bar::b()
+}
+)code");
+        FAIL() << "expected MethodAccessException";
+    } catch (const Codegen::MethodAccessException &e) {
+        ASSERT_STREQ(e.what(), "cannot access private method: a");
+    }
+}

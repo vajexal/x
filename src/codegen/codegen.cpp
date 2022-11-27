@@ -92,43 +92,15 @@ namespace X::Codegen {
         }
 
         if (that) {
-            auto classType = deref(that->getType());
-            auto &classDecl = getClass(classType->getStructName().str());
-            auto prop = classDecl.props.find(name);
-            if (prop != classDecl.props.end()) {
-                auto ptr = builder.CreateStructGEP(classDecl.type, that, prop->second.pos);
-                return {prop->second.type, ptr};
-            }
-
-            auto currentClassDecl = classDecl.parent;
-            while (currentClassDecl) {
-                prop = currentClassDecl->props.find(name);
-                if (prop != currentClassDecl->props.end()) {
-                    if (prop->second.accessModifier == AccessModifier::PRIVATE) {
-                        throw CodegenException("cannot access private property: " + name);
-                    }
-                    auto parent = builder.CreateBitCast(that, currentClassDecl->type->getPointerTo());
-                    auto ptr = builder.CreateStructGEP(currentClassDecl->type, parent, prop->second.pos);
-                    return {prop->second.type, ptr};
-                }
-
-                currentClassDecl = currentClassDecl->parent;
-            }
+            try {
+                return getProp(that, name);
+            } catch (const PropNotFoundException &e) {}
         }
 
         if (self) {
-            auto currentClassDecl = self;
-            while (currentClassDecl) {
-                auto prop = currentClassDecl->staticProps.find(name);
-                if (prop != currentClassDecl->staticProps.end()) {
-                    if (currentClassDecl != self && prop->second.accessModifier == AccessModifier::PRIVATE) {
-                        throw CodegenException("cannot access private property: " + name);
-                    }
-                    return {prop->second.var->getType()->getPointerElementType(), prop->second.var};
-                }
-
-                currentClassDecl = currentClassDecl->parent;
-            }
+            try {
+                return getStaticProp(self->name, name);
+            } catch (const PropNotFoundException &e) {}
         }
 
         throw VarNotFoundException(name);

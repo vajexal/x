@@ -47,6 +47,7 @@ namespace X::Codegen {
     };
 
     struct ClassDecl {
+        std::string name;
         llvm::StructType *type;
         std::map<std::string, Prop> props;
         std::map<std::string, StaticProp> staticProps;
@@ -125,6 +126,7 @@ namespace X::Codegen {
         llvm::Function *getConstructor(const std::string &mangledClassName) const;
         void checkConstructor(MethodDefNode *node, const std::string &className) const;
         llvm::Value *callMethod(llvm::Value *obj, const std::string &methodName, const std::vector<ExprNode *> &args);
+        llvm::Value *callStaticMethod(const std::string &className, const std::string &methodName, const std::vector<ExprNode *> &args);
         llvm::Value *newObj(llvm::StructType *type);
         llvm::StructType *genVtable(ClassNode *classNode, llvm::StructType *klass, ClassDecl &classDecl);
         void initVtable(llvm::Value *obj);
@@ -182,9 +184,19 @@ namespace X::Codegen {
         PropNotFoundException(const std::string &propName) : CodegenException("prop not found: " + propName) {}
     };
 
+    class PropAccessException : public CodegenException {
+    public:
+        PropAccessException(const std::string &propName) : CodegenException("cannot access private property: " + propName) {} // todo access modifier
+    };
+
     class MethodNotFoundException : public CodegenException {
     public:
         MethodNotFoundException(const std::string &methodName) : CodegenException("method not found: " + methodName) {}
+    };
+
+    class MethodAccessException : public CodegenException {
+    public:
+        MethodAccessException(const std::string &methodName) : CodegenException("cannot access private method: " + methodName) {} // todo access modifier
     };
 
     class InvalidObjectAccessException : public CodegenException {

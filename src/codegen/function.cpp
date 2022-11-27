@@ -16,6 +16,19 @@ namespace X::Codegen {
     llvm::Value *Codegen::gen(FnCallNode *node) {
         auto &name = node->getName();
         auto &args = node->getArgs();
+
+        if (that) {
+            try {
+                return callMethod(that, name, args);
+            } catch (const MethodNotFoundException &e) {}
+        }
+
+        if (self) {
+            try {
+                return callStaticMethod(self->name, name, args);
+            } catch (const MethodNotFoundException &e) {}
+        }
+
         auto callee = module.getFunction(name);
         if (!callee) {
             throw CodegenException("called function is not found: " + name);
