@@ -51,7 +51,11 @@ namespace X::Pipes {
     }
 
     void CheckInterfaces::checkClass(ClassNode *node) {
-        auto classMethods = node->getMethods();
+        classMethods[node->getName()] = node->getMethods();
+        auto &klassMethods = classMethods[node->getName()];
+        if (node->hasParent()) {
+            klassMethods.merge(classMethods[node->getParent()]);
+        }
 
         for (auto &interfaceName: node->getInterfaces()) {
             auto methods = interfaceMethods.find(interfaceName);
@@ -60,15 +64,15 @@ namespace X::Pipes {
             }
 
             for (auto &[methodName, methodDecl]: methods->second) {
-                auto classMethod = classMethods.find(methodName);
-                if (classMethod == classMethods.cend()) {
+                auto methodIt = klassMethods.find(methodName);
+                if (methodIt == klassMethods.cend()) {
                     throw CheckInterfacesException(fmt::format("interface method {}::{} must be implemented", interfaceName, methodName));
                 }
 
-                if (!compareDeclAndDef(methodDecl, classMethod->second)) {
+                if (!compareDeclAndDef(methodDecl, methodIt->second)) {
                     throw CheckInterfacesException(
                             fmt::format("declaration of {}::{} must be compatible with interface {}", node->getName(),
-                                        classMethod->second->getFnDef()->getName(), interfaceName));
+                                        methodIt->second->getFnDef()->getName(), interfaceName));
                 }
             }
         }

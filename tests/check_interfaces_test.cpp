@@ -117,3 +117,25 @@ interface C extends A, B {
 )code",
                 "interface method C::a is incompatible")
 ));
+
+TEST_F(CheckInterfacesTest, hiddenImplementation) {
+    checkProgram(R"code(
+interface A {
+    public fn a() void
+}
+
+class Foo {
+    public fn a() void {
+        println("foo")
+    }
+}
+
+class Bar extends Foo implements A {
+}
+
+fn main() void {
+    Bar bar = new Bar()
+    bar.a()
+}
+)code", "foo");
+}

@@ -9,6 +9,8 @@ namespace X::Pipes {
     class CheckInterfaces : public Pipe {
         // interface name -> {method name -> method decl}
         std::map<std::string, std::map<std::string, MethodDeclNode *>> interfaceMethods;
+        // class name -> all methods (including parents) {method name -> method def}
+        std::map<std::string, std::map<std::string, MethodDefNode *>> classMethods;
 
     public:
         StatementListNode *handle(StatementListNode *node) override;
