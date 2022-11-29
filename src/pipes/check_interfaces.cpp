@@ -46,6 +46,11 @@ namespace X::Pipes {
 
     void CheckInterfaces::addMethodToInterface(const std::string &interfaceName, MethodDeclNode *node) {
         auto &methodName = node->getFnDecl()->getName();
+
+        if (node->getAccessModifier() != AccessModifier::PUBLIC) {
+            throw CheckInterfacesException(fmt::format("interface method {}::{} must be public", interfaceName, methodName));
+        }
+
         auto &methods = interfaceMethods[interfaceName];
         auto methodDecl = methods.find(node->getFnDecl()->getName());
         if (methodDecl != methods.end() && *methodDecl->second != *node) {

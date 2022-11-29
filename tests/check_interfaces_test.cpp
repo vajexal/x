@@ -51,6 +51,13 @@ class Bar implements Foo {
         std::make_pair(
                 R"code(
 interface Foo {
+    private fn a() void
+}
+)code",
+                "interface method Foo::a must be public"),
+        std::make_pair(
+                R"code(
+interface Foo {
     public fn a(int b) void
 }
 
