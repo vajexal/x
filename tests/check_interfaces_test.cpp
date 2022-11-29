@@ -32,6 +32,15 @@ class Bar implements Foo {
         std::make_pair(
                 R"code(
 interface Foo {
+}
+
+interface Foo {
+}
+)code",
+                "interface Foo already declared"),
+        std::make_pair(
+                R"code(
+interface Foo {
     public fn a() void
 }
 
@@ -138,4 +147,21 @@ fn main() void {
     bar.a()
 }
 )code", "foo");
+}
+
+TEST_F(CheckInterfacesTest, methodAlreadyDeclared) {
+    try {
+        compiler.compile(R"code(
+interface Foo {
+    public fn a() void
+    public fn a() void
+}
+
+fn main() void {
+}
+)code");
+        FAIL() << "expected AstException";
+    } catch (const AstException &e) {
+        ASSERT_STREQ(e.what(), "method Foo::a already declared");
+    }
 }

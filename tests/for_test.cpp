@@ -152,7 +152,7 @@ fn main() void {
 )code");
         FAIL() << "expected VarNotFoundException";
     } catch (const Codegen::VarNotFoundException &e) {
-        ASSERT_STREQ(e.what(), "var not found: val");
+        ASSERT_STREQ(e.what(), "var val not found");
     }
 }
 
@@ -168,7 +168,7 @@ fn main() void {
 )code");
         FAIL() << "expected VarAlreadyExistsException";
     } catch (const Codegen::VarAlreadyExistsException &e) {
-        ASSERT_STREQ(e.what(), "var already exists: val");
+        ASSERT_STREQ(e.what(), "var val already exists");
     }
 }
 
@@ -184,7 +184,7 @@ fn main() void {
 )code");
         FAIL() << "expected VarAlreadyExistsException";
     } catch (const Codegen::VarAlreadyExistsException &e) {
-        ASSERT_STREQ(e.what(), "var already exists: i");
+        ASSERT_STREQ(e.what(), "var i already exists");
     }
 }
 

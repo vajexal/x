@@ -9,6 +9,7 @@
 #include <variant>
 #include <optional>
 #include <string>
+#include <fmt/core.h>
 
 #include "llvm/IR/Value.h"
 
@@ -60,32 +61,9 @@ namespace X {
     public:
         Type() : id(TypeID::VOID) {} // need empty constructor for bison variant
 
-        static Type scalar(TypeID typeID) {
-            if (typeID == TypeID::CLASS || typeID == TypeID::ARRAY) {
-                throw std::invalid_argument("invalid type for scalar");
-            }
-
-            Type type;
-            type.id = typeID;
-
-            return std::move(type);
-        }
-
-        static Type klass(std::string className) {
-            Type type;
-            type.id = TypeID::CLASS;
-            type.className = std::move(className);
-
-            return std::move(type);
-        }
-
-        static Type array(Type *subtype) {
-            Type type;
-            type.id = TypeID::ARRAY;
-            type.subtype = subtype;
-
-            return std::move(type);
-        }
+        static Type scalar(TypeID typeID);
+        static Type klass(std::string className);
+        static Type array(Type *subtype);
 
         TypeID getTypeID() const { return id; }
         const std::string &getClassName() const { return className.value(); }
@@ -104,6 +82,24 @@ namespace X {
     };
 
     std::ostream &operator<<(std::ostream &out, AccessModifier accessModifier);
+
+    class AstException : public std::exception {
+        std::string message;
+
+    public:
+        AstException(const char *m) : message(m) {}
+        AstException(std::string s) : message(std::move(s)) {}
+
+        const char *what() const noexcept override {
+            return message.c_str();
+        }
+    };
+
+    class MethodAlreadyDeclaredException : public AstException {
+    public:
+        MethodAlreadyDeclaredException(const std::string &className, const std::string &methodName) :
+                AstException(fmt::format("method {}::{} already declared", className, methodName)) {}
+    };
 
     namespace Pipes {
         class PrintAst;
@@ -592,7 +588,7 @@ namespace X {
         StatementListNode *body;
         std::vector<PropDeclNode *> props;
         std::map<std::string, MethodDefNode *> methods;
-        std::vector<MethodDeclNode *> abstractMethods;
+        std::map<std::string, MethodDeclNode *> abstractMethods;
         std::string parent;
         std::vector<std::string> interfaces;
         bool abstract;
@@ -610,7 +606,7 @@ namespace X {
         StatementListNode *getBody() { return body; }
         const std::vector<PropDeclNode *> &getProps() const { return props; }
         const std::map<std::string, MethodDefNode *> &getMethods() const { return methods; }
-        const std::vector<MethodDeclNode *> &getAbstractMethods() const { return abstractMethods; }
+        const std::map<std::string, MethodDeclNode *> &getAbstractMethods() const { return abstractMethods; }
         const std::string &getParent() const { return parent; }
         const std::vector<std::string> &getInterfaces() const { return interfaces; }
         bool isAbstract() const { return abstract; }
@@ -758,13 +754,13 @@ namespace X {
         std::string name;
         std::vector<std::string> parents;
         StatementListNode *body;
-        std::vector<MethodDeclNode *> methods;
+        std::map<std::string, MethodDeclNode *> methods;
 
     public:
         InterfaceNode(std::string name, std::vector<std::string> parents, StatementListNode *body);
         ~InterfaceNode() {
-            for (auto method: methods) {
-                delete method;
+            for (auto &[methodName, methodDeclNode]: methods) {
+                delete methodDeclNode;
             }
         }
 
@@ -774,7 +770,7 @@ namespace X {
         const std::string &getName() const { return name; }
         const std::vector<std::string> &getParents() const { return parents; }
         StatementListNode *getBody() const { return body; }
-        const std::vector<MethodDeclNode *> &getMethods() const { return methods; }
+        const std::map<std::string, MethodDeclNode *> &getMethods() const { return methods; }
         bool hasParents() const { return !parents.empty(); }
     };
 

@@ -18,9 +18,14 @@ namespace X::Pipes {
     }
 
     void CheckInterfaces::addInterface(InterfaceNode *node) {
-        if (interfaceMethods.contains(node->getName())) {
-            throw CheckInterfacesException(fmt::format("interface {} already declared", node->getName()));
+        auto &name = node->getName();
+
+        if (interfaceMethods.contains(name)) {
+            throw CheckInterfacesException(fmt::format("interface {} already declared", name));
         }
+
+        // remember interface name, so we will handle 2 empty interfaces with the same name (throw interface already declared exception)
+        interfaceMethods[name] = {};
 
         if (node->hasParents()) {
             for (auto &parent: node->getParents()) {
@@ -29,13 +34,13 @@ namespace X::Pipes {
                 }
 
                 for (auto &[methodName, methodDecl]: interfaceMethods[parent]) {
-                    addMethodToInterface(node->getName(), methodDecl);
+                    addMethodToInterface(name, methodDecl);
                 }
             }
         }
 
-        for (auto methodDecl: node->getMethods()) {
-            addMethodToInterface(node->getName(), methodDecl);
+        for (auto &[methodName, methodDecl]: node->getMethods()) {
+            addMethodToInterface(name, methodDecl);
         }
     }
 

@@ -30,6 +30,15 @@ class Foo {
         std::make_pair(
                 R"code(
 abstract class Foo {
+}
+
+abstract class Foo {
+}
+)code",
+                "class Foo already exists"),
+        std::make_pair(
+                R"code(
+abstract class Foo {
     abstract public fn a() void
 }
 

@@ -9,6 +9,10 @@ namespace X::Codegen {
     llvm::Value *Codegen::gen(ClassNode *node) {
         auto &name = node->getName();
         const auto &mangledName = mangler.mangleClass(name);
+        if (classes.contains(mangledName)) {
+            throw ClassAlreadyExists(name);
+        }
+
         auto klass = llvm::StructType::create(context, mangledName);
         std::vector<llvm::Type *> props;
         props.reserve(node->getProps().size());
@@ -42,13 +46,21 @@ namespace X::Codegen {
             auto &propName = prop->getName();
             auto type = mapType(prop->getType());
             if (prop->getIsStatic()) {
+                // check if static prop already declared here, because module.getOrInsertGlobal could return ConstantExpr
+                // (if prop will be redeclared with different type)
+                if (classDecl.staticProps.contains(propName)) {
+                    throw PropAlreadyDeclaredException(name, propName);
+                }
                 const auto &mangledPropName = mangler.mangleStaticProp(mangledName, propName);
                 auto global = llvm::cast<llvm::GlobalVariable>(module.getOrInsertGlobal(mangledPropName, type));
                 global->setInitializer(getDefaultValue(prop->getType()));
                 classDecl.staticProps[propName] = {global, prop->getAccessModifier()};
             } else {
                 props.push_back(type);
-                classDecl.props[propName] = {type, propPos++, prop->getAccessModifier()};
+                auto [_, inserted] = classDecl.props.try_emplace(propName, type, propPos++, prop->getAccessModifier());
+                if (!inserted) {
+                    throw PropAlreadyDeclaredException(name, propName);
+                }
             }
         }
 
@@ -57,7 +69,12 @@ namespace X::Codegen {
         classes[mangledName] = std::move(classDecl);
         self = &classes[mangledName];
 
+        auto &abstractMethods = node->getAbstractMethods();
         for (auto &[methodName, method]: node->getMethods()) {
+            if (abstractMethods.contains(methodName)) {
+                throw MethodAlreadyDeclaredException(name, methodName);
+            }
+
             auto fn = method->getFnDef();
             auto isConstructor = methodName == CONSTRUCTOR_FN_NAME;
             if (isConstructor) {
@@ -66,6 +83,7 @@ namespace X::Codegen {
             const auto &fnName = mangler.mangleMethod(mangledName, fn->getName());
             genFn(fnName, fn->getArgs(), fn->getReturnType(), fn->getBody(), method->getIsStatic() ? nullptr : klass);
             if (!isConstructor) {
+                // "insert" to avoid virtual methods overriding
                 self->methods.insert({methodName, {method->getAccessModifier(), false}});
             }
         }
@@ -101,7 +119,7 @@ namespace X::Codegen {
         auto &methodName = node->getName();
 
         if (methodName == CONSTRUCTOR_FN_NAME) {
-            throw MethodNotFoundException(methodName);
+            throw MethodNotFoundException(getClassName(obj), methodName);
         }
 
         return callMethod(obj, methodName, node->getArgs());
@@ -175,7 +193,7 @@ namespace X::Codegen {
             if (propIt != currentClassDecl->props.end()) {
                 if ((propIt->second.accessModifier == AccessModifier::PROTECTED && !that) ||
                     (propIt->second.accessModifier == AccessModifier::PRIVATE && currentClassDecl != &classDecl)) {
-                    throw PropAccessException(name);
+                    throw PropAccessException(currentClassDecl->name, name);
                 }
 
                 auto currentObj = currentClassDecl == &classDecl ? obj : builder.CreateBitCast(obj, currentClassDecl->type->getPointerTo());
@@ -186,7 +204,7 @@ namespace X::Codegen {
             currentClassDecl = currentClassDecl->parent;
         }
 
-        throw PropNotFoundException(name);
+        throw PropNotFoundException(classDecl.name, name);
     }
 
     std::pair<llvm::Type *, llvm::Value *> Codegen::getStaticProp(const std::string &className, const std::string &propName) const {
@@ -197,7 +215,7 @@ namespace X::Codegen {
             if (propIt != currentClassDecl->staticProps.end()) {
                 if ((propIt->second.accessModifier == AccessModifier::PROTECTED && !self) ||
                     (propIt->second.accessModifier == AccessModifier::PRIVATE && currentClassDecl != &classDecl)) {
-                    throw PropAccessException(propName);
+                    throw PropAccessException(currentClassDecl->name, propName);
                 }
 
                 return {propIt->second.var->getType()->getPointerElementType(), propIt->second.var};
@@ -206,7 +224,7 @@ namespace X::Codegen {
             currentClassDecl = currentClassDecl->parent;
         }
 
-        throw PropNotFoundException(propName);
+        throw PropNotFoundException(className, propName);
     }
 
     const ClassDecl &Codegen::getClass(const std::string &mangledName) const {
@@ -215,6 +233,14 @@ namespace X::Codegen {
             throw ClassNotFoundException(mangler.unmangleClass(mangledName));
         }
         return classDecl->second;
+    }
+
+    std::string Codegen::getClassName(llvm::Value *obj) const {
+        auto type = deref(obj->getType());
+        if (!type->isStructTy()) {
+            throw InvalidTypeException();
+        }
+        return std::move(mangler.unmangleClass(type->getStructName().str()));
     }
 
     bool Codegen::isObject(llvm::Value *value) const {
@@ -243,8 +269,8 @@ namespace X::Codegen {
     void Codegen::initVtable(llvm::Value *obj) {
         auto objType = llvm::cast<llvm::StructType>(deref(obj->getType()));
         const auto &mangledClassName = objType->getStructName().str();
-        const auto &className = mangler.unmangleClass(mangledClassName);
         auto currentClassDecl = &getClass(mangledClassName);
+        auto &className = currentClassDecl->name;
 
         while (currentClassDecl) {
             if (currentClassDecl->vtableType) {
@@ -259,7 +285,7 @@ namespace X::Codegen {
                             auto fn = simpleFindMethod(objType, it.first);
                             // just in case
                             if (!fn) {
-                                throw MethodNotFoundException(it.first);
+                                throw MethodNotFoundException(className, it.first);
                             }
                             funcs.push_back(fn);
                         }
@@ -302,7 +328,7 @@ namespace X::Codegen {
 
         auto [fn, fnType, thisType] = findMethod(llvm::cast<llvm::StructType>(type), methodName, obj);
         if (!fn) {
-            throw MethodNotFoundException(methodName);
+            throw MethodNotFoundException(getClassName(obj), methodName);
         }
 
         if (fnType->getNumParams() != (args.size() + 1)) {
@@ -330,7 +356,7 @@ namespace X::Codegen {
         auto &classDecl = getClass(mangledClassName);
         auto [fn, fnType, thisType] = findMethod(classDecl.type, methodName);
         if (!fn) {
-            throw MethodNotFoundException(methodName);
+            throw MethodNotFoundException(className, methodName);
         }
 
         if (fnType->getNumParams() != args.size()) {
@@ -359,12 +385,11 @@ namespace X::Codegen {
         auto &classDecl = getClass(type->getName().str());
         auto currentClassDecl = &classDecl;
         while (currentClassDecl) {
-            const auto &className = currentClassDecl->type->getName().str();
             auto methodIt = currentClassDecl->methods.find(methodName);
             if (methodIt != currentClassDecl->methods.cend()) {
                 if ((methodIt->second.accessModifier == AccessModifier::PROTECTED && !that) ||
                     (methodIt->second.accessModifier == AccessModifier::PRIVATE && currentClassDecl != &classDecl)) {
-                    throw MethodAccessException(methodName);
+                    throw MethodAccessException(currentClassDecl->name, methodName);
                 }
 
                 if (methodIt->second.isVirtual) {
@@ -381,7 +406,7 @@ namespace X::Codegen {
                     return {method, llvm::cast<llvm::FunctionType>(methodType->getPointerElementType()), currentClassDecl->type};
                 }
 
-                auto fn = module.getFunction(mangler.mangleMethod(className, methodName));
+                auto fn = module.getFunction(mangler.mangleMethod(currentClassDecl->type->getName().str(), methodName));
                 if (fn) {
                     return {fn, fn->getFunctionType(), currentClassDecl->type};
                 }

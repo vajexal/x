@@ -1,5 +1,7 @@
 #include "compiler_test_helper.h"
 
+#include "codegen/codegen.h"
+
 class StatementTest : public CompilerTest {
 };
 
@@ -23,4 +25,18 @@ TEST_F(StatementTest, decl) {
 false
 
 true)output");
+}
+
+TEST_F(StatementTest, varAlreadyExists) {
+    try {
+        compiler.compile(R"code(
+fn main() void {
+    int a
+    int a
+}
+)code");
+        FAIL() << "expected VarAlreadyExistsException";
+    } catch (const Codegen::VarAlreadyExistsException &e) {
+        ASSERT_STREQ(e.what(), "var a already exists");
+    }
 }

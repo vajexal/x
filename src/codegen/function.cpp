@@ -8,7 +8,13 @@ namespace X::Codegen {
     }
 
     llvm::Value *Codegen::gen(FnDefNode *node) {
-        genFn(node->getName(), node->getArgs(), node->getReturnType(), node->getBody());
+        auto &name = node->getName();
+
+        if (module.getFunction(name)) {
+            throw FnAlreadyDeclaredException(name);
+        }
+
+        genFn(name, node->getArgs(), node->getReturnType(), node->getBody());
 
         return nullptr;
     }

@@ -18,14 +18,15 @@ namespace X::Pipes {
     void CheckAbstractClasses::checkClass(ClassNode *node) {
         auto &className = node->getName();
         auto &parentClassName = node->getParent();
+        auto &abstractMethods = node->getAbstractMethods();
 
-        if (!node->getAbstractMethods().empty() && !node->isAbstract()) {
+        if (!abstractMethods.empty() && !node->isAbstract()) {
             throw CheckAbstractClassesException(fmt::format("class {} must be declared abstract", className));
         }
 
         if (node->isAbstract()) {
             if (classAbstractMethods.contains(className)) {
-                throw CheckAbstractClassesException(fmt::format("class {} already declared", className));
+                throw CheckAbstractClassesException(fmt::format("class {} already exists", className));
             }
 
             if (node->hasParent()) {
@@ -33,10 +34,7 @@ namespace X::Pipes {
                 classAbstractMethods[className] = classAbstractMethods[parentClassName];
             }
 
-            auto &abstractMethods = classAbstractMethods[className];
-            for (auto methodDecl: node->getAbstractMethods()) {
-                abstractMethods[methodDecl->getFnDecl()->getName()] = methodDecl;
-            }
+            classAbstractMethods[className].insert(abstractMethods.cbegin(), abstractMethods.cend());
 
             return;
         }

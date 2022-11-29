@@ -71,6 +71,7 @@ add_executable(x_test ${X_SOURCES}
         tests/for_test.cpp
         tests/operators_test.cpp
         tests/casts_test.cpp
+        tests/function_test.cpp
         tests/class_test.cpp
         tests/check_interfaces_test.cpp
         tests/check_abstract_classes_test.cpp

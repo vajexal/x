@@ -8,8 +8,11 @@ namespace X::Codegen {
             throw InvalidTypeException();
         }
 
-        auto type = mapType(node->getType());
         auto &name = node->getName();
+        if (namedValues.contains(name)) {
+            throw VarAlreadyExistsException(name);
+        }
+        auto type = mapType(node->getType());
         auto stackVar = createAlloca(type, name);
 
         auto value = node->getExpr() ?

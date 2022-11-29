@@ -68,7 +68,7 @@ fn main() void {
 )code");
         FAIL() << "expected CodegenException";
     } catch (const Codegen::MethodNotFoundException &e) {
-        ASSERT_STREQ(e.what(), "method not found: construct");
+        ASSERT_STREQ(e.what(), "method Foo::construct not found");
     }
 }
 
@@ -231,7 +231,7 @@ fn main() void {
 )code");
         FAIL() << "expected PropAccessException";
     } catch (const Codegen::PropAccessException &e) {
-        ASSERT_STREQ(e.what(), "cannot access private property: a");
+        ASSERT_STREQ(e.what(), "cannot access private property Foo::a");
     }
 }
 
@@ -254,7 +254,7 @@ fn main() void {
 )code");
         FAIL() << "expected PropAccessException";
     } catch (const Codegen::PropAccessException &e) {
-        ASSERT_STREQ(e.what(), "cannot access private property: a");
+        ASSERT_STREQ(e.what(), "cannot access private property Foo::a");
     }
 }
 
@@ -279,7 +279,7 @@ fn main() void {
 )code");
         FAIL() << "expected MethodAccessException";
     } catch (const Codegen::MethodAccessException &e) {
-        ASSERT_STREQ(e.what(), "cannot access private method: a");
+        ASSERT_STREQ(e.what(), "cannot access private method Foo::a");
     }
 }
 
@@ -303,6 +303,114 @@ fn main() void {
 )code");
         FAIL() << "expected MethodAccessException";
     } catch (const Codegen::MethodAccessException &e) {
-        ASSERT_STREQ(e.what(), "cannot access private method: a");
+        ASSERT_STREQ(e.what(), "cannot access private method Foo::a");
+    }
+}
+
+TEST_F(ClassTest, classAlreadyExists) {
+    try {
+        compiler.compile(R"code(
+class Foo {
+}
+
+class Foo {
+}
+
+fn main() void {
+}
+)code");
+        FAIL() << "expected ClassAlreadyExists";
+    } catch (const Codegen::ClassAlreadyExists &e) {
+        ASSERT_STREQ(e.what(), "class Foo already exists");
+    }
+}
+
+TEST_F(ClassTest, methodAlreadyDeclared) {
+    try {
+        compiler.compile(R"code(
+class Foo {
+    public fn a() void {
+    }
+
+    public fn a() void {
+    }
+}
+
+fn main() void {
+}
+)code");
+        FAIL() << "expected AstException";
+    } catch (const AstException &e) {
+        ASSERT_STREQ(e.what(), "method Foo::a already declared");
+    }
+}
+
+TEST_F(ClassTest, methodAlreadyDeclared2) {
+    try {
+        compiler.compile(R"code(
+abstract class Foo {
+    abstract public fn a() void
+
+    public fn a() void {
+    }
+}
+
+fn main() void {
+}
+)code");
+        FAIL() << "expected MethodAlreadyDeclaredException";
+    } catch (const Codegen::MethodAlreadyDeclaredException &e) {
+        ASSERT_STREQ(e.what(), "method Foo::a already declared");
+    }
+}
+
+TEST_F(ClassTest, abstractMethodAlreadyDeclared) {
+    try {
+        compiler.compile(R"code(
+abstract class Foo {
+    abstract public fn a() void
+    abstract public fn a() void
+}
+
+fn main() void {
+}
+)code");
+        FAIL() << "expected AstException";
+    } catch (const AstException &e) {
+        ASSERT_STREQ(e.what(), "method Foo::a already declared");
+    }
+}
+
+TEST_F(ClassTest, propAlreadyDeclared) {
+    try {
+        compiler.compile(R"code(
+class Foo {
+    int a
+    int a
+}
+
+fn main() void {
+}
+)code");
+        FAIL() << "expected PropAlreadyDeclaredException";
+    } catch (const Codegen::PropAlreadyDeclaredException &e) {
+        ASSERT_STREQ(e.what(), "property Foo::a already declared");
+    }
+}
+
+TEST_F(ClassTest, staticPropAlreadyDeclared) {
+    try {
+        compiler.compile(R"code(
+class Foo {
+    static int a
+    static int a
+}
+
+fn main() void {
+}
+)code");
+        FAIL() << "expected PropAlreadyDeclaredException";
+    } catch (const Codegen::PropAlreadyDeclaredException &e) {
+        ASSERT_STREQ(e.what(), "property Foo::a already declared");
     }
 }

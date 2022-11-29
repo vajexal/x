@@ -33,6 +33,8 @@ namespace X::Codegen {
         llvm::Type *type;
         uint64_t pos;
         AccessModifier accessModifier;
+
+        Prop(llvm::Type *type, uint64_t pos, AccessModifier accessModifier) : type(type), pos(pos), accessModifier(accessModifier) {}
     };
 
     struct StaticProp {
@@ -121,6 +123,7 @@ namespace X::Codegen {
         std::pair<llvm::Type *, llvm::Value *> getProp(llvm::Value *obj, const std::string &name) const;
         std::pair<llvm::Type *, llvm::Value *> getStaticProp(const std::string &className, const std::string &propName) const;
         const ClassDecl &getClass(const std::string &mangledName) const;
+        std::string getClassName(llvm::Value *obj) const;
         bool isObject(llvm::Value *value) const;
         llvm::AllocaInst *createAlloca(llvm::Type *type, const std::string &name = "") const;
         llvm::Function *getConstructor(const std::string &mangledClassName) const;
@@ -166,12 +169,17 @@ namespace X::Codegen {
 
     class VarNotFoundException : public CodegenException {
     public:
-        VarNotFoundException(const std::string &varName) : CodegenException("var not found: " + varName) {}
+        VarNotFoundException(const std::string &varName) : CodegenException(fmt::format("var {} not found", varName)) {}
     };
 
     class VarAlreadyExistsException : public CodegenException {
     public:
-        VarAlreadyExistsException(const std::string &varName) : CodegenException("var already exists: " + varName) {}
+        VarAlreadyExistsException(const std::string &varName) : CodegenException(fmt::format("var {} already exists", varName)) {}
+    };
+
+    class FnAlreadyDeclaredException : public CodegenException {
+    public:
+        FnAlreadyDeclaredException(const std::string &fnName) : CodegenException(fmt::format("function {} already declared", fnName)) {}
     };
 
     class ClassNotFoundException : public CodegenException {
@@ -179,24 +187,45 @@ namespace X::Codegen {
         ClassNotFoundException(const std::string &className) : CodegenException(fmt::format("class {} not found", className)) {}
     };
 
+    class ClassAlreadyExists : public CodegenException {
+    public:
+        ClassAlreadyExists(const std::string &className) : CodegenException(fmt::format("class {} already exists", className)) {}
+    };
+
     class PropNotFoundException : public CodegenException {
     public:
-        PropNotFoundException(const std::string &propName) : CodegenException("prop not found: " + propName) {}
+        PropNotFoundException(const std::string &className, const std::string &propName) :
+                CodegenException(fmt::format("property {}::{} not found", className, propName)) {}
+    };
+
+    class PropAlreadyDeclaredException : public CodegenException {
+    public:
+        PropAlreadyDeclaredException(const std::string &className, const std::string &propName) :
+                CodegenException(fmt::format("property {}::{} already declared", className, propName)) {}
     };
 
     class PropAccessException : public CodegenException {
     public:
-        PropAccessException(const std::string &propName) : CodegenException("cannot access private property: " + propName) {} // todo access modifier
+        PropAccessException(const std::string &className, const std::string &propName) :
+                CodegenException(fmt::format("cannot access private property {}::{}", className, propName)) {} // todo access modifier
     };
 
     class MethodNotFoundException : public CodegenException {
     public:
-        MethodNotFoundException(const std::string &methodName) : CodegenException("method not found: " + methodName) {}
+        MethodNotFoundException(const std::string &className, const std::string &methodName) :
+                CodegenException(fmt::format("method {}::{} not found", className, methodName)) {}
+    };
+
+    class MethodAlreadyDeclaredException : public CodegenException {
+    public:
+        MethodAlreadyDeclaredException(const std::string &className, const std::string &methodName) :
+                CodegenException(fmt::format("method {}::{} already declared", className, methodName)) {}
     };
 
     class MethodAccessException : public CodegenException {
     public:
-        MethodAccessException(const std::string &methodName) : CodegenException("cannot access private method: " + methodName) {} // todo access modifier
+        MethodAccessException(const std::string &className, const std::string &methodName) :
+                CodegenException(fmt::format("cannot access private method {}::{}", className, methodName)) {} // todo access modifier
     };
 
     class InvalidObjectAccessException : public CodegenException {

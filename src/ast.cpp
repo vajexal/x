@@ -5,6 +5,33 @@
 #include "utils.h"
 
 namespace X {
+    Type Type::scalar(Type::TypeID typeID) {
+        if (typeID == TypeID::CLASS || typeID == TypeID::ARRAY) {
+            throw std::invalid_argument("invalid type for scalar");
+        }
+
+        Type type;
+        type.id = typeID;
+
+        return std::move(type);
+    }
+
+    Type Type::klass(std::string className) {
+        Type type;
+        type.id = TypeID::CLASS;
+        type.className = std::move(className);
+
+        return std::move(type);
+    }
+
+    Type Type::array(Type *subtype) {
+        Type type;
+        type.id = TypeID::ARRAY;
+        type.subtype = subtype;
+
+        return std::move(type);
+    }
+
     std::ostream &operator<<(std::ostream &out, OpType type) {
         switch (type) {
             case OpType::PRE_INC: return out << "++ ";
@@ -152,11 +179,18 @@ namespace X {
             if (auto propDeclNode = dynamic_cast<PropDeclNode *>(child)) {
                 props.push_back(propDeclNode);
             } else if (auto methodDefNode = dynamic_cast<MethodDefNode *>(child)) {
-                // todo check for duplicates
-                methods[methodDefNode->getFnDef()->getName()] = methodDefNode;
+                auto methodName = methodDefNode->getFnDef()->getName();
+                auto [_, inserted] = methods.insert({methodName, methodDefNode});
+                if (!inserted) {
+                    throw MethodAlreadyDeclaredException(this->name, methodName);
+                }
             } else if (auto methodDeclNode = dynamic_cast<MethodDeclNode *>(child)) {
                 if (methodDeclNode->getIsAbstract()) {
-                    abstractMethods.push_back(methodDeclNode);
+                    auto methodName = methodDeclNode->getFnDecl()->getName();
+                    auto [_, inserted] = abstractMethods.insert({methodName, methodDeclNode});
+                    if (!inserted) {
+                        throw MethodAlreadyDeclaredException(this->name, methodName);
+                    }
                 }
             }
         }
@@ -166,7 +200,11 @@ namespace X {
             name(std::move(name)), parents(std::move(parents)), body(body) {
         for (auto child: body->getChildren()) {
             if (auto methodDeclNode = dynamic_cast<MethodDeclNode *>(child)) {
-                methods.push_back(methodDeclNode);
+                auto methodName = methodDeclNode->getFnDecl()->getName();
+                auto [_, inserted] = methods.insert({methodName, methodDeclNode});
+                if (!inserted) {
+                    throw MethodAlreadyDeclaredException(this->name, methodName);
+                }
             }
         }
     }
