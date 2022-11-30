@@ -7,9 +7,9 @@
 namespace X::Pipes {
     StatementListNode *CheckInterfaces::handle(StatementListNode *node) {
         for (auto child: node->getChildren()) {
-            if (auto interfaceNode = dynamic_cast<InterfaceNode *>(child)) {
+            if (auto interfaceNode = llvm::dyn_cast<InterfaceNode>(child)) {
                 addInterface(interfaceNode);
-            } else if (auto classNode = dynamic_cast<ClassNode *>(child)) {
+            } else if (auto classNode = llvm::dyn_cast<ClassNode>(child)) {
                 checkClass(classNode);
             }
         }

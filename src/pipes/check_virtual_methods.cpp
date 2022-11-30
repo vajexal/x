@@ -5,7 +5,7 @@
 namespace X::Pipes {
     StatementListNode *CheckVirtualMethods::handle(StatementListNode *node) {
         for (auto child: node->getChildren()) {
-            if (auto classNode = dynamic_cast<ClassNode *>(child)) {
+            if (auto classNode = llvm::dyn_cast<ClassNode>(child)) {
                 checkClass(classNode);
             }
         }

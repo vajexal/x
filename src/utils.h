@@ -9,11 +9,6 @@ namespace X {
 
     bool compareDeclAndDef(MethodDeclNode *declNode, MethodDefNode *defNode);
     llvm::Type *deref(llvm::Type *type);
-
-    template<typename To, typename From>
-    bool isa(From *value) {
-        return dynamic_cast<To *>(value) != nullptr;
-    }
 }
 
 #endif //X_UTILS_H

@@ -116,7 +116,7 @@ namespace X::Codegen {
     llvm::Value *Codegen::gen(ForNode *node) {
         llvm::AllocaInst *idxVar = nullptr;
         auto &valVarName = node->getVal();
-        auto isRange = isa<RangeNode>(node->getExpr());
+        auto isRange = llvm::isa<RangeNode>(node->getExpr());
         auto expr = node->getExpr()->gen(*this);
         if (!expr) {
             throw InvalidTypeException();

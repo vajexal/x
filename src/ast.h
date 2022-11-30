@@ -12,6 +12,7 @@
 #include <fmt/core.h>
 
 #include "llvm/IR/Value.h"
+#include "llvm/Support/Casting.h"
 
 namespace X {
     class ExprNode;
@@ -109,16 +110,63 @@ namespace X {
     }
 
     class Node {
+    protected:
+        enum class NodeKind {
+            Scalar,
+            StatementList,
+            Unary,
+            Binary,
+            Declare,
+            Assign,
+            Var,
+            If,
+            While,
+            For,
+            Range,
+            Arg,
+            FnDecl,
+            FnDef,
+            FnCall,
+            Return,
+            Println,
+            Break,
+            Continue,
+            Comment,
+            PropDecl,
+            MethodDecl,
+            MethodDef,
+            Class,
+            FetchProp,
+            FetchStaticProp,
+            MethodCall,
+            StaticMethodCall,
+            AssignProp,
+            AssignStaticProp,
+            New,
+            Interface,
+            FetchArr,
+            AssignArr,
+            AppendArr
+        };
+
+    private:
+        const NodeKind kind;
+
     public:
+        Node(NodeKind kind) : kind(kind) {}
         virtual ~Node() = default;
 
         virtual void print(Pipes::PrintAst &astPrinter, int level = 0) = 0;
         virtual llvm::Value *gen(Codegen::Codegen &codegen) = 0;
 
         virtual bool isTerminate() { return false; }
+
+        NodeKind getKind() const { return kind; }
     };
 
     class ExprNode : public Node {
+    public:
+        ExprNode(NodeKind kind) : Node(kind) {}
     };
 
     class ScalarNode : public ExprNode {
@@ -126,19 +174,24 @@ namespace X {
         ScalarValue value;
 
     public:
-        ScalarNode(Type type, ScalarValue value) : type(std::move(type)), value(std::move(value)) {}
+        ScalarNode(Type type, ScalarValue value) : ExprNode(NodeKind::Scalar), type(std::move(type)), value(std::move(value)) {}
 
         void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
 
         const Type &getType() const { return type; }
         const ScalarValue &getValue() const { return value; }
+
+        static bool classof(const Node *node) {
+            return node->getKind() == NodeKind::Scalar;
+        }
     };
 
     class StatementListNode : public Node {
         std::deque<Node *> children;
 
     public:
+        StatementListNode() : Node(NodeKind::StatementList) {}
         ~StatementListNode() {
             for (auto child: children) {
                 delete child;
@@ -152,6 +205,10 @@ namespace X {
         void prepend(Node *node) { children.push_front(node); }
         bool isLastNodeTerminate() const;
         const std::deque<Node *> &getChildren() const { return children; }
+
+        static bool classof(const Node *node) {
+            return node->getKind() == NodeKind::StatementList;
+        }
     };
 
     class UnaryNode : public ExprNode {
@@ -159,7 +216,7 @@ namespace X {
         ExprNode *expr;
 
     public:
-        UnaryNode(OpType type, ExprNode *expr) : type(type), expr(expr) {}
+        UnaryNode(OpType type, ExprNode *expr) : ExprNode(NodeKind::Unary), type(type), expr(expr) {}
         ~UnaryNode() {
             delete expr;
         }
@@ -169,6 +226,10 @@ namespace X {
 
         OpType getType() const { return type; }
         ExprNode *getExpr() const { return expr; }
+
+        static bool classof(const Node *node) {
+            return node->getKind() == NodeKind::Unary;
+        }
     };
 
     class BinaryNode : public ExprNode {
@@ -177,7 +238,7 @@ namespace X {
         ExprNode *rhs;
 
     public:
-        BinaryNode(OpType type, ExprNode *lhs, ExprNode *rhs) : type(type), lhs(lhs), rhs(rhs) {}
+        BinaryNode(OpType type, ExprNode *lhs, ExprNode *rhs) : ExprNode(NodeKind::Binary), type(type), lhs(lhs), rhs(rhs) {}
         ~BinaryNode() {
             delete lhs;
             delete rhs;
@@ -189,6 +250,10 @@ namespace X {
         OpType getType() const { return type; }
         ExprNode *getLhs() const { return lhs; }
         ExprNode *getRhs() const { return rhs; }
+
+        static bool classof(const Node *node) {
+            return node->getKind() == NodeKind::Binary;
+        }
     };
 
     class DeclareNode : public Node {
@@ -197,7 +262,8 @@ namespace X {
         ExprNode *expr;
 
     public:
-        DeclareNode(Type type, std::string name, ExprNode *expr = nullptr) : type(std::move(type)), name(std::move(name)), expr(expr) {}
+        DeclareNode(Type type, std::string name, ExprNode *expr = nullptr) :
+                Node(NodeKind::Declare), type(std::move(type)), name(std::move(name)), expr(expr) {}
         ~DeclareNode() {
             if (expr) {
                 delete expr;
@@ -210,6 +276,10 @@ namespace X {
         const Type &getType() const { return type; }
         const std::string &getName() const { return name; }
         ExprNode *getExpr() const { return expr; }
+
+        static bool classof(const Node *node) {
+            return node->getKind() == NodeKind::Declare;
+        }
     };
 
     class AssignNode : public Node {
@@ -217,7 +287,7 @@ namespace X {
         ExprNode *expr;
 
     public:
-        AssignNode(std::string name, ExprNode *expr) : name(std::move(name)), expr(expr) {}
+        AssignNode(std::string name, ExprNode *expr) : Node(NodeKind::Assign), name(std::move(name)), expr(expr) {}
         ~AssignNode() {
             delete expr;
         }
@@ -227,18 +297,26 @@ namespace X {
 
         const std::string &getName() const { return name; }
         ExprNode *getExpr() const { return expr; }
+
+        static bool classof(const Node *node) {
+            return node->getKind() == NodeKind::Assign;
+        }
     };
 
     class VarNode : public ExprNode {
         std::string name;
 
     public:
-        VarNode(std::string name) : name(std::move(name)) {}
+        VarNode(std::string name) : ExprNode(NodeKind::Var), name(std::move(name)) {}
 
         void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
 
         const std::string &getName() const { return name; }
+
+        static bool classof(const Node *node) {
+            return node->getKind() == NodeKind::Var;
+        }
     };
 
     class IfNode : public Node {
@@ -247,7 +325,8 @@ namespace X {
         StatementListNode *elseNode;
 
     public:
-        IfNode(ExprNode *cond, StatementListNode *thenNode, StatementListNode *elseNode = nullptr) : cond(cond), thenNode(thenNode), elseNode(elseNode) {}
+        IfNode(ExprNode *cond, StatementListNode *thenNode, StatementListNode *elseNode = nullptr) :
+                Node(NodeKind::If), cond(cond), thenNode(thenNode), elseNode(elseNode) {}
         ~IfNode() {
             delete cond;
             delete thenNode;
@@ -260,6 +339,10 @@ namespace X {
         ExprNode *getCond() const { return cond; }
         StatementListNode *getThenNode() const { return thenNode; }
         StatementListNode *getElseNode() const { return elseNode; }
+
+        static bool classof(const Node *node) {
+            return node->getKind() == NodeKind::If;
+        }
     };
 
     class WhileNode : public Node {
@@ -267,7 +350,7 @@ namespace X {
         StatementListNode *body;
 
     public:
-        WhileNode(ExprNode *cond, StatementListNode *body) : cond(cond), body(body) {}
+        WhileNode(ExprNode *cond, StatementListNode *body) : Node(NodeKind::While), cond(cond), body(body) {}
         ~WhileNode() {
             delete cond;
             delete body;
@@ -278,6 +361,10 @@ namespace X {
 
         ExprNode *getCond() const { return cond; }
         StatementListNode *getBody() const { return body; }
+
+        static bool classof(const Node *node) {
+            return node->getKind() == NodeKind::While;
+        }
     };
 
     class ForNode : public Node {
@@ -287,9 +374,9 @@ namespace X {
         StatementListNode *body;
 
     public:
-        ForNode(std::string val, ExprNode *expr, StatementListNode *body) : val(std::move(val)), expr(expr), body(body) {}
+        ForNode(std::string val, ExprNode *expr, StatementListNode *body) : Node(NodeKind::For), val(std::move(val)), expr(expr), body(body) {}
         ForNode(std::string idx, std::string val, ExprNode *expr, StatementListNode *body) :
-                idx(std::move(idx)), val(std::move(val)), expr(expr), body(body) {}
+                Node(NodeKind::For), idx(std::move(idx)), val(std::move(val)), expr(expr), body(body) {}
         ~ForNode() {
             delete expr;
             delete body;
@@ -304,6 +391,10 @@ namespace X {
         StatementListNode *getBody() const { return body; }
 
         bool hasIdx() const { return idx.has_value(); }
+
+        static bool classof(const Node *node) {
+            return node->getKind() == NodeKind::For;
+        }
     };
 
     class RangeNode : public ExprNode {
@@ -312,8 +403,8 @@ namespace X {
         ExprNode *step = nullptr;
 
     public:
-        RangeNode(ExprNode *stop) : stop(stop) {}
-        RangeNode(ExprNode *start, ExprNode *stop, ExprNode *step = nullptr) : start(start), stop(stop), step(step) {}
+        RangeNode(ExprNode *stop) : ExprNode(NodeKind::Range), stop(stop) {}
+        RangeNode(ExprNode *start, ExprNode *stop, ExprNode *step = nullptr) : ExprNode(NodeKind::Range), start(start), stop(stop), step(step) {}
         ~RangeNode() {
             delete start;
             delete stop;
@@ -326,6 +417,10 @@ namespace X {
         ExprNode *getStart() const { return start; }
         ExprNode *getStop() const { return stop; }
         ExprNode *getStep() const { return step; }
+
+        static bool classof(const Node *node) {
+            return node->getKind() == NodeKind::Range;
+        }
     };
 
     class ArgNode : public Node {
@@ -333,7 +428,7 @@ namespace X {
         std::string name;
 
     public:
-        ArgNode(Type type, std::string name) : type(std::move(type)), name(std::move(name)) {}
+        ArgNode(Type type, std::string name) : Node(NodeKind::Arg), type(std::move(type)), name(std::move(name)) {}
 
         void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
@@ -343,6 +438,10 @@ namespace X {
 
         bool operator==(const ArgNode &other) const;
         bool operator!=(const ArgNode &other) const;
+
+        static bool classof(const Node *node) {
+            return node->getKind() == NodeKind::Arg;
+        }
     };
 
     class FnDeclNode : public Node {
@@ -351,8 +450,8 @@ namespace X {
         Type returnType;
 
     public:
-        FnDeclNode(std::string name, std::vector<ArgNode *> args, Type returnType) : name(std::move(name)), args(std::move(args)),
-                                                                                     returnType(std::move(returnType)) {}
+        FnDeclNode(std::string name, std::vector<ArgNode *> args, Type returnType) :
+                Node(NodeKind::FnDecl), name(std::move(name)), args(std::move(args)), returnType(std::move(returnType)) {}
         ~FnDeclNode() {
             for (auto arg: args) {
                 delete arg;
@@ -368,6 +467,10 @@ namespace X {
 
         bool operator==(const FnDeclNode &other) const;
         bool operator!=(const FnDeclNode &other) const;
+
+        static bool classof(const Node *node) {
+            return node->getKind() == NodeKind::FnDecl;
+        }
     };
 
     class FnDefNode : public Node {
@@ -378,7 +481,7 @@ namespace X {
 
     public:
         FnDefNode(std::string name, std::vector<ArgNode *> args, Type returnType, StatementListNode *body) :
-                name(std::move(name)), args(std::move(args)), returnType(std::move(returnType)), body(body) {}
+                Node(NodeKind::FnDef), name(std::move(name)), args(std::move(args)), returnType(std::move(returnType)), body(body) {}
 
         ~FnDefNode() {
             for (auto arg: args) {
@@ -398,6 +501,10 @@ namespace X {
 
         bool operator==(const FnDefNode &other) const;
         bool operator!=(const FnDefNode &other) const;
+
+        static bool classof(const Node *node) {
+            return node->getKind() == NodeKind::FnDef;
+        }
     };
 
     class FnCallNode : public ExprNode {
@@ -405,7 +512,7 @@ namespace X {
         ExprList args;
 
     public:
-        FnCallNode(std::string name, ExprList args) : name(std::move(name)), args(std::move(args)) {}
+        FnCallNode(std::string name, ExprList args) : ExprNode(NodeKind::FnCall), name(std::move(name)), args(std::move(args)) {}
         ~FnCallNode() {
             for (auto expr: args) {
                 delete expr;
@@ -417,13 +524,17 @@ namespace X {
 
         const std::string &getName() const { return name; }
         const ExprList &getArgs() const { return args; }
+
+        static bool classof(const Node *node) {
+            return node->getKind() == NodeKind::FnCall;
+        }
     };
 
     class ReturnNode : public Node {
         ExprNode *val;
 
     public:
-        explicit ReturnNode(ExprNode *val = nullptr) : val(val) {}
+        explicit ReturnNode(ExprNode *val = nullptr) : Node(NodeKind::Return), val(val) {}
         ~ReturnNode() {
             delete val;
         }
@@ -433,13 +544,17 @@ namespace X {
 
         bool isTerminate() override { return true; };
         ExprNode *getVal() const { return val; }
+
+        static bool classof(const Node *node) {
+            return node->getKind() == NodeKind::Return;
+        }
     };
 
     class PrintlnNode : public Node {
         ExprNode *val;
 
     public:
-        explicit PrintlnNode(ExprNode *val) : val(val) {}
+        explicit PrintlnNode(ExprNode *val) : Node(NodeKind::Println), val(val) {}
         ~PrintlnNode() {
             delete val;
         }
@@ -448,34 +563,54 @@ namespace X {
         llvm::Value *gen(Codegen::Codegen &codegen) override;
 
         ExprNode *getVal() const { return val; }
+
+        static bool classof(const Node *node) {
+            return node->getKind() == NodeKind::Println;
+        }
     };
 
     class BreakNode : public Node {
     public:
+        BreakNode() : Node(NodeKind::Break) {}
+
         void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
 
         bool isTerminate() override { return true; };
+
+        static bool classof(const Node *node) {
+            return node->getKind() == NodeKind::Break;
+        }
     };
 
     class ContinueNode : public Node {
     public:
+        ContinueNode() : Node(NodeKind::Continue) {}
+
         void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
 
         bool isTerminate() override { return true; };
+
+        static bool classof(const Node *node) {
+            return node->getKind() == NodeKind::Continue;
+        }
     };
 
     class CommentNode : public Node {
         std::string comment;
 
     public:
-        CommentNode(std::string comment) : comment(std::move(comment)) {}
+        CommentNode(std::string comment) : Node(NodeKind::Comment), comment(std::move(comment)) {}
 
         void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
 
         const std::string &getComment() const { return comment; }
+
+        static bool classof(const Node *node) {
+            return node->getKind() == NodeKind::Comment;
+        }
     };
 
     class PropDeclNode : public Node {
@@ -486,7 +621,7 @@ namespace X {
 
     public:
         PropDeclNode(Type type, std::string name, AccessModifier accessModifier = AccessModifier::PUBLIC, bool isStatic = false) :
-                type(std::move(type)), name(std::move(name)), accessModifier(accessModifier), isStatic(isStatic) {}
+                Node(NodeKind::PropDecl), type(std::move(type)), name(std::move(name)), accessModifier(accessModifier), isStatic(isStatic) {}
 
         void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
@@ -495,6 +630,10 @@ namespace X {
         const std::string &getName() const { return name; }
         AccessModifier getAccessModifier() const { return accessModifier; }
         bool getIsStatic() const { return isStatic; }
+
+        static bool classof(const Node *node) {
+            return node->getKind() == NodeKind::PropDecl;
+        }
     };
 
     class MethodDeclNode : public Node {
@@ -505,7 +644,7 @@ namespace X {
 
     public:
         MethodDeclNode(FnDeclNode *fnDecl, AccessModifier accessModifier = AccessModifier::PUBLIC, bool isStatic = false) :
-                fnDecl(fnDecl), accessModifier(accessModifier), isStatic(isStatic) {}
+                Node(NodeKind::MethodDecl), fnDecl(fnDecl), accessModifier(accessModifier), isStatic(isStatic) {}
         ~MethodDeclNode() {
             delete fnDecl;
         }
@@ -521,6 +660,10 @@ namespace X {
 
         bool operator==(const MethodDeclNode &other) const;
         bool operator!=(const MethodDeclNode &other) const;
+
+        static bool classof(const Node *node) {
+            return node->getKind() == NodeKind::MethodDecl;
+        }
     };
 
     class MethodDefNode : public Node {
@@ -530,7 +673,7 @@ namespace X {
 
     public:
         MethodDefNode(FnDefNode *fnDef, AccessModifier accessModifier = AccessModifier::PUBLIC, bool isStatic = false) :
-                fnDef(fnDef), accessModifier(accessModifier), isStatic(isStatic) {}
+                Node(NodeKind::MethodDef), fnDef(fnDef), accessModifier(accessModifier), isStatic(isStatic) {}
         ~MethodDefNode() {
             delete fnDef;
         }
@@ -544,43 +687,10 @@ namespace X {
 
         bool operator==(const MethodDefNode &other) const;
         bool operator!=(const MethodDefNode &other) const;
-    };
 
-    class ClassMembersNode : public Node {
-        std::deque<Node *> children;
-        std::vector<PropDeclNode *> props;
-        std::vector<MethodDefNode *> methods;
-        std::vector<MethodDeclNode *> abstractMethods;
-
-    public:
-        ~ClassMembersNode() {
-            for (auto child: children) {
-                delete child;
-            }
+        static bool classof(const Node *node) {
+            return node->getKind() == NodeKind::MethodDef;
         }
-
-        void print(Pipes::PrintAst &astPrinter, int level = 0) override;
-        llvm::Value *gen(Codegen::Codegen &codegen) override;
-
-        void addComment(CommentNode *node) {
-            children.push_back(node);
-        }
-        void addProp(PropDeclNode *prop) {
-            children.push_back(prop);
-            props.push_back(prop);
-        }
-        void addMethod(MethodDefNode *fnDef) {
-            children.push_back(fnDef);
-            methods.push_back(fnDef);
-        }
-        void addAbstractMethod(MethodDeclNode *fnDecl) {
-            children.push_back(fnDecl);
-            abstractMethods.push_back(fnDecl);
-        }
-        const std::deque<Node *> &getChildren() const { return children; }
-        const std::vector<PropDeclNode *> &getProps() const { return props; }
-        const std::vector<MethodDefNode *> &getMethods() const { return methods; }
-        const std::vector<MethodDeclNode *> &getAbstractMethods() const { return abstractMethods; }
     };
 
     class ClassNode : public Node {
@@ -611,6 +721,10 @@ namespace X {
         const std::vector<std::string> &getInterfaces() const { return interfaces; }
         bool isAbstract() const { return abstract; }
         bool hasParent() const { return !parent.empty(); }
+
+        static bool classof(const Node *node) {
+            return node->getKind() == NodeKind::Class;
+        }
     };
 
     class FetchPropNode : public ExprNode {
@@ -618,7 +732,7 @@ namespace X {
         std::string name;
 
     public:
-        FetchPropNode(ExprNode *obj, std::string name) : obj(obj), name(std::move(name)) {}
+        FetchPropNode(ExprNode *obj, std::string name) : ExprNode(NodeKind::FetchProp), obj(obj), name(std::move(name)) {}
         ~FetchPropNode() {
             delete obj;
         }
@@ -628,6 +742,10 @@ namespace X {
 
         ExprNode *getObj() const { return obj; }
         const std::string &getName() const { return name; }
+
+        static bool classof(const Node *node) {
+            return node->getKind() == NodeKind::FetchProp;
+        }
     };
 
     class FetchStaticPropNode : public ExprNode {
@@ -635,13 +753,18 @@ namespace X {
         std::string propName;
 
     public:
-        FetchStaticPropNode(std::string className, std::string propName) : className(std::move(className)), propName(std::move(propName)) {}
+        FetchStaticPropNode(std::string className, std::string propName) :
+                ExprNode(NodeKind::FetchStaticProp), className(std::move(className)), propName(std::move(propName)) {}
 
         void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
 
         const std::string &getClassName() const { return className; }
         const std::string &getPropName() const { return propName; }
+
+        static bool classof(const Node *node) {
+            return node->getKind() == NodeKind::FetchStaticProp;
+        }
     };
 
     class MethodCallNode : public ExprNode {
@@ -650,7 +773,8 @@ namespace X {
         ExprList args;
 
     public:
-        MethodCallNode(ExprNode *obj, std::string name, ExprList args) : obj(obj), name(std::move(name)), args(std::move(args)) {}
+        MethodCallNode(ExprNode *obj, std::string name, ExprList args) :
+                ExprNode(NodeKind::MethodCall), obj(obj), name(std::move(name)), args(std::move(args)) {}
         ~MethodCallNode() {
             delete obj;
 
@@ -665,6 +789,10 @@ namespace X {
         ExprNode *getObj() const { return obj; }
         const std::string &getName() const { return name; }
         const ExprList &getArgs() const { return args; }
+
+        static bool classof(const Node *node) {
+            return node->getKind() == NodeKind::MethodCall;
+        }
     };
 
     class StaticMethodCallNode : public ExprNode {
@@ -674,7 +802,7 @@ namespace X {
 
     public:
         StaticMethodCallNode(std::string className, std::string methodName, ExprList args) :
-                className(std::move(className)), methodName(std::move(methodName)), args(std::move(args)) {}
+                ExprNode(NodeKind::StaticMethodCall), className(std::move(className)), methodName(std::move(methodName)), args(std::move(args)) {}
 
         ~StaticMethodCallNode() {
             for (auto expr: args) {
@@ -688,6 +816,10 @@ namespace X {
         const std::string &getClassName() const { return className; }
         const std::string &getMethodName() const { return methodName; }
         const ExprList &getArgs() const { return args; }
+
+        static bool classof(const Node *node) {
+            return node->getKind() == NodeKind::StaticMethodCall;
+        }
     };
 
     class AssignPropNode : public Node {
@@ -696,7 +828,7 @@ namespace X {
         ExprNode *expr;
 
     public:
-        AssignPropNode(ExprNode *obj, std::string name, ExprNode *expr) : obj(obj), name(std::move(name)), expr(expr) {}
+        AssignPropNode(ExprNode *obj, std::string name, ExprNode *expr) : Node(NodeKind::AssignProp), obj(obj), name(std::move(name)), expr(expr) {}
         ~AssignPropNode() {
             delete obj;
             delete expr;
@@ -708,6 +840,10 @@ namespace X {
         ExprNode *getObj() const { return obj; }
         const std::string &getName() const { return name; }
         ExprNode *getExpr() const { return expr; }
+
+        static bool classof(const Node *node) {
+            return node->getKind() == NodeKind::AssignProp;
+        }
     };
 
     class AssignStaticPropNode : public Node {
@@ -717,7 +853,7 @@ namespace X {
 
     public:
         AssignStaticPropNode(std::string className, std::string propName, ExprNode *expr) :
-                className(std::move(className)), propName(std::move(propName)), expr(expr) {}
+                Node(NodeKind::AssignStaticProp), className(std::move(className)), propName(std::move(propName)), expr(expr) {}
 
         ~AssignStaticPropNode() {
             delete expr;
@@ -729,6 +865,10 @@ namespace X {
         const std::string &getClassName() const { return className; }
         const std::string &getPropName() const { return propName; }
         ExprNode *getExpr() const { return expr; }
+
+        static bool classof(const Node *node) {
+            return node->getKind() == NodeKind::AssignStaticProp;
+        }
     };
 
     class NewNode : public ExprNode {
@@ -736,7 +876,7 @@ namespace X {
         ExprList args;
 
     public:
-        NewNode(std::string name, ExprList args) : name(std::move(name)), args(std::move(args)) {}
+        NewNode(std::string name, ExprList args) : ExprNode(NodeKind::New), name(std::move(name)), args(std::move(args)) {}
         ~NewNode() {
             for (auto expr: args) {
                 delete expr;
@@ -748,6 +888,10 @@ namespace X {
 
         const std::string &getName() const { return name; }
         const ExprList &getArgs() const { return args; }
+
+        static bool classof(const Node *node) {
+            return node->getKind() == NodeKind::New;
+        }
     };
 
     class InterfaceNode : public Node {
@@ -772,6 +916,10 @@ namespace X {
         StatementListNode *getBody() const { return body; }
         const std::map<std::string, MethodDeclNode *> &getMethods() const { return methods; }
         bool hasParents() const { return !parents.empty(); }
+
+        static bool classof(const Node *node) {
+            return node->getKind() == NodeKind::Interface;
+        }
     };
 
     class FetchArrNode : public ExprNode {
@@ -779,7 +927,7 @@ namespace X {
         ExprNode *idx;
 
     public:
-        FetchArrNode(ExprNode *arr, ExprNode *idx) : arr(arr), idx(idx) {}
+        FetchArrNode(ExprNode *arr, ExprNode *idx) : ExprNode(NodeKind::FetchArr), arr(arr), idx(idx) {}
         ~FetchArrNode() {
             delete arr;
             delete idx;
@@ -790,6 +938,10 @@ namespace X {
 
         ExprNode *getArr() const { return arr; }
         ExprNode *getIdx() const { return idx; }
+
+        static bool classof(const Node *node) {
+            return node->getKind() == NodeKind::FetchArr;
+        }
     };
 
     class AssignArrNode : public Node {
@@ -798,7 +950,7 @@ namespace X {
         ExprNode *expr;
 
     public:
-        AssignArrNode(ExprNode *arr, ExprNode *idx, ExprNode *expr) : arr(arr), idx(idx), expr(expr) {}
+        AssignArrNode(ExprNode *arr, ExprNode *idx, ExprNode *expr) : Node(NodeKind::AssignArr), arr(arr), idx(idx), expr(expr) {}
         ~AssignArrNode() {
             delete arr;
             delete idx;
@@ -811,6 +963,10 @@ namespace X {
         ExprNode *getArr() const { return arr; }
         ExprNode *getIdx() const { return idx; }
         ExprNode *getExpr() const { return expr; }
+
+        static bool classof(const Node *node) {
+            return node->getKind() == NodeKind::AssignArr;
+        }
     };
 
     class AppendArrNode : public Node {
@@ -818,7 +974,7 @@ namespace X {
         ExprNode *expr;
 
     public:
-        AppendArrNode(ExprNode *arr, ExprNode *expr) : arr(arr), expr(expr) {}
+        AppendArrNode(ExprNode *arr, ExprNode *expr) : Node(NodeKind::AppendArr), arr(arr), expr(expr) {}
         ~AppendArrNode() {
             delete arr;
             delete expr;
@@ -829,6 +985,10 @@ namespace X {
 
         ExprNode *getArr() const { return arr; }
         ExprNode *getExpr() const { return expr; }
+
+        static bool classof(const Node *node) {
+            return node->getKind() == NodeKind::AppendArr;
+        }
     };
 }
 

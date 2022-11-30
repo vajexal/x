@@ -66,7 +66,7 @@ namespace X::Codegen {
                         throw InvalidTypeException();
                 }
 
-                auto name = dynamic_cast<VarNode *>(node->getExpr())->getName(); // todo
+                auto name = llvm::dyn_cast<VarNode>(node->getExpr())->getName();
                 auto [type, var] = getVar(name);
                 builder.CreateStore(value, var);
 

@@ -163,7 +163,7 @@ namespace X {
 
     bool StatementListNode::isLastNodeTerminate() const {
         for (auto it = children.crbegin(); it != children.crend(); it++) {
-            if (isa<CommentNode>(*it)) {
+            if (llvm::isa<CommentNode>(*it)) {
                 continue;
             }
 
@@ -174,17 +174,17 @@ namespace X {
     }
 
     ClassNode::ClassNode(std::string name, StatementListNode *body, std::string parent, std::vector<std::string> interfaces, bool abstract) :
-            name(std::move(name)), body(body), parent(std::move(parent)), interfaces(std::move(interfaces)), abstract(abstract) {
+            Node(NodeKind::Class), name(std::move(name)), body(body), parent(std::move(parent)), interfaces(std::move(interfaces)), abstract(abstract) {
         for (auto child: body->getChildren()) {
-            if (auto propDeclNode = dynamic_cast<PropDeclNode *>(child)) {
+            if (auto propDeclNode = llvm::dyn_cast<PropDeclNode>(child)) {
                 props.push_back(propDeclNode);
-            } else if (auto methodDefNode = dynamic_cast<MethodDefNode *>(child)) {
+            } else if (auto methodDefNode = llvm::dyn_cast<MethodDefNode>(child)) {
                 auto methodName = methodDefNode->getFnDef()->getName();
                 auto [_, inserted] = methods.insert({methodName, methodDefNode});
                 if (!inserted) {
                     throw MethodAlreadyDeclaredException(this->name, methodName);
                 }
-            } else if (auto methodDeclNode = dynamic_cast<MethodDeclNode *>(child)) {
+            } else if (auto methodDeclNode = llvm::dyn_cast<MethodDeclNode>(child)) {
                 if (methodDeclNode->getIsAbstract()) {
                     auto methodName = methodDeclNode->getFnDecl()->getName();
                     auto [_, inserted] = abstractMethods.insert({methodName, methodDeclNode});
@@ -197,9 +197,9 @@ namespace X {
     }
 
     InterfaceNode::InterfaceNode(std::string name, std::vector<std::string> parents, StatementListNode *body) :
-            name(std::move(name)), parents(std::move(parents)), body(body) {
+            Node(NodeKind::Interface), name(std::move(name)), parents(std::move(parents)), body(body) {
         for (auto child: body->getChildren()) {
-            if (auto methodDeclNode = dynamic_cast<MethodDeclNode *>(child)) {
+            if (auto methodDeclNode = llvm::dyn_cast<MethodDeclNode>(child)) {
                 auto methodName = methodDeclNode->getFnDecl()->getName();
                 auto [_, inserted] = methods.insert({methodName, methodDeclNode});
                 if (!inserted) {
