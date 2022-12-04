@@ -2,12 +2,14 @@
 #define X_DRIVER_H
 
 #include "ast.h"
+#include "location.hh"
 
 namespace X {
     class Driver {
     public:
         StatementListNode *root = nullptr;
         const char *s;
+        yy::location location;
 
         Driver(const char *s) : s(s) {}
         Driver(const std::string &s) : s(s.c_str()) {}

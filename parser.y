@@ -8,6 +8,7 @@
 %define parse.assert
 %define parse.trace
 %expect 0
+%locations
 
 %param { Driver &driver }
 
@@ -143,6 +144,13 @@ top_statement_list:
 | top_statement_list '\n' { $$ = $1; }
 ;
 
+top_statement:
+class_decl { $$ = $1; }
+| interface_decl { $$ = $1; }
+| fn_def { $$ = $1; }
+| COMMENT { $$ = new CommentNode(std::move($1)); }
+;
+
 statement_list:
 %empty { $$ = new StatementListNode; }
 | statement_list statement maybe_comment '\n' {
@@ -151,13 +159,6 @@ statement_list:
     $$ = $1;
 }
 | statement_list '\n' { $$ = $1; }
-;
-
-top_statement:
-class_decl { $$ = $1; }
-| interface_decl { $$ = $1; }
-| fn_def { $$ = $1; }
-| COMMENT { $$ = new CommentNode(std::move($1)); }
 ;
 
 statement_block:
@@ -412,6 +413,6 @@ access_modifier optional_static fn_decl { $$ = new MethodDeclNode($3, $1, $2); }
 
 %%
 
-void yy::parser::error(const std::string &msg) {
-    std::cerr << "yyerror: " << msg << std::endl;
+void yy::parser::error(const location_type& loc, const std::string &msg) {
+    std::cerr << msg << " on line " << loc.begin.line << std::endl;
 }
