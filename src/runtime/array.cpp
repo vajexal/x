@@ -277,7 +277,7 @@ namespace X::Runtime {
         builder.CreateCondBr(cond, growBB, appendBB);
 
         builder.SetInsertPoint(growBB);
-        auto newCap = builder.CreateMul(cap, llvm::ConstantInt::get(llvm::Type::getInt64Ty(context), 2));
+        auto newCap = builder.CreateShl(cap, 1);
         builder.CreateStore(newCap, capPtr);
         auto reallocFn = module.getFunction(mangler.mangleInternalFunction("realloc"));
         auto arrVoidPtr = builder.CreateBitCast(arr, llvm::Type::getInt8PtrTy(context));
