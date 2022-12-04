@@ -23,8 +23,6 @@ jobs:
 
       - name: Build
         run: |
-          re2c lexer.l -o lexer.cpp -ci -W
-          bison -d parser.y -v -W
           mkdir build
           cd build
           cmake ..

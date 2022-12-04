@@ -281,8 +281,6 @@ fn main() void {
 ### Installation
 
 ```bash
-re2c lexer.l -o lexer.cpp -ci -W
-bison -d parser.y -v -W
 mkdir build
 cd build
 cmake ..

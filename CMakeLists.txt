@@ -16,6 +16,7 @@ add_definitions(${LLVM_DEFINITIONS_LIST})
 include_directories(.)
 include_directories(./src)
 include_directories(./tests)
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 set(X_SOURCES lexer.cpp
         parser.tab.cc
@@ -40,6 +41,18 @@ set(X_SOURCES lexer.cpp
         src/pipes/code_generator.cpp)
 
 set(X_LIBS LLVM fmt::fmt)
+
+add_custom_command(
+        OUTPUT lexer.cpp
+        COMMAND re2c ${CMAKE_CURRENT_SOURCE_DIR}/lexer.l -o lexer.cpp -ci -W
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lexer.l
+)
+
+add_custom_command(
+        OUTPUT parser.tab.cc parser.tab.hh location.hh
+        COMMAND bison -d ${CMAKE_CURRENT_SOURCE_DIR}/parser.y -W
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/parser.y
+)
 
 add_executable(x main.cpp ${X_SOURCES})
 
