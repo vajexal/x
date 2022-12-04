@@ -276,7 +276,6 @@ fn main() void {
 - [re2c](https://re2c.org)
 - [bison](https://www.gnu.org/software/bison/)
 - [llvm](https://llvm.org/docs/index.html)
-- [fmt](https://github.com/fmtlib/fmt)
 
 ### Installation
 

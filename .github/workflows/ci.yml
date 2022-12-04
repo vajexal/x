@@ -16,7 +16,7 @@ jobs:
 
       - name: Setup
         run: |
-          brew install llvm bison re2c fmt googletest
+          brew install llvm bison re2c
 
       - name: Checkout code
         uses: actions/checkout@v3
