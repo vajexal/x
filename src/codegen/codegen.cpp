@@ -132,11 +132,11 @@ namespace X::Codegen {
     }
 
     std::pair<llvm::Value *, llvm::Value *> Codegen::upcast(llvm::Value *a, llvm::Value *b) const {
-        if (a->getType()->isDoubleTy() && b->getType()->isIntegerTy()) {
+        if (a->getType()->isDoubleTy() && b->getType()->isIntegerTy(INTEGER_BIT_WIDTH)) {
             return {a, builder.CreateSIToFP(b, llvm::Type::getDoubleTy(context))};
         }
 
-        if (a->getType()->isIntegerTy() && b->getType()->isDoubleTy()) {
+        if (a->getType()->isIntegerTy(INTEGER_BIT_WIDTH) && b->getType()->isDoubleTy()) {
             return {builder.CreateSIToFP(a, llvm::Type::getDoubleTy(context)), b};
         }
 
@@ -144,11 +144,11 @@ namespace X::Codegen {
     }
 
     std::pair<llvm::Value *, llvm::Value *> Codegen::forceUpcast(llvm::Value *a, llvm::Value *b) const {
-        if (a->getType()->isIntegerTy()) {
+        if (a->getType()->isIntegerTy(INTEGER_BIT_WIDTH)) {
             a = builder.CreateSIToFP(a, llvm::Type::getDoubleTy(context));
         }
 
-        if (b->getType()->isIntegerTy()) {
+        if (b->getType()->isIntegerTy(INTEGER_BIT_WIDTH)) {
             b = builder.CreateSIToFP(b, llvm::Type::getDoubleTy(context));
         }
 
