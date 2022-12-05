@@ -142,6 +142,7 @@ namespace X::Codegen {
         llvm::Value *castTo(llvm::Value *value, llvm::Type *expectedType) const;
 
         llvm::Value *genLogicalAnd(BinaryNode *node);
+        llvm::Value *genLogicalOr(BinaryNode *node);
 
         void genFn(const std::string &name, const std::vector<ArgNode *> &args, const Type &returnType, StatementListNode *body,
                    llvm::StructType *thisType = nullptr);

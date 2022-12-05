@@ -41,6 +41,7 @@ true)output"),
     }
 )code",
                 "yes"),
+        // logical and
         std::make_pair(
                 R"code(
     println(2 && 3.14)
@@ -51,6 +52,18 @@ true)output"),
                 R"output(true
 false
 false
+true)output"),
+        // logical or
+        std::make_pair(
+                R"code(
+    println(2 || 3.14)
+    println(0 || 0.0)
+    println(3.14 || false)
+    println(0 || 1 || 2)
+)code",
+                R"output(true
+false
+true
 true)output")
 ));
 
@@ -66,4 +79,24 @@ fn main() void {
 }
 )code", R"output(hello
 false)output");
+}
+
+TEST_P(OperatorsTest, logicalOrLazyEval) {
+    checkProgram(R"code(
+fn fnWithSideEffect() int {
+    println("hello")
+    return 1
+}
+
+fn main() void {
+    println(fnWithSideEffect() || fnWithSideEffect())
+}
+)code", R"output(hello
+true)output");
+}
+
+TEST_P(OperatorsTest, logicalOperatosPrecedence) {
+    checkCode(R"code(
+    println(1 || 0 && 0)
+)code", "true");
 }

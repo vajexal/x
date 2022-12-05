@@ -81,9 +81,11 @@ namespace X::Codegen {
     }
 
     llvm::Value *Codegen::gen(BinaryNode *node) {
-        // logical "and" is special because of lazy evaluation
+        // logical "and" and "or" are special because of lazy evaluation
         if (node->getType() == OpType::AND) {
             return genLogicalAnd(node);
+        } else if (node->getType() == OpType::OR) {
+            return genLogicalOr(node);
         }
 
         auto lhs = node->getLhs()->gen(*this);
@@ -209,8 +211,7 @@ namespace X::Codegen {
         }
         lhs = downcastToBool(lhs);
         builder.CreateCondBr(lhs, thenBB, mergeBB);
-
-        auto currentBB = builder.GetInsertBlock();
+        auto lhsBB = builder.GetInsertBlock();
 
         parentFunction->getBasicBlockList().push_back(thenBB);
         builder.SetInsertPoint(thenBB);
@@ -220,12 +221,44 @@ namespace X::Codegen {
         }
         rhs = downcastToBool(rhs);
         builder.CreateBr(mergeBB);
+        auto rhsBB = builder.GetInsertBlock();
 
         parentFunction->getBasicBlockList().push_back(mergeBB);
         builder.SetInsertPoint(mergeBB);
         auto phi = builder.CreatePHI(builder.getInt1Ty(), 2);
-        phi->addIncoming(builder.getFalse(), currentBB);
-        phi->addIncoming(rhs, thenBB);
+        phi->addIncoming(builder.getFalse(), lhsBB);
+        phi->addIncoming(rhs, rhsBB);
+        return phi;
+    }
+
+    llvm::Value *Codegen::genLogicalOr(BinaryNode *node) {
+        auto parentFunction = builder.GetInsertBlock()->getParent();
+        auto elseBB = llvm::BasicBlock::Create(context);
+        auto mergeBB = llvm::BasicBlock::Create(context);
+
+        auto lhs = node->getLhs()->gen(*this);
+        if (!lhs) {
+            throw BinaryArgIsEmptyException();
+        }
+        lhs = downcastToBool(lhs);
+        builder.CreateCondBr(lhs, mergeBB, elseBB);
+        auto lhsBB = builder.GetInsertBlock();
+
+        parentFunction->getBasicBlockList().push_back(elseBB);
+        builder.SetInsertPoint(elseBB);
+        auto rhs = node->getRhs()->gen(*this);
+        if (!rhs) {
+            throw BinaryArgIsEmptyException();
+        }
+        rhs = downcastToBool(rhs);
+        builder.CreateBr(mergeBB);
+        auto rhsBB = builder.GetInsertBlock();
+
+        parentFunction->getBasicBlockList().push_back(mergeBB);
+        builder.SetInsertPoint(mergeBB);
+        auto phi = builder.CreatePHI(builder.getInt1Ty(), 2);
+        phi->addIncoming(builder.getTrue(), lhsBB);
+        phi->addIncoming(rhs, rhsBB);
         return phi;
     }
 }
