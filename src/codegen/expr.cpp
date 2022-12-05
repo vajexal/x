@@ -81,11 +81,16 @@ namespace X::Codegen {
     }
 
     llvm::Value *Codegen::gen(BinaryNode *node) {
+        // logical "and" is special because of lazy evaluation
+        if (node->getType() == OpType::AND) {
+            return genLogicalAnd(node);
+        }
+
         auto lhs = node->getLhs()->gen(*this);
         auto rhs = node->getRhs()->gen(*this);
 
         if (!lhs || !rhs) {
-            throw CodegenException("binary arg is empty");
+            throw BinaryArgIsEmptyException();
         }
 
         if (Runtime::String::isStringType(lhs->getType()) && Runtime::String::isStringType(rhs->getType())) {
@@ -191,5 +196,36 @@ namespace X::Codegen {
         }
 
         return builder.CreateCall(arrGetFn, {arr, idx});
+    }
+
+    llvm::Value *Codegen::genLogicalAnd(BinaryNode *node) {
+        auto parentFunction = builder.GetInsertBlock()->getParent();
+        auto thenBB = llvm::BasicBlock::Create(context);
+        auto mergeBB = llvm::BasicBlock::Create(context);
+
+        auto lhs = node->getLhs()->gen(*this);
+        if (!lhs) {
+            throw BinaryArgIsEmptyException();
+        }
+        lhs = downcastToBool(lhs);
+        builder.CreateCondBr(lhs, thenBB, mergeBB);
+
+        auto currentBB = builder.GetInsertBlock();
+
+        parentFunction->getBasicBlockList().push_back(thenBB);
+        builder.SetInsertPoint(thenBB);
+        auto rhs = node->getRhs()->gen(*this);
+        if (!rhs) {
+            throw BinaryArgIsEmptyException();
+        }
+        rhs = downcastToBool(rhs);
+        builder.CreateBr(mergeBB);
+
+        parentFunction->getBasicBlockList().push_back(mergeBB);
+        builder.SetInsertPoint(mergeBB);
+        auto phi = builder.CreatePHI(builder.getInt1Ty(), 2);
+        phi->addIncoming(builder.getFalse(), currentBB);
+        phi->addIncoming(rhs, thenBB);
+        return phi;
     }
 }

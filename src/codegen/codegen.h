@@ -141,6 +141,8 @@ namespace X::Codegen {
         bool instanceof(llvm::StructType *instanceType, llvm::StructType *type) const;
         llvm::Value *castTo(llvm::Value *value, llvm::Type *expectedType) const;
 
+        llvm::Value *genLogicalAnd(BinaryNode *node);
+
         void genFn(const std::string &name, const std::vector<ArgNode *> &args, const Type &returnType, StatementListNode *body,
                    llvm::StructType *thisType = nullptr);
         llvm::FunctionType *genFnType(const std::vector<ArgNode *> &args, const Type &returnType, llvm::StructType *thisType = nullptr);
@@ -246,6 +248,11 @@ namespace X::Codegen {
     class InvalidTypeException : public CodegenException {
     public:
         InvalidTypeException() : CodegenException("invalid type") {}
+    };
+
+    class BinaryArgIsEmptyException : public CodegenException {
+    public:
+        BinaryArgIsEmptyException() : CodegenException("binary arg is empty") {}
     };
 }
 
