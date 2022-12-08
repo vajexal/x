@@ -211,6 +211,44 @@ fn main() void {
 )code", "bar");
 }
 
+TEST_F(ClassTest, interfacePolymorphism) {
+    checkProgram(R"code(
+interface A {
+    public fn a() void
+}
+
+interface B extends A {
+    public fn b() void
+}
+
+class C implements B {
+    public fn a() void {
+        println("ca")
+    }
+
+    public fn b() void {
+        println("cb")
+    }
+}
+
+class D extends C {
+    public fn a() void {
+        println("da")
+    }
+}
+
+fn foo(A a) void {
+    a.a()
+}
+
+fn main() void {
+    D d = new D()
+
+    foo(d)
+}
+)code", "da");
+}
+
 TEST_F(ClassTest, privatePropAccess) {
     try {
         compiler.compile(R"code(
@@ -412,5 +450,37 @@ fn main() void {
         FAIL() << "expected PropAlreadyDeclaredException";
     } catch (const Codegen::PropAlreadyDeclaredException &e) {
         ASSERT_STREQ(e.what(), "property Foo::a already declared");
+    }
+}
+
+TEST_F(ClassTest, cannotInstatinateAbstractClass) {
+    try {
+        compiler.compile(R"code(
+abstract class Foo {
+}
+
+fn main() void {
+    Foo foo = new Foo()
+}
+)code");
+        FAIL() << "expected CodegenException";
+    } catch (const Codegen::CodegenException &e) {
+        ASSERT_STREQ(e.what(), "cannot instantiate abstract class Foo");
+    }
+}
+
+TEST_F(ClassTest, cannotInstatinateInterface) {
+    try {
+        compiler.compile(R"code(
+interface Foo {
+}
+
+fn main() void {
+    Foo foo = new Foo()
+}
+)code");
+        FAIL() << "expected ClassNotFoundException";
+    } catch (const Codegen::ClassNotFoundException &e) {
+        ASSERT_STREQ(e.what(), "class Foo not found");
     }
 }

@@ -2,17 +2,20 @@
 #define X_CHECK_INTERFACES_H
 
 #include "pipeline.h"
+#include "compiler_runtime.h"
 
 #include <map>
 
 namespace X::Pipes {
     class CheckInterfaces : public Pipe {
-        // interface name -> {method name -> method decl}
-        std::map<std::string, std::map<std::string, MethodDeclNode *>> interfaceMethods;
+        CompilerRuntime &compilerRuntime;
+
         // class name -> all methods (including parents) {method name -> method def}
         std::map<std::string, std::map<std::string, MethodDefNode *>> classMethods;
 
     public:
+        CheckInterfaces(CompilerRuntime &compilerRuntime) : compilerRuntime(compilerRuntime) {}
+
         StatementListNode *handle(StatementListNode *node) override;
 
     private:

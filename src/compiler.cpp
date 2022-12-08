@@ -17,7 +17,7 @@ namespace X {
         auto node = pipeline
                 .pipe(new Pipes::ParseCode(code))
 //                .pipe(new Pipes::PrintAst())
-                .pipe(new Pipes::CheckInterfaces())
+                .pipe(new Pipes::CheckInterfaces(compilerRuntime))
                 .pipe(new Pipes::CheckAbstractClasses())
                 .pipe(new Pipes::CheckVirtualMethods(compilerRuntime))
                 .pipe(new Pipes::CodeGenerator(compilerRuntime))

@@ -12,6 +12,10 @@ namespace X {
             return "class." + className;
         }
 
+        std::string mangleInterface(const std::string &interfaceName) const {
+            return "interface." + interfaceName;
+        }
+
         std::string unmangleClass(const std::string &mangledClassName) const {
             return mangledClassName.substr(std::strlen("class."));
         }

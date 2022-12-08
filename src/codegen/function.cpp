@@ -106,7 +106,7 @@ namespace X::Codegen {
                 throw InvalidTypeException();
             }
 
-            paramTypes.push_back(mapType(arg->getType()));
+            paramTypes.push_back(mapArgType(arg->getType()));
         }
 
         auto retType = mapType(returnType);

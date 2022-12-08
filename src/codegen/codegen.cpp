@@ -37,12 +37,23 @@ namespace X::Codegen {
                 return llvm::Type::getVoidTy(context);
             case Type::TypeID::CLASS: {
                 auto &className = type.getClassName();
-                auto &classDecl = getClass(mangler.mangleClass(className));
+                auto &classDecl = getClassDecl(mangler.mangleClass(className));
                 return classDecl.type->getPointerTo();
             }
             default:
                 throw InvalidTypeException();
         }
+    }
+
+    llvm::Type *Codegen::mapArgType(const Type &type) {
+        if (type.getTypeID() == Type::TypeID::CLASS) {
+            auto interfaceDecl = findInterfaceDecl(mangler.mangleInterface(type.getClassName()));
+            if (interfaceDecl) {
+                return interfaceDecl->type->getPointerTo();
+            }
+        }
+
+        return mapType(type);
     }
 
     llvm::Constant *Codegen::getDefaultValue(const Type &type) {
@@ -118,7 +129,7 @@ namespace X::Codegen {
         auto mallocSizeType = llvm::Type::getInt64Ty(context);
         auto typeSize = module.getDataLayout().getTypeAllocSize(type);
         if (typeSize.isScalable()) {
-            throw CodegenException("can't calc class size");
+            throw CodegenException("can't calc obj size");
         }
         auto allocSize = builder.getInt64(typeSize.getFixedSize());
 
@@ -204,9 +215,14 @@ namespace X::Codegen {
     }
 
     bool Codegen::instanceof(llvm::StructType *instanceType, llvm::StructType *type) const {
-        auto currentClassDecl = &getClass(instanceType->getStructName().str());
-        auto expectedClassDecl = &getClass(type->getStructName().str());
+        const auto &expectedTypeName = type->getStructName().str();
+        auto currentClassDecl = &getClassDecl(instanceType->getStructName().str());
+        auto expectedInterfaceDecl = findInterfaceDecl(expectedTypeName);
+        if (expectedInterfaceDecl) {
+            return compilerRuntime.implementedInterfaces[currentClassDecl->name].contains(expectedInterfaceDecl->name);
+        }
 
+        auto expectedClassDecl = &getClassDecl(expectedTypeName);
         while (currentClassDecl) {
             if (currentClassDecl == expectedClassDecl) {
                 return true;
@@ -218,7 +234,7 @@ namespace X::Codegen {
         return false;
     }
 
-    llvm::Value *Codegen::castTo(llvm::Value *value, llvm::Type *expectedType) const {
+    llvm::Value *Codegen::castTo(llvm::Value *value, llvm::Type *expectedType) {
         if (value->getType() == expectedType) {
             return value;
         }
@@ -231,11 +247,26 @@ namespace X::Codegen {
         auto expectedClassType = deref(expectedType);
         if (type->isStructTy() && expectedClassType->isStructTy()) {
             if (instanceof(llvm::cast<llvm::StructType>(type), llvm::cast<llvm::StructType>(expectedClassType))) {
-                return builder.CreateBitCast(value, expectedType);
+                auto interfaceDecl = findInterfaceDecl(expectedClassType->getStructName().str());
+                return interfaceDecl ?
+                       instantiateInterface(value, *interfaceDecl) :
+                       builder.CreateBitCast(value, expectedType);
             }
         }
 
         return value;
+    }
+
+    llvm::Value *Codegen::instantiateInterface(llvm::Value *value, const InterfaceDecl &interfaceDecl) {
+        auto interface = newObj(interfaceDecl.type);
+
+        initInterfaceVtable(value, interface);
+
+        auto objPtr = builder.CreateStructGEP(interfaceDecl.type, interface, 1);
+        auto valueVoidPtr = builder.CreateBitCast(value, builder.getInt8PtrTy());
+        builder.CreateStore(valueVoidPtr, objPtr);
+
+        return interface;
     }
 
     llvm::Value *Codegen::compareStrings(llvm::Value *first, llvm::Value *second) const {

@@ -59,6 +59,13 @@ namespace X::Codegen {
         llvm::StructType *vtableType = nullptr;
     };
 
+    struct InterfaceDecl {
+        std::string name;
+        llvm::StructType *type;
+        std::map<std::string, Method> methods;
+        llvm::StructType *vtableType = nullptr;
+    };
+
     class Codegen {
         static inline const std::string CONSTRUCTOR_FN_NAME = "construct";
         static inline const int INTEGER_BIT_WIDTH = 64;
@@ -76,6 +83,7 @@ namespace X::Codegen {
         llvm::Value *that = nullptr;
         ClassDecl *self = nullptr; // current class in static context
         std::map<std::string, ClassDecl> classes;
+        std::map<std::string, InterfaceDecl> interfaces;
 
     public:
         Codegen(llvm::LLVMContext &context, llvm::IRBuilder<> &builder, llvm::Module &module, CompilerRuntime &compilerRuntime) :
@@ -116,13 +124,15 @@ namespace X::Codegen {
 
     private:
         llvm::Type *mapType(const Type &type);
+        llvm::Type *mapArgType(const Type &type);
         llvm::Constant *getDefaultValue(const Type &type);
         /// differs from getDefaultValue because getDefaultValue returns constant and createDefaultValue can emit instructions
         llvm::Value *createDefaultValue(const Type &type);
         std::pair<llvm::Type *, llvm::Value *> getVar(std::string &name) const;
         std::pair<llvm::Type *, llvm::Value *> getProp(llvm::Value *obj, const std::string &name) const;
         std::pair<llvm::Type *, llvm::Value *> getStaticProp(const std::string &className, const std::string &propName) const;
-        const ClassDecl &getClass(const std::string &mangledName) const;
+        const ClassDecl &getClassDecl(const std::string &mangledName) const;
+        const InterfaceDecl *findInterfaceDecl(const std::string &mangledName) const;
         std::string getClassName(llvm::Value *obj) const;
         bool isObject(llvm::Value *value) const;
         llvm::AllocaInst *createAlloca(llvm::Type *type, const std::string &name = "") const;
@@ -132,14 +142,17 @@ namespace X::Codegen {
         llvm::Value *callStaticMethod(const std::string &className, const std::string &methodName, const std::vector<ExprNode *> &args);
         llvm::Value *newObj(llvm::StructType *type);
         llvm::StructType *genVtable(ClassNode *classNode, llvm::StructType *klass, ClassDecl &classDecl);
+        llvm::StructType *genVtable(InterfaceNode *classNode, llvm::StructType *interfaceType, InterfaceDecl &interfaceDecl);
         void initVtable(llvm::Value *obj);
+        void initInterfaceVtable(llvm::Value *obj, llvm::Value *interface);
 
         std::pair<llvm::Value *, llvm::Value *> upcast(llvm::Value *a, llvm::Value *b) const;
         std::pair<llvm::Value *, llvm::Value *> forceUpcast(llvm::Value *a, llvm::Value *b) const;
         llvm::Value *downcastToBool(llvm::Value *value) const;
         llvm::Value *castToString(llvm::Value *value) const;
         bool instanceof(llvm::StructType *instanceType, llvm::StructType *type) const;
-        llvm::Value *castTo(llvm::Value *value, llvm::Type *expectedType) const;
+        llvm::Value *castTo(llvm::Value *value, llvm::Type *expectedType);
+        llvm::Value *instantiateInterface(llvm::Value *value, const InterfaceDecl &interfaceDecl);
 
         llvm::Value *genLogicalAnd(BinaryNode *node);
         llvm::Value *genLogicalOr(BinaryNode *node);

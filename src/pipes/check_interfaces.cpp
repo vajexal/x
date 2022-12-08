@@ -20,22 +20,27 @@ namespace X::Pipes {
     void CheckInterfaces::addInterface(InterfaceNode *node) {
         auto &name = node->getName();
 
-        if (interfaceMethods.contains(name)) {
+        if (compilerRuntime.interfaceMethods.contains(name)) {
             throw CheckInterfacesException(fmt::format("interface {} already declared", name));
         }
 
         // remember interface name, so we will handle 2 empty interfaces with the same name (throw interface already declared exception)
-        interfaceMethods[name] = {};
+        compilerRuntime.interfaceMethods[name] = {};
 
         if (node->hasParents()) {
             for (auto &parent: node->getParents()) {
-                if (!interfaceMethods.contains(parent)) {
+                if (!compilerRuntime.interfaceMethods.contains(parent)) {
                     throw CheckInterfacesException(fmt::format("interface {} not found", parent));
                 }
 
-                for (auto &[methodName, methodDecl]: interfaceMethods[parent]) {
+                for (auto &[methodName, methodDecl]: compilerRuntime.interfaceMethods[parent]) {
                     addMethodToInterface(name, methodDecl);
                 }
+
+                // cache extended interfaces
+                auto &extendedInterfaces = compilerRuntime.implementedInterfaces[name];
+                extendedInterfaces.merge(compilerRuntime.implementedInterfaces[parent]);
+                extendedInterfaces.insert(parent);
             }
         }
 
@@ -51,25 +56,29 @@ namespace X::Pipes {
             throw CheckInterfacesException(fmt::format("interface method {}::{} must be public", interfaceName, methodName));
         }
 
-        auto &methods = interfaceMethods[interfaceName];
+        auto &methods = compilerRuntime.interfaceMethods[interfaceName];
+        // todo maybe insert and then check if value is created because "collision" probability is low
         auto methodDecl = methods.find(node->getFnDecl()->getName());
-        if (methodDecl != methods.end() && *methodDecl->second != *node) {
+        if (methodDecl == methods.cend()) {
+            methods[methodName] = node;
+        } else if (*methodDecl->second != *node) {
             throw CheckInterfacesException(fmt::format("interface method {}::{} is incompatible", interfaceName, methodName));
         }
-
-        methods[methodName] = node;
     }
 
     void CheckInterfaces::checkClass(ClassNode *node) {
-        classMethods[node->getName()] = node->getMethods();
-        auto &klassMethods = classMethods[node->getName()];
+        auto &name = node->getName();
+        classMethods[name] = node->getMethods();
+        auto &klassMethods = classMethods[name];
         if (node->hasParent()) {
-            klassMethods.merge(classMethods[node->getParent()]);
+            auto &parentName = node->getParent();
+            klassMethods.merge(classMethods[parentName]);
+            compilerRuntime.implementedInterfaces[name].merge(compilerRuntime.implementedInterfaces[parentName]);
         }
 
         for (auto &interfaceName: node->getInterfaces()) {
-            auto methods = interfaceMethods.find(interfaceName);
-            if (methods == interfaceMethods.end()) {
+            auto methods = compilerRuntime.interfaceMethods.find(interfaceName);
+            if (methods == compilerRuntime.interfaceMethods.end()) {
                 throw CheckInterfacesException(fmt::format("interface {} not found", interfaceName));
             }
 
@@ -81,10 +90,15 @@ namespace X::Pipes {
 
                 if (!compareDeclAndDef(methodDecl, methodIt->second)) {
                     throw CheckInterfacesException(
-                            fmt::format("declaration of {}::{} must be compatible with interface {}", node->getName(),
+                            fmt::format("declaration of {}::{} must be compatible with interface {}", name,
                                         methodIt->second->getFnDef()->getName(), interfaceName));
                 }
             }
+
+            // cache implemented interfaces
+            auto &classImplementedInterfaces = compilerRuntime.implementedInterfaces[name];
+            classImplementedInterfaces.merge(compilerRuntime.implementedInterfaces[interfaceName]);
+            classImplementedInterfaces.insert(interfaceName);
         }
     }
 }
