@@ -1,8 +1,9 @@
 #ifndef X_CODE_GENERATOR_H
 #define X_CODE_GENERATOR_H
 
-#include "pipeline.h"
+#include "llvm/Support/Error.h"
 
+#include "pipeline.h"
 #include "compiler_runtime.h"
 
 namespace X::Pipes {
@@ -14,6 +15,12 @@ namespace X::Pipes {
         CodeGenerator(CompilerRuntime &compilerRuntime) : compilerRuntime(compilerRuntime) {}
 
         StatementListNode *handle(StatementListNode *node) override;
+
+    private:
+        void throwOnError(llvm::Error &&err) const;
+
+        template<typename T>
+        T throwOnError(llvm::Expected<T> &&val) const;
     };
 
     class CodeGeneratorException : public std::exception {

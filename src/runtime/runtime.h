@@ -7,7 +7,9 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Function.h"
-#include "llvm/ExecutionEngine/ExecutionEngine.h"
+#include "llvm/ExecutionEngine/Orc/Core.h"
+#include "llvm/ExecutionEngine/Orc/Mangling.h"
+#include "llvm/Support/Error.h"
 
 #include "runtime/string.h"
 #include "runtime/array.h"
@@ -23,10 +25,21 @@ namespace X::Runtime {
     class Runtime {
         Mangler mangler;
 
-        std::vector<std::tuple<llvm::Function *, void *>> fnDefinitions;
     public:
         void addDeclarations(llvm::LLVMContext &context, llvm::IRBuilder<> &builder, llvm::Module &module);
-        void addDefinitions(llvm::ExecutionEngine &engine);
+        void addDefinitions(llvm::orc::JITDylib &JD, llvm::orc::MangleAndInterner &llvmMangle);
+    };
+
+    class RuntimeBuiltinGenerator : public llvm::orc::DefinitionGenerator {
+        Mangler mangler;
+
+        llvm::orc::SymbolMap builtinFuncs;
+
+    public:
+        explicit RuntimeBuiltinGenerator(llvm::orc::MangleAndInterner &llvmMangle);
+
+        llvm::Error tryToGenerate(llvm::orc::LookupState &LS, llvm::orc::LookupKind K, llvm::orc::JITDylib &JD, llvm::orc::JITDylibLookupFlags JDLookupFlags,
+                                  const llvm::orc::SymbolLookupSet &LookupSet) override;
     };
 }
 
