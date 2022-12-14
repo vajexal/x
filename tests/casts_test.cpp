@@ -112,3 +112,17 @@ fn main() void {
 
     checkProgram(code, "1");
 }
+
+TEST_F(CastsTest, returnImplicitCast) {
+    auto code = R"code(
+fn foo() float {
+    return 1
+}
+
+fn main() void {
+    println(foo())
+}
+)code";
+
+    checkProgram(code, "1");
+}

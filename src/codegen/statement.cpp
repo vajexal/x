@@ -282,6 +282,8 @@ namespace X::Codegen {
             throw CodegenException("return value is empty");
         }
 
+        value = castTo(value, builder.getCurrentFunctionReturnType());
+
         builder.CreateRet(value);
         return nullptr;
     }

@@ -265,9 +265,7 @@ namespace X {
         DeclareNode(Type type, std::string name, ExprNode *expr = nullptr) :
                 Node(NodeKind::Declare), type(std::move(type)), name(std::move(name)), expr(expr) {}
         ~DeclareNode() {
-            if (expr) {
-                delete expr;
-            }
+            delete expr;
         }
 
         void print(Pipes::PrintAst &astPrinter, int level = 0) override;

@@ -245,13 +245,12 @@ namespace X::Codegen {
 
         auto type = deref(value->getType());
         auto expectedClassType = deref(expectedType);
-        if (type->isStructTy() && expectedClassType->isStructTy()) {
-            if (instanceof(llvm::cast<llvm::StructType>(type), llvm::cast<llvm::StructType>(expectedClassType))) {
-                auto interfaceDecl = findInterfaceDecl(expectedClassType->getStructName().str());
-                return interfaceDecl ?
-                       instantiateInterface(value, *interfaceDecl) :
-                       builder.CreateBitCast(value, expectedType);
-            }
+        if (type->isStructTy() && expectedClassType->isStructTy() &&
+            instanceof(llvm::cast<llvm::StructType>(type), llvm::cast<llvm::StructType>(expectedClassType))) {
+            auto interfaceDecl = findInterfaceDecl(expectedClassType->getStructName().str());
+            return interfaceDecl ?
+                   instantiateInterface(value, *interfaceDecl) :
+                   builder.CreateBitCast(value, expectedType);
         }
 
         return value;
