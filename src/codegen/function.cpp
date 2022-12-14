@@ -14,6 +14,10 @@ namespace X::Codegen {
             throw FnAlreadyDeclaredException(name);
         }
 
+        if (name == "main") {
+            checkMainFn(node);
+        }
+
         genFn(name, node->getArgs(), node->getReturnType(), node->getBody());
 
         return nullptr;
@@ -111,5 +115,15 @@ namespace X::Codegen {
 
         auto retType = mapType(returnType);
         return llvm::FunctionType::get(retType, paramTypes, false);
+    }
+
+    void Codegen::checkMainFn(FnDefNode *node) const {
+        if (!node->getArgs().empty()) {
+            throw CodegenException("main must take no arguments");
+        }
+
+        if (node->getReturnType().getTypeID() != Type::TypeID::VOID) {
+            throw CodegenException("main must return void");
+        }
     }
 }

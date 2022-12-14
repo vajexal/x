@@ -22,3 +22,27 @@ fn main() void {
         ASSERT_STREQ(e.what(), "function a already declared");
     }
 }
+
+TEST_F(FunctionTest, mainSignature) {
+    try {
+        compiler.compile(R"code(
+fn main(int argc, []string argv) int {
+}
+)code");
+        FAIL() << "expected CodegenException";
+    } catch (const Codegen::CodegenException &e) {
+        ASSERT_STREQ(e.what(), "main must take no arguments");
+    }
+}
+
+TEST_F(FunctionTest, mainSignature2) {
+    try {
+        compiler.compile(R"code(
+fn main() int {
+}
+)code");
+        FAIL() << "expected CodegenException";
+    } catch (const Codegen::CodegenException &e) {
+        ASSERT_STREQ(e.what(), "main must return void");
+    }
+}

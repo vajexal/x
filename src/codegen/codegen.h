@@ -68,7 +68,8 @@ namespace X::Codegen {
 
     class Codegen {
         static inline const std::string CONSTRUCTOR_FN_NAME = "construct";
-        static inline const int INTEGER_BIT_WIDTH = 64;
+        static const int INTEGER_BIT_WIDTH = 64;
+        static inline const std::string MAIN_FN_NAME = "main";
 
         llvm::LLVMContext &context;
         llvm::IRBuilder<> &builder;
@@ -160,6 +161,7 @@ namespace X::Codegen {
         void genFn(const std::string &name, const std::vector<ArgNode *> &args, const Type &returnType, StatementListNode *body,
                    llvm::StructType *thisType = nullptr);
         llvm::FunctionType *genFnType(const std::vector<ArgNode *> &args, const Type &returnType, llvm::StructType *thisType = nullptr);
+        void checkMainFn(FnDefNode *node) const;
         std::tuple<llvm::Value *, llvm::FunctionType *, llvm::Type *> findMethod(
                 llvm::StructType *type, const std::string &methodName, llvm::Value *obj = nullptr) const;
         // find method in class only looking for generated funcs (ignoring internal classes, virtual funcs, access modifiers etc.)
