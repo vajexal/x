@@ -8,8 +8,7 @@ TEST_F(TourTest, tour) {
 // Single line comment
 
 // classes will be described later
-class Foo {
-}
+class Foo {}
 
 fn types() void {
     // variable declaration and assigment.
@@ -229,8 +228,7 @@ class E implements A, B {
 }
 
 // class can extend and implement simultaneously
-class F {
-}
+class F {}
 
 class G extends F implements A {
     public fn foo() void {

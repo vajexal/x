@@ -10,8 +10,7 @@ TEST_P(CheckAbstractClassesTest, abstract_classes) {
 
     try {
         compiler.compile(code + R"code(
-fn main() void {
-}
+fn main() void {}
 )code");
         FAIL() << "expected CheckAbstractClassesException";
     } catch (const Pipes::CheckAbstractClassesException &e) {
@@ -29,11 +28,9 @@ class Foo {
                 "class Foo must be declared abstract"),
         std::make_pair(
                 R"code(
-abstract class Foo {
-}
+abstract class Foo {}
 
-abstract class Foo {
-}
+abstract class Foo {}
 )code",
                 "class Foo already exists"),
         std::make_pair(
@@ -42,8 +39,7 @@ abstract class Foo {
     abstract public fn a() void
 }
 
-class Bar extends Foo {
-}
+class Bar extends Foo {}
 )code",
                 "abstract method Foo::a must be implemented"),
         std::make_pair(

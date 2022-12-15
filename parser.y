@@ -162,7 +162,8 @@ statement_list:
 ;
 
 statement_block:
-'{' maybe_comment '\n' statement_list '}' {
+'{' '}' { $$ = new StatementListNode; }
+| '{' maybe_comment '\n' statement_list '}' {
     if ($2) $4->prepend($2);
     $$ = $4;
 }
@@ -332,7 +333,8 @@ implements:
 ;
 
 class_members_block:
-'{' maybe_comment '\n' class_members_list '}' {
+'{' '}' { $$ = new StatementListNode; }
+| '{' maybe_comment '\n' class_members_list '}' {
     if ($2) $4->prepend($2);
     $$ = $4;
 }
@@ -391,7 +393,8 @@ extends_list:
 ;
 
 interface_methods_block:
-'{' maybe_comment '\n' interface_methods_list '}' {
+'{' '}' { $$ = new StatementListNode; }
+| '{' maybe_comment '\n' interface_methods_list '}' {
     if ($2) $4->prepend($2);
     $$ = $4;
 }

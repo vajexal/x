@@ -10,8 +10,7 @@ TEST_P(CheckInterfacesTest, interfaces) {
 
     try {
         compiler.compile(code + R"code(
-fn main() void {
-}
+fn main() void {}
 )code");
         FAIL() << "expected CheckInterfacesException";
     } catch (const Pipes::CheckInterfacesException &e) {
@@ -31,11 +30,9 @@ class Bar implements Foo {
                 "interface Foo not found"),
         std::make_pair(
                 R"code(
-interface Foo {
-}
+interface Foo {}
 
-interface Foo {
-}
+interface Foo {}
 )code",
                 "interface Foo already declared"),
         std::make_pair(
@@ -44,8 +41,7 @@ interface Foo {
     public fn a() void
 }
 
-class Bar implements Foo {
-}
+class Bar implements Foo {}
 )code",
                 "interface method Foo::a must be implemented"),
         std::make_pair(
@@ -146,8 +142,7 @@ class Foo {
     }
 }
 
-class Bar extends Foo implements A {
-}
+class Bar extends Foo implements A {}
 
 fn main() void {
     Bar bar = new Bar()
@@ -164,8 +159,7 @@ interface Foo {
     public fn a() void
 }
 
-fn main() void {
-}
+fn main() void {}
 )code");
         FAIL() << "expected AstException";
     } catch (const AstException &e) {

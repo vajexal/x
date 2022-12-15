@@ -8,14 +8,11 @@ class FunctionTest : public CompilerTest {
 TEST_F(FunctionTest, fnAlreadyDeclared) {
     try {
         compiler.compile(R"code(
-fn a() void {
-}
+fn a() void {}
 
-fn a() void {
-}
+fn a() void {}
 
-fn main() void {
-}
+fn main() void {}
 )code");
         FAIL() << "expected FnAlreadyDeclaredException";
     } catch (const Codegen::FnAlreadyDeclaredException &e) {
@@ -26,8 +23,7 @@ fn main() void {
 TEST_F(FunctionTest, mainSignature) {
     try {
         compiler.compile(R"code(
-fn main(int argc, []string argv) int {
-}
+fn main(int argc, []string argv) int {}
 )code");
         FAIL() << "expected CodegenException";
     } catch (const Codegen::CodegenException &e) {
@@ -38,8 +34,7 @@ fn main(int argc, []string argv) int {
 TEST_F(FunctionTest, mainSignature2) {
     try {
         compiler.compile(R"code(
-fn main() int {
-}
+fn main() int {}
 )code");
         FAIL() << "expected CodegenException";
     } catch (const Codegen::CodegenException &e) {

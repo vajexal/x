@@ -27,8 +27,7 @@ class Foo {
     }
 }
 
-class Bar extends Foo {
-}
+class Bar extends Foo {}
 
 fn main() void {
     Bar bar = new Bar(10)
@@ -39,8 +38,7 @@ fn main() void {
 TEST_F(ClassTest, constructorArgsMismatch) {
     try {
         compiler.compile(R"code(
-class Foo {
-}
+class Foo {}
 
 fn main() void {
     Foo foo = new Foo(10)
@@ -75,11 +73,9 @@ fn main() void {
 TEST_F(ClassTest, inheritance) {
     try {
         compiler.compile(R"code(
-class Bar extends Foo {
-}
+class Bar extends Foo {}
 
-fn main() void {
-}
+fn main() void {}
 )code");
         FAIL() << "expected exception";
     } catch (const std::exception &e) {
@@ -196,8 +192,7 @@ class Bar extends Foo {
     }
 }
 
-class Baz extends Bar {
-}
+class Baz extends Bar {}
 
 fn check(Foo foo) void {
     foo.a()
@@ -348,18 +343,15 @@ fn main() void {
 TEST_F(ClassTest, classAlreadyExists) {
     try {
         compiler.compile(R"code(
-class Foo {
-}
+class Foo {}
 
-class Foo {
-}
+class Foo {}
 
-fn main() void {
-}
+fn main() void {}
 )code");
-        FAIL() << "expected ClassAlreadyExistsException";
-    } catch (const Codegen::ClassAlreadyExistsException &e) {
-        ASSERT_STREQ(e.what(), "class Foo already exists");
+        FAIL() << "expected SymbolAlreadyExistsException";
+    } catch (const Codegen::SymbolAlreadyExistsException &e) {
+        ASSERT_STREQ(e.what(), "symbol Foo already exists");
     }
 }
 
@@ -374,8 +366,7 @@ class Foo {
     }
 }
 
-fn main() void {
-}
+fn main() void {}
 )code");
         FAIL() << "expected AstException";
     } catch (const AstException &e) {
@@ -393,8 +384,7 @@ abstract class Foo {
     }
 }
 
-fn main() void {
-}
+fn main() void {}
 )code");
         FAIL() << "expected MethodAlreadyDeclaredException";
     } catch (const Codegen::MethodAlreadyDeclaredException &e) {
@@ -410,8 +400,7 @@ abstract class Foo {
     abstract public fn a() void
 }
 
-fn main() void {
-}
+fn main() void {}
 )code");
         FAIL() << "expected AstException";
     } catch (const AstException &e) {
@@ -427,8 +416,7 @@ class Foo {
     int a
 }
 
-fn main() void {
-}
+fn main() void {}
 )code");
         FAIL() << "expected PropAlreadyDeclaredException";
     } catch (const Codegen::PropAlreadyDeclaredException &e) {
@@ -444,8 +432,7 @@ class Foo {
     static int a
 }
 
-fn main() void {
-}
+fn main() void {}
 )code");
         FAIL() << "expected PropAlreadyDeclaredException";
     } catch (const Codegen::PropAlreadyDeclaredException &e) {
@@ -456,14 +443,11 @@ fn main() void {
 TEST_F(ClassTest, symbolAlreadyExists) {
     try {
         compiler.compile(R"code(
-interface Foo {
-}
+interface Foo {}
 
-class Foo {
-}
+class Foo {}
 
-fn main() void {
-}
+fn main() void {}
 )code");
         FAIL() << "expected SymbolAlreadyExistsException";
     } catch (const Codegen::SymbolAlreadyExistsException &e) {
@@ -474,8 +458,7 @@ fn main() void {
 TEST_F(ClassTest, cannotInstatinateAbstractClass) {
     try {
         compiler.compile(R"code(
-abstract class Foo {
-}
+abstract class Foo {}
 
 fn main() void {
     Foo foo = new Foo()
@@ -490,8 +473,7 @@ fn main() void {
 TEST_F(ClassTest, cannotInstatinateInterface) {
     try {
         compiler.compile(R"code(
-interface Foo {
-}
+interface Foo {}
 
 fn main() void {
     Foo foo = new Foo()

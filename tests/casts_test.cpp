@@ -26,14 +26,11 @@ TEST_F(CastsTest, arrayElemImplicitCast) {
 
 TEST_F(CastsTest, fnArgImplicitCast) {
     auto code = R"code(
-class Foo {
-}
+class Foo {}
 
-class Bar extends Foo {
-}
+class Bar extends Foo {}
 
-fn baz(Foo foo) void {
-}
+fn baz(Foo foo) void {}
 
 fn main() void {
     Bar bar = new Bar()
