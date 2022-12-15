@@ -10,7 +10,7 @@
 #include "pipes/code_generator.h"
 
 namespace X {
-    int Compiler::compile(const std::string &code) {
+    int Compiler::compile(const std::string &code, const std::string &sourceName) {
         CompilerRuntime compilerRuntime;
 
         Pipeline pipeline{};
@@ -20,7 +20,7 @@ namespace X {
                 .pipe(new Pipes::CheckInterfaces(compilerRuntime))
                 .pipe(new Pipes::CheckAbstractClasses())
                 .pipe(new Pipes::CheckVirtualMethods(compilerRuntime))
-                .pipe(new Pipes::CodeGenerator(compilerRuntime))
+                .pipe(new Pipes::CodeGenerator(compilerRuntime, sourceName))
                 .get();
 
         delete node;

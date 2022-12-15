@@ -6,7 +6,7 @@
 namespace X {
     class Compiler {
     public:
-        int compile(const std::string &code);
+        int compile(const std::string &code, const std::string &sourceName = "narnia");
     };
 }
 

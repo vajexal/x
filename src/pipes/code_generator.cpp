@@ -17,7 +17,7 @@ namespace X::Pipes {
         auto context = std::make_unique<llvm::LLVMContext>();
         context->setOpaquePointers(false); // todo migrate to opaque pointers
         llvm::IRBuilder<> builder(*context);
-        auto module = std::make_unique<llvm::Module>("Module", *context);
+        auto module = std::make_unique<llvm::Module>(sourceName, *context);
         Codegen::Codegen codegen(*context, builder, *module, compilerRuntime);
         Runtime::Runtime runtime{};
 

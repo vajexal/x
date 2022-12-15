@@ -13,9 +13,10 @@ namespace X::Pipes {
     // todo rename
     class CodeGenerator : public Pipe {
         CompilerRuntime &compilerRuntime;
+        std::string sourceName;
 
     public:
-        CodeGenerator(CompilerRuntime &compilerRuntime) : compilerRuntime(compilerRuntime) {}
+        CodeGenerator(CompilerRuntime &compilerRuntime, std::string sourceName) : compilerRuntime(compilerRuntime), sourceName(std::move(sourceName)) {}
 
         StatementListNode *handle(StatementListNode *node) override;
 
