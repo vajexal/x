@@ -16,6 +16,9 @@ namespace X {
 
         // class or interface name -> implemented (or extended) interfaces
         std::map<std::string, std::set<std::string>> implementedInterfaces;
+
+        // class name -> all extended classes
+        std::map<std::string, std::set<std::string>> extendedClasses;
     };
 }
 

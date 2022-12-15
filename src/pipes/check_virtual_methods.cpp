@@ -14,14 +14,23 @@ namespace X::Pipes {
     }
 
     void CheckVirtualMethods::checkClass(ClassNode *node) {
-        classes[node->getName()] = node;
+        auto &name = node->getName();
+
+        classes[name] = node;
 
         if (!node->hasParent()) {
             return;
         }
 
+        auto &parent = node->getParent();
+
+        // cache extended classes
+        auto &extendedClasses = compilerRuntime.extendedClasses[name];
+        extendedClasses.merge(compilerRuntime.extendedClasses[parent]);
+        extendedClasses.insert(parent);
+
         auto classMethods = node->getMethods();
-        auto currentClass = getClass(node->getParent());
+        auto currentClass = getClass(parent);
         while (currentClass) {
             for (auto &[methodName, methodDef]: currentClass->getMethods()) {
                 if (methodDef->getIsStatic() || methodName == CONSTRUCTOR_FN_NAME) {
@@ -35,7 +44,7 @@ namespace X::Pipes {
 
                 if (*methodDef != *classMethod->second) {
                     throw CheckVirtualMethodsException(fmt::format("declaration of {}::{} must be compatible with {}::{}",
-                                                                   node->getName(), methodName, currentClass->getName(), methodName));
+                                                                   name, methodName, currentClass->getName(), methodName));
                 }
 
                 compilerRuntime.virtualMethods[currentClass->getName()].insert(methodName);

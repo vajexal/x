@@ -215,23 +215,16 @@ namespace X::Codegen {
     }
 
     bool Codegen::instanceof(llvm::StructType *instanceType, llvm::StructType *type) const {
-        const auto &expectedTypeName = type->getStructName().str();
-        auto currentClassDecl = &getClassDecl(instanceType->getStructName().str());
+        const auto &expectedTypeName = type->getName().str();
+        auto &currentClassDecl = getClassDecl(instanceType->getStructName().str());
         auto expectedInterfaceDecl = findInterfaceDecl(expectedTypeName);
         if (expectedInterfaceDecl) {
-            return compilerRuntime.implementedInterfaces[currentClassDecl->name].contains(expectedInterfaceDecl->name);
+            return compilerRuntime.implementedInterfaces[currentClassDecl.name].contains(expectedInterfaceDecl->name);
         }
 
-        auto expectedClassDecl = &getClassDecl(expectedTypeName);
-        while (currentClassDecl) {
-            if (currentClassDecl == expectedClassDecl) {
-                return true;
-            }
 
-            currentClassDecl = currentClassDecl->parent;
-        }
-
-        return false;
+        auto &expectedClassDecl = getClassDecl(expectedTypeName);
+        return compilerRuntime.extendedClasses[currentClassDecl.name].contains(expectedClassDecl.name);
     }
 
     llvm::Value *Codegen::castTo(llvm::Value *value, llvm::Type *expectedType) {
