@@ -74,7 +74,7 @@ yy::parser::symbol_type yylex(Driver &driver) {
 
       "//"([^\n\x00]*) { return yy::parser::make_COMMENT(std::string(yypmatch[2], yypmatch[3] - yypmatch[2]), driver.location); }
 
-      [0-9]+"."[0-9]+ { return yy::parser::make_FLOAT(std::atof(yypmatch[0]), driver.location); }
+      [+\-]?[0-9]+"."[0-9]+ { return yy::parser::make_FLOAT(std::atof(yypmatch[0]), driver.location); }
       "0"|[+\-]?[1-9][0-9]* { return yy::parser::make_INT(std::atol(yypmatch[0]), driver.location); }
       ["]([^"\n\x00]*)["] { return yy::parser::make_STRING(std::string(yypmatch[2], yypmatch[3] - yypmatch[2]), driver.location); }
 
