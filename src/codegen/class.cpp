@@ -8,9 +8,10 @@
 namespace X::Codegen {
     llvm::Value *Codegen::gen(ClassNode *node) {
         auto &name = node->getName();
+        addSymbol(name);
         const auto &mangledName = mangler.mangleClass(name);
         if (classes.contains(mangledName)) {
-            throw ClassAlreadyExists(name);
+            throw ClassAlreadyExistsException(name);
         }
 
         auto klass = llvm::StructType::create(context, mangledName);
@@ -178,6 +179,7 @@ namespace X::Codegen {
 
     llvm::Value *Codegen::gen(InterfaceNode *node) {
         auto &name = node->getName();
+        addSymbol(name);
         const auto &mangledName = mangler.mangleInterface(name);
         InterfaceDecl interfaceDecl;
         interfaceDecl.name = name;

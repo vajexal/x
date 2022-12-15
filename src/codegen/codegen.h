@@ -5,6 +5,7 @@
 #include <stack>
 #include <vector>
 #include <tuple>
+#include <set>
 #include <fmt/core.h>
 
 #include "llvm/IR/LLVMContext.h"
@@ -85,6 +86,7 @@ namespace X::Codegen {
         ClassDecl *self = nullptr; // current class in static context
         std::map<std::string, ClassDecl> classes;
         std::map<std::string, InterfaceDecl> interfaces;
+        std::set<std::string> symbols;
 
     public:
         Codegen(llvm::LLVMContext &context, llvm::IRBuilder<> &builder, llvm::Module &module, CompilerRuntime &compilerRuntime) :
@@ -171,6 +173,8 @@ namespace X::Codegen {
 
         llvm::StructType *getArrayForType(const Type *type);
         void fillArray(llvm::Value *arr, const std::vector<llvm::Value *> &values);
+
+        void addSymbol(const std::string &symbol);
     };
 
     class CodegenException : public std::exception {
@@ -205,9 +209,9 @@ namespace X::Codegen {
         ClassNotFoundException(const std::string &className) : CodegenException(fmt::format("class {} not found", className)) {}
     };
 
-    class ClassAlreadyExists : public CodegenException {
+    class ClassAlreadyExistsException : public CodegenException {
     public:
-        ClassAlreadyExists(const std::string &className) : CodegenException(fmt::format("class {} already exists", className)) {}
+        ClassAlreadyExistsException(const std::string &className) : CodegenException(fmt::format("class {} already exists", className)) {}
     };
 
     class PropNotFoundException : public CodegenException {
@@ -244,6 +248,11 @@ namespace X::Codegen {
     public:
         MethodAccessException(const std::string &className, const std::string &methodName) :
                 CodegenException(fmt::format("cannot access private method {}::{}", className, methodName)) {} // todo access modifier
+    };
+
+    class SymbolAlreadyExistsException : public CodegenException {
+    public:
+        SymbolAlreadyExistsException(const std::string &symbol) : CodegenException(fmt::format("symbol {} already exists", symbol)) {}
     };
 
     class InvalidObjectAccessException : public CodegenException {

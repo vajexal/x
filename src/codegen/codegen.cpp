@@ -298,4 +298,11 @@ namespace X::Codegen {
             builder.CreateCall(arrSetFn, {arr, index, values[i]});
         }
     }
+
+    void Codegen::addSymbol(const std::string &symbol) {
+        auto [_, inserted] = symbols.insert(symbol);
+        if (!inserted) {
+            throw SymbolAlreadyExistsException(symbol);
+        }
+    }
 }

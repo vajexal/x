@@ -357,8 +357,8 @@ class Foo {
 fn main() void {
 }
 )code");
-        FAIL() << "expected ClassAlreadyExists";
-    } catch (const Codegen::ClassAlreadyExists &e) {
+        FAIL() << "expected ClassAlreadyExistsException";
+    } catch (const Codegen::ClassAlreadyExistsException &e) {
         ASSERT_STREQ(e.what(), "class Foo already exists");
     }
 }
@@ -450,6 +450,24 @@ fn main() void {
         FAIL() << "expected PropAlreadyDeclaredException";
     } catch (const Codegen::PropAlreadyDeclaredException &e) {
         ASSERT_STREQ(e.what(), "property Foo::a already declared");
+    }
+}
+
+TEST_F(ClassTest, symbolAlreadyExists) {
+    try {
+        compiler.compile(R"code(
+interface Foo {
+}
+
+class Foo {
+}
+
+fn main() void {
+}
+)code");
+        FAIL() << "expected SymbolAlreadyExistsException";
+    } catch (const Codegen::SymbolAlreadyExistsException &e) {
+        ASSERT_STREQ(e.what(), "symbol Foo already exists");
     }
 }
 
