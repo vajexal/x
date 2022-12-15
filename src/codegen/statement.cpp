@@ -298,8 +298,8 @@ namespace X::Codegen {
             value = castToString(value);
         }
 
-        auto callee = module.getFunction("println");
-        builder.CreateCall(callee, {value});
+        auto printlnFn = module.getFunction("println");
+        builder.CreateCall(printlnFn, {value});
 
         return nullptr;
     }

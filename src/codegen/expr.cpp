@@ -99,8 +99,8 @@ namespace X::Codegen {
             switch (node->getType()) {
                 case OpType::PLUS: {
                     const auto &stringConcatFnName = mangler.mangleMethod(Runtime::String::CLASS_NAME, "concat");
-                    auto callee = module.getFunction(stringConcatFnName);
-                    return builder.CreateCall(callee, {lhs, rhs});
+                    auto stringConcatFn = module.getFunction(stringConcatFnName);
+                    return builder.CreateCall(stringConcatFn, {lhs, rhs});
                 }
                 case OpType::EQUAL:
                     return compareStrings(lhs, rhs);

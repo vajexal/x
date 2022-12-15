@@ -179,14 +179,14 @@ namespace X::Codegen {
             default:
                 if (Runtime::String::isStringType(value->getType())) {
                     const auto &stringIsEmptyFnName = mangler.mangleMethod(Runtime::String::CLASS_NAME, "isEmpty");
-                    auto callee = module.getFunction(stringIsEmptyFnName);
-                    auto val = builder.CreateCall(callee, {value});
+                    auto stringIsEmptyFn = module.getFunction(stringIsEmptyFnName);
+                    auto val = builder.CreateCall(stringIsEmptyFn, {value});
                     return negate(val);
                 } else if (Runtime::Array::isArrayType(value->getType())) {
                     auto arrType = deref(value->getType());
                     const auto &arrayIsEmptyFnName = mangler.mangleMethod(arrType->getStructName().str(), "isEmpty");
-                    auto callee = module.getFunction(arrayIsEmptyFnName);
-                    auto val = builder.CreateCall(callee, {value});
+                    auto arrayIsEmptyFn = module.getFunction(arrayIsEmptyFnName);
+                    auto val = builder.CreateCall(arrayIsEmptyFn, {value});
                     return negate(val);
                 }
                 throw InvalidTypeException();
@@ -198,16 +198,16 @@ namespace X::Codegen {
         switch (type->getTypeID()) {
             case llvm::Type::TypeID::IntegerTyID: {
                 if (type->isIntegerTy(1)) {
-                    auto callee = module.getFunction(mangler.mangleInternalFunction("castBoolToString"));
-                    return builder.CreateCall(callee, {value});
+                    auto castBoolToStringFn = module.getFunction(mangler.mangleInternalFunction("castBoolToString"));
+                    return builder.CreateCall(castBoolToStringFn, {value});
                 }
 
-                auto callee = module.getFunction(mangler.mangleInternalFunction("castIntToString"));
-                return builder.CreateCall(callee, {value});
+                auto castIntToStringFn = module.getFunction(mangler.mangleInternalFunction("castIntToString"));
+                return builder.CreateCall(castIntToStringFn, {value});
             }
             case llvm::Type::TypeID::DoubleTyID: {
-                auto callee = module.getFunction(mangler.mangleInternalFunction("castFloatToString"));
-                return builder.CreateCall(callee, {value});
+                auto castFloatToStringFn = module.getFunction(mangler.mangleInternalFunction("castFloatToString"));
+                return builder.CreateCall(castFloatToStringFn, {value});
             }
         }
 
@@ -262,8 +262,8 @@ namespace X::Codegen {
     }
 
     llvm::Value *Codegen::compareStrings(llvm::Value *first, llvm::Value *second) const {
-        auto callee = module.getFunction(mangler.mangleInternalFunction("compareStrings"));
-        return builder.CreateCall(callee, {first, second});
+        auto compareStringsFn = module.getFunction(mangler.mangleInternalFunction("compareStrings"));
+        return builder.CreateCall(compareStringsFn, {first, second});
     }
 
     llvm::Value *Codegen::negate(llvm::Value *value) const {

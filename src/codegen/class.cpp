@@ -398,7 +398,7 @@ namespace X::Codegen {
         }
 
         if (fnType->getNumParams() != (args.size() + 1)) {
-            throw CodegenException("callee args mismatch");
+            throw CodegenException("fn args mismatch");
         }
 
         auto interfaceDecl = findInterfaceDecl(type->getStructName().str());
@@ -431,7 +431,7 @@ namespace X::Codegen {
         }
 
         if (fnType->getNumParams() != args.size()) {
-            throw CodegenException("callee args mismatch");
+            throw CodegenException("fn args mismatch");
         }
 
         std::vector<llvm::Value *> llvmArgs;

@@ -39,23 +39,23 @@ namespace X::Codegen {
             } catch (const MethodNotFoundException &e) {}
         }
 
-        auto callee = module.getFunction(name);
-        if (!callee) {
+        auto fn = module.getFunction(name);
+        if (!fn) {
             throw CodegenException("called function is not found: " + name);
         }
-        if (callee->arg_size() != args.size()) {
-            throw CodegenException("callee args mismatch");
+        if (fn->arg_size() != args.size()) {
+            throw CodegenException("fn args mismatch");
         }
 
         std::vector<llvm::Value *> llvmArgs;
         llvmArgs.reserve(args.size());
         for (auto i = 0; i < args.size(); i++) {
             auto val = args[i]->gen(*this);
-            val = castTo(val, callee->getArg(i)->getType());
+            val = castTo(val, fn->getArg(i)->getType());
             llvmArgs.push_back(val);
         }
 
-        return builder.CreateCall(callee, llvmArgs);
+        return builder.CreateCall(fn, llvmArgs);
     }
 
     void Codegen::genFn(const std::string &name, const std::vector<ArgNode *> &args, const Type &returnType, StatementListNode *body,
