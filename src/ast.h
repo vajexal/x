@@ -116,7 +116,7 @@ namespace X {
             StatementList,
             Unary,
             Binary,
-            Declare,
+            Decl,
             Assign,
             Var,
             If,
@@ -256,15 +256,15 @@ namespace X {
         }
     };
 
-    class DeclareNode : public Node {
+    class DeclNode : public Node {
         Type type;
         std::string name;
         ExprNode *expr;
 
     public:
-        DeclareNode(Type type, std::string name, ExprNode *expr = nullptr) :
-                Node(NodeKind::Declare), type(std::move(type)), name(std::move(name)), expr(expr) {}
-        ~DeclareNode() {
+        DeclNode(Type type, std::string name, ExprNode *expr = nullptr) :
+                Node(NodeKind::Decl), type(std::move(type)), name(std::move(name)), expr(expr) {}
+        ~DeclNode() {
             delete expr;
         }
 
@@ -276,7 +276,7 @@ namespace X {
         ExprNode *getExpr() const { return expr; }
 
         static bool classof(const Node *node) {
-            return node->getKind() == NodeKind::Declare;
+            return node->getKind() == NodeKind::Decl;
         }
     };
 

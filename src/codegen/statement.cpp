@@ -3,7 +3,7 @@
 #include "utils.h"
 
 namespace X::Codegen {
-    llvm::Value *Codegen::gen(DeclareNode *node) {
+    llvm::Value *Codegen::gen(DeclNode *node) {
         if (node->getType().getTypeID() == Type::TypeID::VOID) {
             throw InvalidTypeException();
         }

@@ -97,7 +97,7 @@ namespace X::Codegen {
         llvm::Value *gen(ScalarNode *node);
         llvm::Value *gen(UnaryNode *node);
         llvm::Value *gen(BinaryNode *node);
-        llvm::Value *gen(DeclareNode *node);
+        llvm::Value *gen(DeclNode *node);
         llvm::Value *gen(AssignNode *node);
         llvm::Value *gen(VarNode *node);
         llvm::Value *gen(IfNode *node);

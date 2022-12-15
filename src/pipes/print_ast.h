@@ -26,7 +26,7 @@ namespace X::Pipes {
         void printNode(ScalarNode *node, int level);
         void printNode(UnaryNode *node, int level);
         void printNode(BinaryNode *node, int level);
-        void printNode(DeclareNode *node, int level);
+        void printNode(DeclNode *node, int level);
         void printNode(AssignNode *node, int level);
         void printNode(VarNode *node, int level);
         void printNode(IfNode *node, int level);

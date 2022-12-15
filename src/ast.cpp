@@ -213,7 +213,7 @@ namespace X {
     void StatementListNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<StatementListNode>(this, level); }
     void UnaryNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<UnaryNode>(this, level); }
     void BinaryNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<BinaryNode>(this, level); }
-    void DeclareNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<DeclareNode>(this, level); }
+    void DeclNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<DeclNode>(this, level); }
     void AssignNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<AssignNode>(this, level); }
     void VarNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<VarNode>(this, level); }
     void IfNode::print(Pipes::PrintAst &astPrinter, int level) { astPrinter.print<IfNode>(this, level); }
@@ -249,7 +249,7 @@ namespace X {
     llvm::Value *StatementListNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
     llvm::Value *UnaryNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
     llvm::Value *BinaryNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
-    llvm::Value *DeclareNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
+    llvm::Value *DeclNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
     llvm::Value *AssignNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
     llvm::Value *VarNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
     llvm::Value *IfNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }

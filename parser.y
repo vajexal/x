@@ -89,7 +89,7 @@
 %nterm <ExprNode *> expr
 %nterm <Type> type
 %nterm <Type> array_type
-%nterm <DeclareNode *> var_decl
+%nterm <DeclNode *> var_decl
 %nterm <VarNode *> identifier
 %nterm <ScalarNode *> scalar
 %nterm <ExprNode *> dereferenceable
@@ -231,8 +231,8 @@ array_type:
 ;
 
 var_decl:
-type IDENTIFIER '=' expr { $$ = new DeclareNode(std::move($1), std::move($2), $4); }
-| type IDENTIFIER { $$ = new DeclareNode(std::move($1), std::move($2)); }
+type IDENTIFIER '=' expr { $$ = new DeclNode(std::move($1), std::move($2), $4); }
+| type IDENTIFIER { $$ = new DeclNode(std::move($1), std::move($2)); }
 ;
 
 identifier:
