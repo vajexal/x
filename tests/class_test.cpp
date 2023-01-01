@@ -35,21 +35,6 @@ fn main() void {
 )code", "10");
 }
 
-TEST_F(ClassTest, constructorArgsMismatch) {
-    try {
-        compiler.compile(R"code(
-class Foo {}
-
-fn main() void {
-    Foo foo = new Foo(10)
-}
-)code");
-        FAIL() << "expected CodegenException";
-    } catch (const Codegen::CodegenException &e) {
-        ASSERT_STREQ(e.what(), "constructor args mismatch");
-    }
-}
-
 TEST_F(ClassTest, constructorIsNotCallable) {
     try {
         compiler.compile(R"code(
@@ -479,8 +464,8 @@ fn main() void {
     Foo foo = new Foo()
 }
 )code");
-        FAIL() << "expected ClassNotFoundException";
-    } catch (const Codegen::ClassNotFoundException &e) {
+        FAIL() << "expected exception";
+    } catch (const std::exception &e) {
         ASSERT_STREQ(e.what(), "class Foo not found");
     }
 }

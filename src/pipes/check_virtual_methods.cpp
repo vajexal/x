@@ -2,6 +2,8 @@
 
 #include <fmt/core.h>
 
+#include "utils.h"
+
 namespace X::Pipes {
     StatementListNode *CheckVirtualMethods::handle(StatementListNode *node) {
         for (auto child: node->getChildren()) {

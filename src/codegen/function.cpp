@@ -43,9 +43,6 @@ namespace X::Codegen {
         if (!fn) {
             throw CodegenException("called function is not found: " + name);
         }
-        if (fn->arg_size() != args.size()) {
-            throw CodegenException("fn args mismatch");
-        }
 
         std::vector<llvm::Value *> llvmArgs;
         llvmArgs.reserve(args.size());
@@ -106,10 +103,6 @@ namespace X::Codegen {
             paramTypes.push_back(thisType->getPointerTo());
         }
         for (auto arg: args) {
-            if (arg->getType().getTypeID() == Type::TypeID::VOID) {
-                throw InvalidTypeException();
-            }
-
             paramTypes.push_back(mapArgType(arg->getType()));
         }
 

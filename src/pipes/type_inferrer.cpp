@@ -1,0 +1,642 @@
+#include "type_inferrer.h"
+
+#include <fmt/core.h>
+
+#include "runtime/runtime.h"
+#include "utils.h"
+
+namespace X::Pipes {
+    StatementListNode *TypeInferrer::handle(StatementListNode *node) {
+        fnTypes["exit"] = {{}, Type::voidTy()};
+
+        classMethodTypes[Runtime::String::CLASS_NAME].insert({
+                                                                     {"concat", {{Type::scalar(Type::TypeID::STRING)}, Type::scalar(Type::TypeID::STRING)}},
+                                                                     {"length", {{}, Type::scalar(Type::TypeID::INT)}},
+                                                                     {"isEmpty", {{}, Type::scalar(Type::TypeID::BOOL)}},
+                                                                     {"trim", {{}, Type::scalar(Type::TypeID::BOOL)}},
+                                                                     {"toLower", {{}, Type::scalar(Type::TypeID::STRING)}},
+                                                                     {"toUpper", {{}, Type::scalar(Type::TypeID::STRING)}},
+                                                                     {"index", {{Type::scalar(Type::TypeID::STRING)}, Type::scalar(Type::TypeID::INT)}},
+                                                                     {"contains", {{Type::scalar(Type::TypeID::STRING)}, Type::scalar(Type::TypeID::BOOL)}},
+                                                                     {"startsWith", {{Type::scalar(Type::TypeID::STRING)}, Type::scalar(Type::TypeID::BOOL)}},
+                                                                     {"endsWith", {{Type::scalar(Type::TypeID::STRING)}, Type::scalar(Type::TypeID::BOOL)}},
+                                                                     {"substring", {{Type::scalar(Type::TypeID::INT), Type::scalar(Type::TypeID::INT)},
+                                                                                    Type::scalar(Type::TypeID::STRING)}},
+                                                             });
+
+        classMethodTypes[Runtime::Array::CLASS_NAME].insert({
+                                                                    {"length", {{}, Type::scalar(Type::TypeID::INT)}},
+                                                                    {"isEmpty", {{}, Type::scalar(Type::TypeID::BOOL)}},
+                                                            });
+
+        infer(node);
+
+        return node;
+    }
+
+    Type TypeInferrer::infer(Node *node) {
+        throw TypeInferrerException("can't infer node");
+    }
+
+    Type TypeInferrer::infer(StatementListNode *node) {
+        for (auto child: node->getChildren()) {
+            child->infer(*this);
+        }
+
+        return Type::voidTy();
+    }
+
+    Type TypeInferrer::infer(ScalarNode *node) {
+        return node->getType();
+    }
+
+    Type TypeInferrer::infer(UnaryNode *node) {
+        auto exprType = node->getExpr()->infer(*this);
+
+        switch (node->getType()) {
+            case OpType::PRE_INC:
+            case OpType::PRE_DEC:
+            case OpType::POST_INC:
+            case OpType::POST_DEC:
+                if (!exprType.isOneOf(Type::TypeID::INT, Type::TypeID::FLOAT)) {
+                    throw InvalidTypeException();
+                }
+
+                return exprType;
+            case OpType::NOT:
+                if (exprType.isOneOf(Type::TypeID::VOID, Type::TypeID::CLASS)) {
+                    throw InvalidTypeException();
+                }
+
+                return Type::scalar(Type::TypeID::BOOL);
+            default:
+                throw TypeInferrerException("invalid op type");
+        }
+    }
+
+    Type TypeInferrer::infer(BinaryNode *node) {
+        auto lhs = node->getLhs()->infer(*this);
+        auto rhs = node->getRhs()->infer(*this);
+
+        switch (node->getType()) {
+            case OpType::OR:
+            case OpType::AND:
+                if (lhs.isOneOf(Type::TypeID::VOID, Type::TypeID::CLASS) || rhs.isOneOf(Type::TypeID::VOID, Type::TypeID::CLASS)) {
+                    throw InvalidTypeException();
+                }
+
+                return Type::scalar(Type::TypeID::BOOL);
+            case OpType::EQUAL:
+            case OpType::NOT_EQUAL:
+                if (lhs.isOneOf(Type::TypeID::VOID, Type::TypeID::CLASS) || rhs.isOneOf(Type::TypeID::VOID, Type::TypeID::CLASS)) {
+                    throw InvalidTypeException();
+                }
+
+                if (lhs != rhs) {
+                    throw TypeInferrerException("incompatible types");
+                }
+
+                return Type::scalar(Type::TypeID::BOOL);
+            case OpType::PLUS:
+            case OpType::MINUS:
+                if (lhs.getTypeID() == Type::TypeID::STRING && rhs.getTypeID() == Type::TypeID::STRING) {
+                    return Type::scalar(Type::TypeID::STRING);
+                }
+
+                if (lhs.isOneOf(Type::TypeID::INT, Type::TypeID::FLOAT) && rhs.isOneOf(Type::TypeID::INT, Type::TypeID::FLOAT)) {
+                    if (lhs.getTypeID() == Type::TypeID::FLOAT || rhs.getTypeID() == Type::TypeID::FLOAT) {
+                        return Type::scalar(Type::TypeID::FLOAT);
+                    }
+
+                    return Type::scalar(Type::TypeID::INT);
+                }
+
+                throw InvalidTypeException();
+            case OpType::MUL:
+                if (lhs.isOneOf(Type::TypeID::INT, Type::TypeID::FLOAT) && rhs.isOneOf(Type::TypeID::INT, Type::TypeID::FLOAT)) {
+                    if (lhs.getTypeID() == Type::TypeID::FLOAT || rhs.getTypeID() == Type::TypeID::FLOAT) {
+                        return Type::scalar(Type::TypeID::FLOAT);
+                    }
+
+                    return Type::scalar(Type::TypeID::INT);
+                }
+
+                throw InvalidTypeException();
+            case OpType::DIV:
+            case OpType::POW:
+                if (lhs.isOneOf(Type::TypeID::INT, Type::TypeID::FLOAT) && rhs.isOneOf(Type::TypeID::INT, Type::TypeID::FLOAT)) {
+                    return Type::scalar(Type::TypeID::FLOAT);
+                }
+
+                throw InvalidTypeException();
+            case OpType::SMALLER:
+            case OpType::SMALLER_OR_EQUAL:
+            case OpType::GREATER:
+            case OpType::GREATER_OR_EQUAL:
+                if (lhs.isOneOf(Type::TypeID::INT, Type::TypeID::FLOAT) && rhs.isOneOf(Type::TypeID::INT, Type::TypeID::FLOAT)) {
+                    return Type::scalar(Type::TypeID::BOOL);
+                }
+
+                throw InvalidTypeException();
+            default:
+                throw TypeInferrerException("invalid op type");
+        }
+    }
+
+    Type TypeInferrer::infer(DeclNode *node) {
+        auto &type = node->getType();
+
+        if (type.getTypeID() == Type::TypeID::VOID || (type.getTypeID() == Type::TypeID::ARRAY && type.getSubtype()->getTypeID() == Type::TypeID::VOID)) {
+            throw InvalidTypeException();
+        }
+
+        if (node->getExpr()) {
+            auto exprType = node->getExpr()->infer(*this);
+
+            if (!canCastTo(exprType, type)) {
+                throw InvalidTypeException();
+            }
+        }
+
+        vars[node->getName()] = type;
+
+        return Type::voidTy();
+    }
+
+    Type TypeInferrer::infer(AssignNode *node) {
+        auto exprType = node->getExpr()->infer(*this);
+        auto varType = getVarType(node->getName());
+
+        if (!canCastTo(exprType, varType)) {
+            throw InvalidTypeException();
+        }
+
+        return Type::voidTy();
+    }
+
+    Type TypeInferrer::infer(VarNode *node) {
+        return getVarType(node->getName());
+    }
+
+    Type TypeInferrer::infer(IfNode *node) {
+        auto condType = node->getCond()->infer(*this);
+        if (condType.isOneOf(Type::TypeID::VOID, Type::TypeID::CLASS)) {
+            throw InvalidTypeException();
+        }
+
+        node->getThenNode()->infer(*this);
+        if (node->getElseNode()) {
+            node->getElseNode()->infer(*this);
+        }
+
+        return Type::voidTy();
+    }
+
+    Type TypeInferrer::infer(WhileNode *node) {
+        auto condType = node->getCond()->infer(*this);
+        if (condType.isOneOf(Type::TypeID::VOID, Type::TypeID::CLASS)) {
+            throw InvalidTypeException();
+        }
+
+        node->getBody()->infer(*this);
+
+        return Type::voidTy();
+    }
+
+    Type TypeInferrer::infer(ForNode *node) {
+        auto exprType = node->getExpr()->infer(*this);
+
+        // for expression must be array or range
+        if (exprType.getTypeID() != Type::TypeID::ARRAY &&
+            !(exprType.getTypeID() == Type::TypeID::CLASS && exprType.getClassName() == Runtime::Range::CLASS_NAME)) {
+            throw TypeInferrerException("for expression must be array or range");
+        }
+
+        if (node->hasIdx()) {
+            vars[node->getIdx()] = Type::scalar(Type::TypeID::INT);
+        }
+        const auto &varType = exprType.getTypeID() == Type::TypeID::ARRAY ? *exprType.getSubtype() : Type::scalar(Type::TypeID::INT);
+        vars[node->getVal()] = varType;
+
+        node->getBody()->infer(*this);
+
+        if (node->hasIdx()) {
+            vars.erase(node->getIdx());
+        }
+        vars.erase(node->getVal());
+
+        return Type::voidTy();
+    }
+
+    Type TypeInferrer::infer(RangeNode *node) {
+        auto startType = node->getStart() ? node->getStart()->infer(*this) : Type::scalar(Type::TypeID::INT);
+        auto stopType = node->getStop()->infer(*this);
+        auto stepType = node->getStep() ? node->getStep()->infer(*this) : Type::scalar(Type::TypeID::INT);
+
+        if (startType.getTypeID() != Type::TypeID::INT) {
+            throw TypeInferrerException("range start argument must be int");
+        }
+        if (stopType.getTypeID() != Type::TypeID::INT) {
+            throw TypeInferrerException("range stop argument must be int");
+        }
+        if (stepType.getTypeID() != Type::TypeID::INT) {
+            throw TypeInferrerException("range step argument must be int");
+        }
+
+        return Type::klass(Runtime::Range::CLASS_NAME);
+    }
+
+    Type TypeInferrer::infer(BreakNode *node) {
+        return Type::voidTy();
+    }
+
+    Type TypeInferrer::infer(ContinueNode *node) {
+        return Type::voidTy();
+    }
+
+    Type TypeInferrer::infer(ArgNode *node) {
+        auto &type = node->getType();
+        if (type.getTypeID() == Type::TypeID::VOID || (type.getTypeID() == Type::TypeID::ARRAY && type.getSubtype()->getTypeID() == Type::TypeID::VOID)) {
+            throw InvalidTypeException();
+        }
+
+        return type;
+    }
+
+    Type TypeInferrer::infer(FnDeclNode *node) {
+        std::vector<Type> args;
+        args.reserve(node->getArgs().size());
+
+        for (auto arg: node->getArgs()) {
+            args.push_back(arg->infer(*this));
+        }
+
+        auto &retType = node->getReturnType();
+        checkIfTypeIsValid(retType);
+        fnTypes[node->getName()] = {args, retType};
+
+        return Type::voidTy();
+    }
+
+    Type TypeInferrer::infer(FnDefNode *node) {
+        std::vector<Type> args;
+        args.reserve(node->getArgs().size());
+
+        for (auto arg: node->getArgs()) {
+            auto argType = arg->infer(*this);
+            vars[arg->getName()] = argType;
+            args.push_back(argType);
+        }
+
+        auto &retType = node->getReturnType();
+        checkIfTypeIsValid(retType);
+        fnTypes[node->getName()] = {args, retType};
+        currentFnRetType = retType;
+
+        node->getBody()->infer(*this);
+
+        vars.clear();
+
+        return Type::voidTy();
+    }
+
+    Type TypeInferrer::infer(FnCallNode *node) {
+        auto &fnType = getFnType(node->getName());
+        checkFnCall(fnType, node->getArgs());
+        return fnType.retType;
+    }
+
+    Type TypeInferrer::infer(ReturnNode *node) {
+        auto retType = node->getVal()->infer(*this);
+
+        if (retType.getTypeID() == Type::TypeID::VOID) {
+            throw InvalidTypeException();
+        }
+
+        if (!canCastTo(retType, currentFnRetType)) {
+            throw InvalidTypeException();
+        }
+
+        return std::move(retType);
+    }
+
+    Type TypeInferrer::infer(PrintlnNode *node) {
+        auto type = node->getVal()->infer(*this);
+
+        if (type.isOneOf(Type::TypeID::VOID, Type::TypeID::CLASS, Type::TypeID::ARRAY)) {
+            throw InvalidTypeException();
+        }
+
+        return Type::voidTy();
+    }
+
+    Type TypeInferrer::infer(CommentNode *node) {
+        return Type::voidTy();
+    }
+
+    Type TypeInferrer::infer(ClassNode *node) {
+        thisName = node->getName();
+        classes.insert(thisName);
+
+        if (node->hasParent()) {
+            classProps[thisName] = classProps[node->getParent()];
+            classMethodTypes[thisName] = classMethodTypes[node->getParent()];
+        }
+
+        node->getBody()->infer(*this);
+
+        if (!classMethodTypes[thisName].contains(CONSTRUCTOR_FN_NAME)) {
+            classMethodTypes[thisName][CONSTRUCTOR_FN_NAME] = {{}, Type::voidTy()};
+        }
+
+        thisName.clear();
+
+        return Type::voidTy();
+    }
+
+    Type TypeInferrer::infer(PropDeclNode *node) {
+        auto &type = node->getType();
+        if (type.getTypeID() == Type::TypeID::VOID || (type.getTypeID() == Type::TypeID::ARRAY && type.getSubtype()->getTypeID() == Type::TypeID::VOID)) {
+            throw InvalidTypeException();
+        }
+
+        classProps[thisName][node->getName()] = type;
+
+        return Type::voidTy();
+    }
+
+    Type TypeInferrer::infer(MethodDefNode *node) {
+        std::vector<Type> args;
+        args.reserve(node->getFnDef()->getArgs().size());
+
+        for (auto arg: node->getFnDef()->getArgs()) {
+            auto argType = arg->infer(*this);
+            vars[arg->getName()] = argType;
+            args.push_back(argType);
+        }
+
+        auto &retType = node->getFnDef()->getReturnType();
+        checkIfTypeIsValid(retType);
+        classMethodTypes[thisName][node->getFnDef()->getName()] = {args, retType};
+        currentFnRetType = retType;
+
+        node->getFnDef()->getBody()->infer(*this);
+
+        vars.clear();
+
+        return Type::voidTy();
+    }
+
+    Type TypeInferrer::infer(FetchPropNode *node) {
+        auto objType = node->getObj()->infer(*this);
+        if (objType.getTypeID() != Type::TypeID::CLASS) {
+            throw InvalidTypeException();
+        }
+
+        return getPropType(objType.getClassName(), node->getName());
+    }
+
+    Type TypeInferrer::infer(FetchStaticPropNode *node) {
+        return getPropType(node->getClassName(), node->getPropName());
+    }
+
+    Type TypeInferrer::infer(MethodCallNode *node) {
+        auto objType = node->getObj()->infer(*this);
+        const auto &className = getObjectClassName(objType);
+
+        auto &fnType = getMethodType(className, node->getName());
+        checkFnCall(fnType, node->getArgs());
+        return fnType.retType;
+    }
+
+    Type TypeInferrer::infer(StaticMethodCallNode *node) {
+        auto &fnType = getMethodType(node->getClassName(), node->getMethodName());
+        checkFnCall(fnType, node->getArgs());
+        return fnType.retType;
+    }
+
+    Type TypeInferrer::infer(AssignPropNode *node) {
+        auto objType = node->getObj()->infer(*this);
+        if (objType.getTypeID() != Type::TypeID::CLASS) {
+            throw InvalidTypeException();
+        }
+
+        auto &propType = getPropType(objType.getClassName(), node->getName());
+        auto exprType = node->getExpr()->infer(*this);
+
+        if (!canCastTo(exprType, propType)) {
+            throw InvalidTypeException();
+        }
+
+        return Type::voidTy();
+    }
+
+    Type TypeInferrer::infer(AssignStaticPropNode *node) {
+        auto &propType = getPropType(node->getClassName(), node->getPropName());
+        auto exprType = node->getExpr()->infer(*this);
+
+        if (!canCastTo(exprType, propType)) {
+            throw InvalidTypeException();
+        }
+
+        return Type::voidTy();
+    }
+
+    Type TypeInferrer::infer(NewNode *node) {
+        auto &name = node->getName();
+        if (!classes.contains(name)) {
+            throw TypeInferrerException(fmt::format("class {} not found", name));
+        }
+
+        auto &fnType = getMethodType(name, CONSTRUCTOR_FN_NAME);
+        checkFnCall(fnType, node->getArgs());
+        return Type::klass(name);
+    }
+
+    Type TypeInferrer::infer(MethodDeclNode *node) {
+        std::vector<Type> args;
+        args.reserve(node->getFnDecl()->getArgs().size());
+
+        for (auto arg: node->getFnDecl()->getArgs()) {
+            args.push_back(arg->infer(*this));
+        }
+
+        auto &retType = node->getFnDecl()->getReturnType();
+        checkIfTypeIsValid(retType);
+        classMethodTypes[thisName][node->getFnDecl()->getName()] = {args, retType};
+
+        return Type::voidTy();
+    }
+
+    Type TypeInferrer::infer(InterfaceNode *node) {
+        thisName = node->getName();
+
+        node->getBody()->infer(*this);
+
+        thisName.clear();
+
+        return Type::voidTy();
+    }
+
+    Type TypeInferrer::infer(FetchArrNode *node) {
+        auto arrType = node->getArr()->infer(*this);
+        if (arrType.getTypeID() != Type::TypeID::ARRAY) {
+            throw InvalidTypeException();
+        }
+
+        auto idxType = node->getIdx()->infer(*this);
+        if (idxType.getTypeID() != Type::TypeID::INT) {
+            throw InvalidTypeException();
+        }
+
+        return *arrType.getSubtype();
+    }
+
+    Type TypeInferrer::infer(AssignArrNode *node) {
+        auto arrType = node->getArr()->infer(*this);
+        if (arrType.getTypeID() != Type::TypeID::ARRAY) {
+            throw InvalidTypeException();
+        }
+
+        auto idxType = node->getIdx()->infer(*this);
+        if (idxType.getTypeID() != Type::TypeID::INT) {
+            throw InvalidTypeException();
+        }
+
+        auto exprType = node->getExpr()->infer(*this);
+        if (!canCastTo(exprType, *arrType.getSubtype())) {
+            throw InvalidTypeException();
+        }
+
+        return Type::voidTy();
+    }
+
+    Type TypeInferrer::infer(AppendArrNode *node) {
+        auto arrType = node->getArr()->infer(*this);
+        if (arrType.getTypeID() != Type::TypeID::ARRAY) {
+            throw InvalidTypeException();
+        }
+
+        auto exprType = node->getExpr()->infer(*this);
+        if (!canCastTo(exprType, *arrType.getSubtype())) {
+            throw InvalidTypeException();
+        }
+
+        return Type::voidTy();
+    }
+
+    void TypeInferrer::checkIfTypeIsValid(const Type &type) const {
+        if (type.getTypeID() == Type::TypeID::ARRAY && type.getSubtype()->getTypeID() == Type::TypeID::VOID) {
+            throw InvalidTypeException();
+        }
+    }
+
+    void TypeInferrer::checkFnCall(const FnType &fnType, const ExprList &args) {
+        if (fnType.args.size() != args.size()) {
+            throw TypeInferrerException("call args mismatch");
+        }
+
+        for (auto i = 0; i < fnType.args.size(); i++) {
+            auto argType = args[i]->infer(*this);
+            if (!canCastTo(argType, fnType.args[i])) {
+                throw InvalidTypeException();
+            }
+        }
+    }
+
+    const Type TypeInferrer::getVarType(const std::string &name) const {
+        auto varIt = vars.find(name);
+        if (varIt != vars.cend()) {
+            return varIt->second;
+        }
+
+        if (!thisName.empty()) {
+            auto &props = classProps.at(thisName);
+            auto propIt = props.find(name);
+            if (propIt != props.cend()) {
+                return propIt->second;
+            }
+        }
+
+        throw TypeInferrerException(fmt::format("var {} not found", name));
+    }
+
+    const FnType &TypeInferrer::getFnType(const std::string &fnName) const {
+        auto fnTypeIt = fnTypes.find(fnName);
+        if (fnTypeIt != fnTypes.cend()) {
+            return fnTypeIt->second;
+        }
+
+        if (!thisName.empty()) {
+            auto methods = classMethodTypes.at(thisName);
+            auto methodIt = methods.find(fnName);
+            if (methodIt != methods.cend()) {
+                return methodIt->second;
+            }
+        }
+
+        throw TypeInferrerException(fmt::format("fn {} not found", fnName));
+    }
+
+    const FnType &TypeInferrer::getMethodType(const std::string &className, const std::string &methodName) const {
+        auto methodTypesIt = classMethodTypes.find(className);
+        if (methodTypesIt == classMethodTypes.cend()) {
+            throw TypeInferrerException(fmt::format("class {} not found", className));
+        }
+
+        auto fnTypeIt = methodTypesIt->second.find(methodName);
+        if (fnTypeIt == methodTypesIt->second.cend()) {
+            throw TypeInferrerException(fmt::format("method {}::{} not found", className, methodName));
+        }
+
+        return fnTypeIt->second;
+    }
+
+    const Type &TypeInferrer::getPropType(const std::string &className, const std::string &propName) const {
+        auto classPropsIt = classProps.find(className);
+        if (classPropsIt == classProps.cend()) {
+            throw TypeInferrerException(fmt::format("class {} not found", className));
+        }
+
+        auto propTypeIt = classPropsIt->second.find(propName);
+        if (propTypeIt == classPropsIt->second.cend()) {
+            throw TypeInferrerException(fmt::format("prop {}::{} not found", className, propName));
+        }
+
+        return propTypeIt->second;
+    }
+
+    std::string TypeInferrer::getObjectClassName(const Type &objType) const {
+        switch (objType.getTypeID()) {
+            case Type::TypeID::CLASS:
+                return objType.getClassName();
+            case Type::TypeID::STRING:
+                return Runtime::String::CLASS_NAME;
+            case Type::TypeID::ARRAY:
+                return Runtime::Array::CLASS_NAME;
+            default:
+                throw InvalidTypeException();
+        }
+    }
+
+    bool TypeInferrer::canCastTo(const Type &type, const Type &expectedType) const {
+        if (type == expectedType) {
+            return true;
+        }
+
+        if (type.getTypeID() == Type::TypeID::INT && expectedType.getTypeID() == Type::TypeID::FLOAT) {
+            return true;
+        }
+
+        if (type.getTypeID() == Type::TypeID::CLASS && expectedType.getTypeID() == Type::TypeID::CLASS && instanceof(type, expectedType)) {
+            return true;
+        }
+
+        return false;
+    }
+
+    bool TypeInferrer::instanceof(const Type &instanceType, const Type &type) const {
+        return compilerRuntime.extendedClasses[instanceType.getClassName()].contains(type.getClassName()) ||
+               compilerRuntime.implementedInterfaces[instanceType.getClassName()].contains(type.getClassName());
+    }
+}

@@ -36,7 +36,7 @@ namespace X::Runtime {
                 false
         );
         auto fn = llvm::Function::Create(fnType, llvm::Function::ExternalLinkage,
-                                         mangler.mangleMethod(arrayType->getName().str(), "construct"), module);
+                                         mangler.mangleMethod(arrayType->getName().str(), CONSTRUCTOR_FN_NAME), module);
 
         auto that = fn->getArg(0);
         auto len = fn->getArg(1);

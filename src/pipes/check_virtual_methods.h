@@ -10,8 +10,6 @@
 
 namespace X::Pipes {
     class CheckVirtualMethods : public Pipe {
-        static inline const std::string CONSTRUCTOR_FN_NAME = "construct";
-
         CompilerRuntime &compilerRuntime;
         std::map<std::string, ClassNode *> classes;
 

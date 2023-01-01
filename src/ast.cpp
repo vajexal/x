@@ -2,6 +2,7 @@
 
 #include "pipes/print_ast.h"
 #include "codegen/codegen.h"
+#include "pipes/type_inferrer.h"
 #include "utils.h"
 
 namespace X {
@@ -28,6 +29,13 @@ namespace X {
         Type type;
         type.id = TypeID::ARRAY;
         type.subtype = subtype;
+
+        return std::move(type);
+    }
+
+    Type Type::voidTy() {
+        Type type;
+        type.id = TypeID::VOID;
 
         return std::move(type);
     }
@@ -280,4 +288,40 @@ namespace X {
     llvm::Value *FetchArrNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
     llvm::Value *AssignArrNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
     llvm::Value *AppendArrNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
+
+    Type ScalarNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
+    Type StatementListNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
+    Type UnaryNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
+    Type BinaryNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
+    Type DeclNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
+    Type AssignNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
+    Type VarNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
+    Type IfNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
+    Type WhileNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
+    Type ForNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
+    Type RangeNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
+    Type BreakNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
+    Type ContinueNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
+    Type ArgNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
+    Type FnDeclNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
+    Type FnDefNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
+    Type FnCallNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
+    Type ReturnNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
+    Type PrintlnNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
+    Type CommentNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
+    Type ClassNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
+    Type PropDeclNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
+    Type MethodDefNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
+    Type FetchPropNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
+    Type FetchStaticPropNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
+    Type MethodCallNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
+    Type StaticMethodCallNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
+    Type AssignPropNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
+    Type AssignStaticPropNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
+    Type NewNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
+    Type MethodDeclNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
+    Type InterfaceNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
+    Type FetchArrNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
+    Type AssignArrNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
+    Type AppendArrNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
 }

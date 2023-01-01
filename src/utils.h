@@ -7,6 +7,8 @@ namespace X {
     class MethodDeclNode;
     class MethodDefNode;
 
+    inline const std::string CONSTRUCTOR_FN_NAME = "construct";
+
     bool compareDeclAndDef(MethodDeclNode *declNode, MethodDefNode *defNode);
     llvm::Type *deref(llvm::Type *type);
 }

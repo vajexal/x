@@ -40,10 +40,6 @@ namespace X::Codegen {
         }
 
         for (auto prop: node->getProps()) {
-            if (prop->getType().getTypeID() == Type::TypeID::VOID) {
-                throw InvalidTypeException();
-            }
-
             auto &propName = prop->getName();
             auto type = mapType(prop->getType());
             if (prop->getIsStatic()) {
@@ -397,10 +393,6 @@ namespace X::Codegen {
             throw MethodNotFoundException(getClassName(obj), methodName);
         }
 
-        if (fnType->getNumParams() != (args.size() + 1)) {
-            throw CodegenException("fn args mismatch");
-        }
-
         auto interfaceDecl = findInterfaceDecl(type->getStructName().str());
         if (interfaceDecl) {
             auto objPtr = builder.CreateStructGEP(type, obj, 1);
@@ -428,10 +420,6 @@ namespace X::Codegen {
         auto [fn, fnType, thisType] = findMethod(classDecl.type, methodName);
         if (!fn) {
             throw MethodNotFoundException(className, methodName);
-        }
-
-        if (fnType->getNumParams() != args.size()) {
-            throw CodegenException("fn args mismatch");
         }
 
         std::vector<llvm::Value *> llvmArgs;

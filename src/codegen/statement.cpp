@@ -4,10 +4,6 @@
 
 namespace X::Codegen {
     llvm::Value *Codegen::gen(DeclNode *node) {
-        if (node->getType().getTypeID() == Type::TypeID::VOID) {
-            throw InvalidTypeException();
-        }
-
         auto &name = node->getName();
         if (namedValues.contains(name)) {
             throw VarAlreadyExistsException(name);
@@ -118,14 +114,7 @@ namespace X::Codegen {
         auto &valVarName = node->getVal();
         auto isRange = llvm::isa<RangeNode>(node->getExpr());
         auto expr = node->getExpr()->gen(*this);
-        if (!expr) {
-            throw InvalidTypeException();
-        }
         auto exprType = deref(expr->getType());
-        if (!Runtime::Array::isArrayType(exprType) && !isRange) {
-            // todo expected type
-            throw InvalidTypeException();
-        }
 
         auto parentFunction = builder.GetInsertBlock()->getParent();
         auto loopInitBB = llvm::BasicBlock::Create(context, "loopInit", parentFunction);
@@ -229,21 +218,10 @@ namespace X::Codegen {
         auto start = node->getStart() ?
                      node->getStart()->gen(*this) :
                      llvm::ConstantInt::getSigned(llvm::Type::getInt64Ty(context), 0);
-        if (!start->getType()->isIntegerTy(INTEGER_BIT_WIDTH)) {
-            throw InvalidTypeException();
-        }
-
         auto stop = node->getStop()->gen(*this);
-        if (!stop->getType()->isIntegerTy(INTEGER_BIT_WIDTH)) {
-            throw InvalidTypeException();
-        }
-
         auto step = node->getStep() ?
                     node->getStep()->gen(*this) :
                     llvm::ConstantInt::getSigned(llvm::Type::getInt64Ty(context), 1);
-        if (!step->getType()->isIntegerTy(INTEGER_BIT_WIDTH)) {
-            throw InvalidTypeException();
-        }
 
         auto rangeCreateFn = module.getFunction(mangler.mangleMethod(Runtime::Range::CLASS_NAME, "create"));
         return builder.CreateCall(rangeCreateFn, {start, stop, step});

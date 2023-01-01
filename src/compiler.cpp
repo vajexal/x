@@ -7,6 +7,7 @@
 #include "pipes/check_interfaces.h"
 #include "pipes/check_abstract_classes.h"
 #include "pipes/check_virtual_methods.h"
+#include "pipes/type_inferrer.h"
 #include "pipes/code_generator.h"
 
 namespace X {
@@ -20,6 +21,7 @@ namespace X {
                 .pipe(new Pipes::CheckInterfaces(compilerRuntime))
                 .pipe(new Pipes::CheckAbstractClasses())
                 .pipe(new Pipes::CheckVirtualMethods(compilerRuntime))
+                .pipe(new Pipes::TypeInferrer(compilerRuntime))
                 .pipe(new Pipes::CodeGenerator(compilerRuntime, sourceName))
                 .get();
 

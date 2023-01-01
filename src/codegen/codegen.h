@@ -68,7 +68,6 @@ namespace X::Codegen {
     };
 
     class Codegen {
-        static inline const std::string CONSTRUCTOR_FN_NAME = "construct";
         static const int INTEGER_BIT_WIDTH = 64;
         static inline const std::string MAIN_FN_NAME = "main";
 

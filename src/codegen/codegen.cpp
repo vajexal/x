@@ -222,7 +222,6 @@ namespace X::Codegen {
             return compilerRuntime.implementedInterfaces[currentClassDecl.name].contains(expectedInterfaceDecl->name);
         }
 
-
         auto &expectedClassDecl = getClassDecl(expectedTypeName);
         return compilerRuntime.extendedClasses[currentClassDecl.name].contains(expectedClassDecl.name);
     }

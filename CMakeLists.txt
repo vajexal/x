@@ -48,6 +48,7 @@ set(X_SOURCES lexer.cpp
         src/pipes/check_interfaces.cpp
         src/pipes/check_abstract_classes.cpp
         src/pipes/check_virtual_methods.cpp
+        src/pipes/type_inferrer.cpp
         src/pipes/code_generator.cpp)
 
 set(X_LIBS LLVM fmt::fmt)
@@ -98,6 +99,7 @@ add_executable(x_test ${X_SOURCES}
         tests/class_test.cpp
         tests/check_interfaces_test.cpp
         tests/check_abstract_classes_test.cpp
+        tests/type_inferrer_test.cpp
         tests/tour_test.cpp)
 target_link_libraries(x_test GTest::gtest_main ${X_LIBS})
 

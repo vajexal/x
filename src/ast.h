@@ -65,10 +65,20 @@ namespace X {
         static Type scalar(TypeID typeID);
         static Type klass(std::string className);
         static Type array(Type *subtype);
+        static Type voidTy();
 
         TypeID getTypeID() const { return id; }
         const std::string &getClassName() const { return className.value(); }
         Type *getSubtype() const { return subtype; }
+
+        bool isOneOf(TypeID typeId) {
+            return id == typeId;
+        }
+
+        template<typename... Args>
+        bool isOneOf(TypeID typeID, Args... ids) {
+            return id == typeID || isOneOf(ids...);
+        }
 
         bool operator==(const Type &other) const;
         bool operator!=(const Type &other) const;
@@ -104,6 +114,7 @@ namespace X {
 
     namespace Pipes {
         class PrintAst;
+        class TypeInferrer;
     }
     namespace Codegen {
         class Codegen;
@@ -158,6 +169,7 @@ namespace X {
 
         virtual void print(Pipes::PrintAst &astPrinter, int level = 0) = 0;
         virtual llvm::Value *gen(Codegen::Codegen &codegen) = 0;
+        virtual Type infer(Pipes::TypeInferrer &typeInferrer) = 0;
 
         virtual bool isTerminate() { return false; }
 
@@ -178,6 +190,7 @@ namespace X {
 
         void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
+        Type infer(Pipes::TypeInferrer &typeInferrer) override;
 
         const Type &getType() const { return type; }
         const ScalarValue &getValue() const { return value; }
@@ -200,6 +213,7 @@ namespace X {
 
         void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
+        Type infer(Pipes::TypeInferrer &typeInferrer) override;
 
         void add(Node *node) { children.push_back(node); }
         void prepend(Node *node) { children.push_front(node); }
@@ -223,6 +237,7 @@ namespace X {
 
         void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
+        Type infer(Pipes::TypeInferrer &typeInferrer) override;
 
         OpType getType() const { return type; }
         ExprNode *getExpr() const { return expr; }
@@ -246,6 +261,7 @@ namespace X {
 
         void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
+        Type infer(Pipes::TypeInferrer &typeInferrer) override;
 
         OpType getType() const { return type; }
         ExprNode *getLhs() const { return lhs; }
@@ -270,6 +286,7 @@ namespace X {
 
         void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
+        Type infer(Pipes::TypeInferrer &typeInferrer) override;
 
         const Type &getType() const { return type; }
         const std::string &getName() const { return name; }
@@ -292,6 +309,7 @@ namespace X {
 
         void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
+        Type infer(Pipes::TypeInferrer &typeInferrer) override;
 
         const std::string &getName() const { return name; }
         ExprNode *getExpr() const { return expr; }
@@ -309,6 +327,7 @@ namespace X {
 
         void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
+        Type infer(Pipes::TypeInferrer &typeInferrer) override;
 
         const std::string &getName() const { return name; }
 
@@ -333,6 +352,7 @@ namespace X {
 
         void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
+        Type infer(Pipes::TypeInferrer &typeInferrer) override;
 
         ExprNode *getCond() const { return cond; }
         StatementListNode *getThenNode() const { return thenNode; }
@@ -356,6 +376,7 @@ namespace X {
 
         void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
+        Type infer(Pipes::TypeInferrer &typeInferrer) override;
 
         ExprNode *getCond() const { return cond; }
         StatementListNode *getBody() const { return body; }
@@ -382,6 +403,7 @@ namespace X {
 
         void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
+        Type infer(Pipes::TypeInferrer &typeInferrer) override;
 
         const std::string &getIdx() const { return idx.value(); }
         const std::string &getVal() const { return val; }
@@ -411,6 +433,7 @@ namespace X {
 
         void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
+        Type infer(Pipes::TypeInferrer &typeInferrer) override;
 
         ExprNode *getStart() const { return start; }
         ExprNode *getStop() const { return stop; }
@@ -430,6 +453,7 @@ namespace X {
 
         void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
+        Type infer(Pipes::TypeInferrer &typeInferrer) override;
 
         const Type &getType() const { return type; }
         const std::string &getName() const { return name; }
@@ -458,6 +482,7 @@ namespace X {
 
         void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
+        Type infer(Pipes::TypeInferrer &typeInferrer) override;
 
         const std::string &getName() const { return name; }
         const std::vector<ArgNode *> &getArgs() const { return args; }
@@ -491,6 +516,7 @@ namespace X {
 
         void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
+        Type infer(Pipes::TypeInferrer &typeInferrer) override;
 
         const std::string &getName() const { return name; }
         const std::vector<ArgNode *> &getArgs() const { return args; }
@@ -519,6 +545,7 @@ namespace X {
 
         void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
+        Type infer(Pipes::TypeInferrer &typeInferrer) override;
 
         const std::string &getName() const { return name; }
         const ExprList &getArgs() const { return args; }
@@ -539,6 +566,7 @@ namespace X {
 
         void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
+        Type infer(Pipes::TypeInferrer &typeInferrer) override;
 
         bool isTerminate() override { return true; };
         ExprNode *getVal() const { return val; }
@@ -559,6 +587,7 @@ namespace X {
 
         void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
+        Type infer(Pipes::TypeInferrer &typeInferrer) override;
 
         ExprNode *getVal() const { return val; }
 
@@ -573,6 +602,7 @@ namespace X {
 
         void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
+        Type infer(Pipes::TypeInferrer &typeInferrer) override;
 
         bool isTerminate() override { return true; };
 
@@ -587,6 +617,7 @@ namespace X {
 
         void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
+        Type infer(Pipes::TypeInferrer &typeInferrer) override;
 
         bool isTerminate() override { return true; };
 
@@ -603,6 +634,7 @@ namespace X {
 
         void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
+        Type infer(Pipes::TypeInferrer &typeInferrer) override;
 
         const std::string &getComment() const { return comment; }
 
@@ -623,6 +655,7 @@ namespace X {
 
         void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
+        Type infer(Pipes::TypeInferrer &typeInferrer) override;
 
         const Type &getType() const { return type; }
         const std::string &getName() const { return name; }
@@ -649,6 +682,7 @@ namespace X {
 
         void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
+        Type infer(Pipes::TypeInferrer &typeInferrer) override;
 
         FnDeclNode *getFnDecl() const { return fnDecl; }
         bool getIsAbstract() const { return isAbstract; }
@@ -678,6 +712,7 @@ namespace X {
 
         void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
+        Type infer(Pipes::TypeInferrer &typeInferrer) override;
 
         FnDefNode *getFnDef() const { return fnDef; }
         bool getIsStatic() const { return isStatic; }
@@ -709,6 +744,7 @@ namespace X {
 
         void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
+        Type infer(Pipes::TypeInferrer &typeInferrer) override;
 
         const std::string &getName() const { return name; }
         StatementListNode *getBody() { return body; }
@@ -737,6 +773,7 @@ namespace X {
 
         void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
+        Type infer(Pipes::TypeInferrer &typeInferrer) override;
 
         ExprNode *getObj() const { return obj; }
         const std::string &getName() const { return name; }
@@ -756,6 +793,7 @@ namespace X {
 
         void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
+        Type infer(Pipes::TypeInferrer &typeInferrer) override;
 
         const std::string &getClassName() const { return className; }
         const std::string &getPropName() const { return propName; }
@@ -783,6 +821,7 @@ namespace X {
 
         void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
+        Type infer(Pipes::TypeInferrer &typeInferrer) override;
 
         ExprNode *getObj() const { return obj; }
         const std::string &getName() const { return name; }
@@ -810,6 +849,7 @@ namespace X {
 
         void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
+        Type infer(Pipes::TypeInferrer &typeInferrer) override;
 
         const std::string &getClassName() const { return className; }
         const std::string &getMethodName() const { return methodName; }
@@ -834,6 +874,7 @@ namespace X {
 
         void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
+        Type infer(Pipes::TypeInferrer &typeInferrer) override;
 
         ExprNode *getObj() const { return obj; }
         const std::string &getName() const { return name; }
@@ -859,6 +900,7 @@ namespace X {
 
         void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
+        Type infer(Pipes::TypeInferrer &typeInferrer) override;
 
         const std::string &getClassName() const { return className; }
         const std::string &getPropName() const { return propName; }
@@ -883,6 +925,7 @@ namespace X {
 
         void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
+        Type infer(Pipes::TypeInferrer &typeInferrer) override;
 
         const std::string &getName() const { return name; }
         const ExprList &getArgs() const { return args; }
@@ -908,6 +951,7 @@ namespace X {
 
         void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
+        Type infer(Pipes::TypeInferrer &typeInferrer) override;
 
         const std::string &getName() const { return name; }
         const std::vector<std::string> &getParents() const { return parents; }
@@ -933,6 +977,7 @@ namespace X {
 
         void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
+        Type infer(Pipes::TypeInferrer &typeInferrer) override;
 
         ExprNode *getArr() const { return arr; }
         ExprNode *getIdx() const { return idx; }
@@ -957,6 +1002,7 @@ namespace X {
 
         void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
+        Type infer(Pipes::TypeInferrer &typeInferrer) override;
 
         ExprNode *getArr() const { return arr; }
         ExprNode *getIdx() const { return idx; }
@@ -980,6 +1026,7 @@ namespace X {
 
         void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
+        Type infer(Pipes::TypeInferrer &typeInferrer) override;
 
         ExprNode *getArr() const { return arr; }
         ExprNode *getExpr() const { return expr; }

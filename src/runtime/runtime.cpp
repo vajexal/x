@@ -5,6 +5,7 @@
 #include "llvm/ExecutionEngine/JITSymbol.h"
 
 #include "casts.h"
+#include "utils.h"
 
 namespace X::Runtime {
     void println(String *str) {
@@ -37,7 +38,7 @@ namespace X::Runtime {
                 {mangler.mangleInternalFunction("castIntToString"), stringType->getPointerTo(), {llvm::Type::getInt64Ty(context)}},
                 {mangler.mangleInternalFunction("castFloatToString"), stringType->getPointerTo(), {llvm::Type::getDoubleTy(context)}},
                 {mangler.mangleInternalFunction("compareStrings"), llvm::Type::getInt1Ty(context), {stringType->getPointerTo(), stringType->getPointerTo()}},
-                {mangler.mangleMethod(String::CLASS_NAME, "construct"),
+                {mangler.mangleMethod(String::CLASS_NAME, CONSTRUCTOR_FN_NAME),
                  llvm::Type::getVoidTy(context), {stringType->getPointerTo(), llvm::Type::getInt8PtrTy(context)}},
                 {mangler.mangleMethod(String::CLASS_NAME, "concat"),
                  stringType->getPointerTo(), {stringType->getPointerTo(), stringType->getPointerTo()}},
@@ -94,7 +95,7 @@ namespace X::Runtime {
                 {mangler.mangleInternalFunction("castIntToString"), reinterpret_cast<void *>(castIntToString)},
                 {mangler.mangleInternalFunction("castFloatToString"), reinterpret_cast<void *>(castFloatToString)},
                 {mangler.mangleInternalFunction("compareStrings"), reinterpret_cast<void *>(compareStrings)},
-                {mangler.mangleMethod(String::CLASS_NAME, "construct"), reinterpret_cast<void *>(String_construct)},
+                {mangler.mangleMethod(String::CLASS_NAME, CONSTRUCTOR_FN_NAME), reinterpret_cast<void *>(String_construct)},
                 {mangler.mangleMethod(String::CLASS_NAME, "concat"), reinterpret_cast<void *>(String_concat)},
                 {mangler.mangleMethod(String::CLASS_NAME, "length"), reinterpret_cast<void *>(String_length)},
                 {mangler.mangleMethod(String::CLASS_NAME, "isEmpty"), reinterpret_cast<void *>(String_isEmpty)},
