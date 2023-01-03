@@ -32,6 +32,15 @@ fn main() void {
 }
 )code",
                 "invalid type"),
+        std::make_pair(
+                R"code(
+fn foo() void {}
+
+fn main() void {
+    auto x = foo()
+}
+)code",
+                "invalid type"),
         // check decl and assignment
         std::make_pair(
                 R"code(

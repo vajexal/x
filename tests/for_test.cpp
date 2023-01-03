@@ -13,7 +13,7 @@ TEST_P(ForTest, foreach) {
 INSTANTIATE_TEST_SUITE_P(Code, ForTest, testing::Values(
         std::make_pair(
                 R"code(
-    []int a = []int{}
+    auto a = []int{}
     for val in a {
         println(val)
     }
@@ -21,7 +21,7 @@ INSTANTIATE_TEST_SUITE_P(Code, ForTest, testing::Values(
                 ""),
         std::make_pair(
                 R"code(
-    []int a = []int{1, 2, 3}
+    auto a = []int{1, 2, 3}
     for val in a {
         println(val)
     }
@@ -30,7 +30,7 @@ INSTANTIATE_TEST_SUITE_P(Code, ForTest, testing::Values(
 3)output"),
         std::make_pair(
                 R"code(
-    []int a = []int{1, 2, 3}
+    auto a = []int{1, 2, 3}
     for val in a {
         val++
         println(val)
@@ -40,7 +40,7 @@ INSTANTIATE_TEST_SUITE_P(Code, ForTest, testing::Values(
 4)output"),
         std::make_pair(
                 R"code(
-    []int a = []int{1, 2, 3, 4, 5}
+    auto a = []int{1, 2, 3, 4, 5}
     for val in a {
         if val == 2 {
             continue
@@ -57,7 +57,7 @@ INSTANTIATE_TEST_SUITE_P(Code, ForTest, testing::Values(
 4)output"),
         std::make_pair(
                 R"code(
-    []float a = []float{1.23, 3.14, 6.28}
+    auto a = []float{1.23, 3.14, 6.28}
     for i, val in a {
         println(i)
     }
@@ -66,7 +66,7 @@ INSTANTIATE_TEST_SUITE_P(Code, ForTest, testing::Values(
 2)output"),
         std::make_pair(
                 R"code(
-    []float a = []float{1.23, 3.14, 6.28}
+    auto a = []float{1.23, 3.14, 6.28}
     for i, val in a {
         i++
         println(val)
@@ -143,8 +143,7 @@ TEST_F(ForTest, useValVarOutsideOfFor) {
     try {
         compiler.compile(R"code(
 fn main() void {
-    []int a = []int{}
-    for val in a {
+    for val in []int{} {
     }
 
     println(val)
@@ -161,8 +160,7 @@ TEST_F(ForTest, overrideVar) {
         compiler.compile(R"code(
 fn main() void {
     int val
-    []int a = []int{}
-    for val in a {
+    for val in []int{} {
     }
 }
 )code");
@@ -177,8 +175,7 @@ TEST_F(ForTest, overrideIdxVar) {
         compiler.compile(R"code(
 fn main() void {
     int i
-    []int a = []int{}
-    for i, val in a {
+    for i, val in []int{} {
     }
 }
 )code");

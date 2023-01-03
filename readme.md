@@ -14,7 +14,9 @@ fn types() void {
     // variable declaration and assigment.
     int i // i == 0
     float f = 3.14
-    bool b = false // or "true"    
+    bool b = false // or "true"
+    // or we can infer variable type
+    auto i2 = 123
 
     // strings
 
@@ -42,7 +44,7 @@ fn types() void {
 
     // check for substring.
     // If substring is not found then index will return -1
-    int pos = s.index("world")
+    auto pos = s.index("world")
     println(pos) // 6
 
     // check if string contains substring
@@ -93,7 +95,7 @@ fn flow() void {
     }
 
     // will print "2"
-    int i = 2
+    auto i = 2
     if i == 0 {
         println(0)
     } else if i == 1 {
@@ -124,7 +126,7 @@ fn flow() void {
         println("string is not empty")
     }
 
-    []int a = []int{1, 2, 3}
+    auto a = []int{1, 2, 3}
     if a {
         println("array is not empty")
     }
@@ -254,11 +256,11 @@ fn main() void {
     flow()
 
     // we can call previously defined function like this
-    float f = bar(2, 3.14) 
+    auto f = bar(2, 3.14) 
     println(f) // 6.28
 
     // creating objects
-    Cat luna = new Cat("Luna")
+    auto luna = new Cat("Luna")
     println(luna.getName()) // "Luna"
     luna.makeSound()
 

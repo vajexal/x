@@ -52,7 +52,8 @@ namespace X {
             STRING,
             ARRAY,
             VOID,
-            CLASS
+            CLASS,
+            AUTO
         };
     private:
         TypeID id;
@@ -66,6 +67,7 @@ namespace X {
         static Type klass(std::string className);
         static Type array(Type *subtype);
         static Type voidTy();
+        static Type autoTy();
 
         TypeID getTypeID() const { return id; }
         const std::string &getClassName() const { return className.value(); }
@@ -289,6 +291,7 @@ namespace X {
         Type infer(Pipes::TypeInferrer &typeInferrer) override;
 
         const Type &getType() const { return type; }
+        void setType(const Type &typ) { type = typ; }
         const std::string &getName() const { return name; }
         ExprNode *getExpr() const { return expr; }
 

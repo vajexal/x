@@ -27,7 +27,7 @@ INSTANTIATE_TEST_SUITE_P(Code, IfTest, testing::Values(
                 "false"),
         std::make_pair(
                 R"code(
-    int i = 3
+    auto i = 3
     if i == 1 {
         println(1)
     } else if i == 2 {
@@ -41,7 +41,7 @@ INSTANTIATE_TEST_SUITE_P(Code, IfTest, testing::Values(
                 "3"),
         std::make_pair(
                 R"code(
-    int i = 8
+    auto i = 8
     if i == 1 {
         println(1)
     } else if i == 2 {

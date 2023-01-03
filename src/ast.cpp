@@ -7,7 +7,7 @@
 
 namespace X {
     Type Type::scalar(Type::TypeID typeID) {
-        if (typeID == TypeID::CLASS || typeID == TypeID::ARRAY) {
+        if (typeID == TypeID::CLASS || typeID == TypeID::ARRAY || typeID == TypeID::AUTO) {
             throw std::invalid_argument("invalid type for scalar");
         }
 
@@ -36,6 +36,13 @@ namespace X {
     Type Type::voidTy() {
         Type type;
         type.id = TypeID::VOID;
+
+        return std::move(type);
+    }
+
+    Type Type::autoTy() {
+        Type type;
+        type.id = TypeID::AUTO;
 
         return std::move(type);
     }
@@ -74,6 +81,7 @@ namespace X {
             case Type::TypeID::ARRAY: return out << *type.getSubtype() << "[]";
             case Type::TypeID::VOID: return out << "void";
             case Type::TypeID::CLASS: return out << "class " << type.getClassName();
+            case Type::TypeID::AUTO: return out << "auto";
         }
 
         return out;

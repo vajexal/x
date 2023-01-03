@@ -74,6 +74,7 @@ namespace X::Pipes {
 
     private:
         void checkIfTypeIsValid(const Type &type) const;
+        void checkIfLvalueTypeIsValid(const Type &type) const;
         void checkFnCall(const FnType &fnType, const ExprList &args);
         const Type getVarType(const std::string &name) const;
         const FnType &getFnType(const std::string &fnName) const;

@@ -38,6 +38,7 @@
 %token BOOL_TYPE "bool"
 %token STRING_TYPE "string"
 %token VOID_TYPE "void"
+%token AUTO_TYPE "auto"
 %token FN "fn"
 %token VAR "var"
 %token <std::string> IDENTIFIER
@@ -232,6 +233,7 @@ array_type:
 
 var_decl:
 type IDENTIFIER '=' expr { $$ = new DeclNode(std::move($1), std::move($2), $4); }
+| AUTO_TYPE IDENTIFIER '=' expr { $$ = new DeclNode(Type::autoTy(), std::move($2), $4); }
 | type IDENTIFIER { $$ = new DeclNode(std::move($1), std::move($2)); }
 ;
 

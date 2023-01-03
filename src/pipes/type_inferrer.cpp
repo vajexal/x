@@ -146,9 +146,23 @@ namespace X::Pipes {
     Type TypeInferrer::infer(DeclNode *node) {
         auto &type = node->getType();
 
-        if (type.getTypeID() == Type::TypeID::VOID || (type.getTypeID() == Type::TypeID::ARRAY && type.getSubtype()->getTypeID() == Type::TypeID::VOID)) {
-            throw InvalidTypeException();
+        if (type.getTypeID() == Type::TypeID::AUTO) {
+            // infer expr type and change decl type accordingly
+            if (!node->getExpr()) {
+                throw InvalidTypeException();
+            }
+
+            auto exprType = node->getExpr()->infer(*this);
+
+            checkIfLvalueTypeIsValid(exprType);
+
+            node->setType(exprType);
+            vars[node->getName()] = exprType;
+
+            return Type::voidTy();
         }
+
+        checkIfLvalueTypeIsValid(type);
 
         if (node->getExpr()) {
             auto exprType = node->getExpr()->infer(*this);
@@ -256,9 +270,8 @@ namespace X::Pipes {
 
     Type TypeInferrer::infer(ArgNode *node) {
         auto &type = node->getType();
-        if (type.getTypeID() == Type::TypeID::VOID || (type.getTypeID() == Type::TypeID::ARRAY && type.getSubtype()->getTypeID() == Type::TypeID::VOID)) {
-            throw InvalidTypeException();
-        }
+
+        checkIfLvalueTypeIsValid(type);
 
         return type;
     }
@@ -356,9 +369,8 @@ namespace X::Pipes {
 
     Type TypeInferrer::infer(PropDeclNode *node) {
         auto &type = node->getType();
-        if (type.getTypeID() == Type::TypeID::VOID || (type.getTypeID() == Type::TypeID::ARRAY && type.getSubtype()->getTypeID() == Type::TypeID::VOID)) {
-            throw InvalidTypeException();
-        }
+
+        checkIfLvalueTypeIsValid(type);
 
         classProps[thisName][node->getName()] = type;
 
@@ -529,6 +541,18 @@ namespace X::Pipes {
         if (type.getTypeID() == Type::TypeID::ARRAY && type.getSubtype()->getTypeID() == Type::TypeID::VOID) {
             throw InvalidTypeException();
         }
+
+        if (type.getTypeID() == Type::TypeID::AUTO) {
+            throw InvalidTypeException();
+        }
+    }
+
+    void TypeInferrer::checkIfLvalueTypeIsValid(const Type &type) const {
+        if (type.getTypeID() == Type::TypeID::VOID) {
+            throw InvalidTypeException();
+        }
+
+        checkIfTypeIsValid(type);
     }
 
     void TypeInferrer::checkFnCall(const FnType &fnType, const ExprList &args) {

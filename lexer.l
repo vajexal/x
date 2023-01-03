@@ -31,6 +31,7 @@ yy::parser::symbol_type yylex(Driver &driver) {
       "bool" { return yy::parser::make_BOOL_TYPE(driver.location); }
       "string" { return yy::parser::make_STRING_TYPE(driver.location); }
       "void" { return yy::parser::make_VOID_TYPE(driver.location); }
+      "auto" { return yy::parser::make_AUTO_TYPE(driver.location); }
       "false" { return yy::parser::make_BOOL(false, driver.location); }
       "true" { return yy::parser::make_BOOL(true, driver.location); }
       "fn" { return yy::parser::make_FN(driver.location); }
