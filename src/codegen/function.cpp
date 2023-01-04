@@ -1,5 +1,7 @@
 #include "codegen.h"
 
+#include "utils.h"
+
 namespace X::Codegen {
     llvm::Value *Codegen::gen(FnDeclNode *node) {
         genFn(node->getName(), node->getArgs(), node->getReturnType(), nullptr);
@@ -61,7 +63,7 @@ namespace X::Codegen {
         auto fnType = genFnType(args, returnType, thisType);
         auto fn = llvm::Function::Create(fnType, llvm::Function::ExternalLinkage, name, module);
         if (thisType) {
-            fn->getArg(0)->setName("this");
+            fn->getArg(0)->setName(THIS_KEYWORD);
         }
         for (auto i = 0; i < args.size(); i++) {
             fn->getArg(i + paramsOffset)->setName(args[i]->getName());

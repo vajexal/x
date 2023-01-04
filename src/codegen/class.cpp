@@ -220,7 +220,7 @@ namespace X::Codegen {
     }
 
     std::pair<llvm::Type *, llvm::Value *> Codegen::getStaticProp(const std::string &className, const std::string &propName) const {
-        auto &classDecl = getClassDecl(mangler.mangleClass(className));
+        auto &classDecl = className == SELF_KEYWORD && self ? *self : getClassDecl(mangler.mangleClass(className));
         auto currentClassDecl = &classDecl;
         while (currentClassDecl) {
             auto propIt = currentClassDecl->staticProps.find(propName);
@@ -415,8 +415,7 @@ namespace X::Codegen {
     }
 
     llvm::Value *Codegen::callStaticMethod(const std::string &className, const std::string &methodName, const std::vector<ExprNode *> &args) {
-        const auto &mangledClassName = mangler.mangleClass(className);
-        auto &classDecl = getClassDecl(mangledClassName);
+        auto &classDecl = className == SELF_KEYWORD && self ? *self : getClassDecl(mangler.mangleClass(className));
         auto [fn, fnType, thisType] = findMethod(classDecl.type, methodName);
         if (!fn) {
             throw MethodNotFoundException(className, methodName);

@@ -469,3 +469,70 @@ fn main() void {
         ASSERT_STREQ(e.what(), "class Foo not found");
     }
 }
+
+TEST_F(ClassTest, that) {
+    checkProgram(R"code(
+class Greeter {
+    private string name
+
+    public fn construct(string name) void {
+        this.name = name
+    }
+
+    public fn greet() void {
+        println("hello " + this.name)
+    }
+}
+
+fn main() void {
+    auto greeter = new Greeter("Peter")
+
+    greeter.greet()
+}
+
+)code", "hello Peter");
+}
+
+TEST_F(ClassTest, cannotAssignThis) {
+    try {
+        compiler.compile(R"code(
+class Foo {
+    public fn a() void {
+        this = this
+    }
+}
+)code");
+        FAIL() << "expected exception";
+    } catch (const std::exception &e) {}
+}
+
+TEST_F(ClassTest, self) {
+    checkProgram(R"code(
+class Foo {
+    public static int a
+
+    public static fn b() void {
+        self::a = 1
+
+        println(self::a)
+    }
+}
+
+fn main() void {
+    Foo::b()
+}
+)code", "1");
+}
+
+TEST_F(ClassTest, cannotAssignSelf) {
+    try {
+        compiler.compile(R"code(
+class Foo {
+    public static fn a() void {
+        self = self
+    }
+}
+)code");
+        FAIL() << "expected exception";
+    } catch (const std::exception &e) {}
+}

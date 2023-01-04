@@ -179,6 +179,10 @@ namespace X::Codegen {
 
     llvm::Value *Codegen::gen(VarNode *node) {
         auto name = node->getName();
+        if (name == THIS_KEYWORD && that) {
+            return that;
+        }
+
         auto [type, var] = getVar(name);
         return builder.CreateLoad(type, var, name);
     }

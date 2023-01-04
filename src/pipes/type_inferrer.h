@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <map>
+#include <optional>
 #include <set>
 
 #include "pipeline.h"
@@ -15,18 +16,28 @@ namespace X::Pipes {
         Type retType;
     };
 
+    struct PropType {
+        Type type;
+        bool isStatic;
+    };
+
+    struct MethodType : FnType {
+        bool isStatic;
+    };
+
     class TypeInferrer : public Pipe {
         CompilerRuntime &compilerRuntime;
 
         std::map<std::string, Type> vars;
         std::map<std::string, FnType> fnTypes;
         // name of the current class (empty string if not in class scope)
-        std::string thisName;
+        std::optional<std::string> self;
+        std::optional<std::string> that;
         Type currentFnRetType;
         // class name -> {prop name -> type}
-        std::map<std::string, std::map<std::string, Type>> classProps;
+        std::map<std::string, std::map<std::string, PropType>> classProps;
         // class name -> {method name -> return type}
-        std::map<std::string, std::map<std::string, FnType>> classMethodTypes;
+        std::map<std::string, std::map<std::string, MethodType>> classMethodTypes;
         std::set<std::string> classes;
 
     public:
@@ -78,8 +89,8 @@ namespace X::Pipes {
         void checkFnCall(const FnType &fnType, const ExprList &args);
         const Type getVarType(const std::string &name) const;
         const FnType &getFnType(const std::string &fnName) const;
-        const FnType &getMethodType(const std::string &className, const std::string &methodName) const;
-        const Type &getPropType(const std::string &className, const std::string &propName) const;
+        const MethodType &getMethodType(const std::string &className, const std::string &methodName, bool isStatic = false) const;
+        const Type &getPropType(const std::string &className, const std::string &propName, bool isStatic = false) const;
         std::string getObjectClassName(const Type &objType) const;
         bool canCastTo(const Type &type, const Type &expectedType) const;
         bool instanceof(const Type &instanceType, const Type &type) const;

@@ -15,6 +15,7 @@
 %code requires {
     #include "ast.h"
     #include "driver.h"
+    #include "utils.h"
 
     using namespace X;
 }
@@ -80,6 +81,8 @@
 %token PROTECTED "protected"
 %token PRIVATE "private"
 %token ABSTRACT "abstract"
+%token THIS "this"
+%token SELF "self"
 
 %nterm <StatementListNode *> top_statement_list
 %nterm <Node *> top_statement
@@ -92,6 +95,7 @@
 %nterm <Type> array_type
 %nterm <DeclNode *> var_decl
 %nterm <VarNode *> identifier
+%nterm <std::string> static_identifier
 %nterm <ScalarNode *> scalar
 %nterm <ExprNode *> dereferenceable
 %nterm <std::vector<ExprNode *>> expr_list
@@ -175,7 +179,7 @@ expr { $$ = $1; }
 | var_decl { $$ = $1; }
 | IDENTIFIER '=' expr { $$ = new AssignNode(std::move($1), $3); }
 | dereferenceable '.' IDENTIFIER '=' expr { $$ = new AssignPropNode($1, std::move($3), $5); }
-| IDENTIFIER SCOPE IDENTIFIER '=' expr { $$ = new AssignStaticPropNode(std::move($1), std::move($3), $5); }
+| static_identifier SCOPE IDENTIFIER '=' expr { $$ = new AssignStaticPropNode(std::move($1), std::move($3), $5); }
 | dereferenceable '[' expr ']' '=' expr { $$ = new AssignArrNode($1, $3, $6); }
 | dereferenceable '[' ']' '=' expr { $$ = new AppendArrNode($1, $5); }
 | if_statement { $$ = $1; }
@@ -212,8 +216,8 @@ INC identifier { $$ = new UnaryNode(OpType::PRE_INC, $2); }
 | scalar { $$ = std::move($1); }
 | dereferenceable { $$ = std::move($1); }
 | IDENTIFIER '(' expr_list ')' { $$ = new FnCallNode(std::move($1), std::move($3)); }
-| IDENTIFIER SCOPE IDENTIFIER { $$ = new FetchStaticPropNode(std::move($1), std::move($3)); }
-| IDENTIFIER SCOPE IDENTIFIER '(' expr_list ')' { $$ = new StaticMethodCallNode(std::move($1), std::move($3), std::move($5)); }
+| static_identifier SCOPE IDENTIFIER { $$ = new FetchStaticPropNode(std::move($1), std::move($3)); }
+| static_identifier SCOPE IDENTIFIER '(' expr_list ')' { $$ = new StaticMethodCallNode(std::move($1), std::move($3), std::move($5)); }
 | NEW IDENTIFIER '(' expr_list ')' { $$ = new NewNode(std::move($2), std::move($4)); }
 ;
 
@@ -241,6 +245,11 @@ identifier:
 IDENTIFIER { $$ = new VarNode(std::move($1)); }
 ;
 
+static_identifier:
+SELF { $$ = SELF_KEYWORD; }
+| IDENTIFIER { $$ = std::move($1); }
+;
+
 scalar:
 INT { $$ = new ScalarNode(std::move(Type::scalar(Type::TypeID::INT)), $1); }
 | FLOAT { $$ = new ScalarNode(std::move(Type::scalar(Type::TypeID::FLOAT)), $1); }
@@ -261,6 +270,7 @@ expr { $$ = std::vector<ExprNode *>(); $$.push_back($1); }
 
 dereferenceable:
 identifier { $$ = std::move($1); }
+| THIS { $$ = new VarNode(THIS_KEYWORD); }
 | dereferenceable '.' IDENTIFIER { $$ = new FetchPropNode($1, std::move($3)); }
 | dereferenceable '[' expr ']' { $$ = new FetchArrNode($1, $3); }
 | dereferenceable '.' IDENTIFIER '(' expr_list ')' { $$ = new MethodCallNode($1, std::move($3), std::move($5)); }

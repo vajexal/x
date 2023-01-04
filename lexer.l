@@ -60,6 +60,8 @@ yy::parser::symbol_type yylex(Driver &driver) {
       "public" { return yy::parser::make_PUBLIC(driver.location); }
       "protected" { return yy::parser::make_PROTECTED(driver.location); }
       "private" { return yy::parser::make_PRIVATE(driver.location); }
+      "this" { return yy::parser::make_THIS(driver.location); }
+      "self" { return yy::parser::make_SELF(driver.location); }
 
       [_a-zA-Z][_a-zA-Z0-9]* { return yy::parser::make_IDENTIFIER(std::string(yypmatch[0], yypmatch[1] - yypmatch[0]), driver.location); }
 

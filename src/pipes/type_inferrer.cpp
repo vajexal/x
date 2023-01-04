@@ -10,23 +10,23 @@ namespace X::Pipes {
         fnTypes["exit"] = {{}, Type::voidTy()};
 
         classMethodTypes[Runtime::String::CLASS_NAME].insert({
-                                                                     {"concat", {{Type::scalar(Type::TypeID::STRING)}, Type::scalar(Type::TypeID::STRING)}},
-                                                                     {"length", {{}, Type::scalar(Type::TypeID::INT)}},
-                                                                     {"isEmpty", {{}, Type::scalar(Type::TypeID::BOOL)}},
-                                                                     {"trim", {{}, Type::scalar(Type::TypeID::BOOL)}},
-                                                                     {"toLower", {{}, Type::scalar(Type::TypeID::STRING)}},
-                                                                     {"toUpper", {{}, Type::scalar(Type::TypeID::STRING)}},
-                                                                     {"index", {{Type::scalar(Type::TypeID::STRING)}, Type::scalar(Type::TypeID::INT)}},
-                                                                     {"contains", {{Type::scalar(Type::TypeID::STRING)}, Type::scalar(Type::TypeID::BOOL)}},
-                                                                     {"startsWith", {{Type::scalar(Type::TypeID::STRING)}, Type::scalar(Type::TypeID::BOOL)}},
-                                                                     {"endsWith", {{Type::scalar(Type::TypeID::STRING)}, Type::scalar(Type::TypeID::BOOL)}},
-                                                                     {"substring", {{Type::scalar(Type::TypeID::INT), Type::scalar(Type::TypeID::INT)},
-                                                                                    Type::scalar(Type::TypeID::STRING)}},
+                                                                     {"concat", {{{Type::scalar(Type::TypeID::STRING)}, Type::scalar(Type::TypeID::STRING)}}},
+                                                                     {"length", {{{}, Type::scalar(Type::TypeID::INT)}}},
+                                                                     {"isEmpty", {{{}, Type::scalar(Type::TypeID::BOOL)}}},
+                                                                     {"trim", {{{}, Type::scalar(Type::TypeID::BOOL)}}},
+                                                                     {"toLower", {{{}, Type::scalar(Type::TypeID::STRING)}}},
+                                                                     {"toUpper", {{{}, Type::scalar(Type::TypeID::STRING)}}},
+                                                                     {"index", {{{Type::scalar(Type::TypeID::STRING)}, Type::scalar(Type::TypeID::INT)}}},
+                                                                     {"contains", {{{Type::scalar(Type::TypeID::STRING)}, Type::scalar(Type::TypeID::BOOL)}}},
+                                                                     {"startsWith", {{{Type::scalar(Type::TypeID::STRING)}, Type::scalar(Type::TypeID::BOOL)}}},
+                                                                     {"endsWith", {{{Type::scalar(Type::TypeID::STRING)}, Type::scalar(Type::TypeID::BOOL)}}},
+                                                                     {"substring", {{{Type::scalar(Type::TypeID::INT), Type::scalar(Type::TypeID::INT)},
+                                                                                     Type::scalar(Type::TypeID::STRING)}}},
                                                              });
 
         classMethodTypes[Runtime::Array::CLASS_NAME].insert({
-                                                                    {"length", {{}, Type::scalar(Type::TypeID::INT)}},
-                                                                    {"isEmpty", {{}, Type::scalar(Type::TypeID::BOOL)}},
+                                                                    {"length", {{{}, Type::scalar(Type::TypeID::INT)}}},
+                                                                    {"isEmpty", {{{}, Type::scalar(Type::TypeID::BOOL)}}},
                                                             });
 
         infer(node);
@@ -189,7 +189,12 @@ namespace X::Pipes {
     }
 
     Type TypeInferrer::infer(VarNode *node) {
-        return getVarType(node->getName());
+        auto &name = node->getName();
+        if (name == THIS_KEYWORD && that) {
+            return Type::klass(that.value());
+        }
+
+        return getVarType(name);
     }
 
     Type TypeInferrer::infer(IfNode *node) {
@@ -348,21 +353,23 @@ namespace X::Pipes {
     }
 
     Type TypeInferrer::infer(ClassNode *node) {
-        thisName = node->getName();
-        classes.insert(thisName);
+        self = node->getName();
+        classes.insert(self.value());
+
+        classProps[self.value()] = {};
 
         if (node->hasParent()) {
-            classProps[thisName] = classProps[node->getParent()];
-            classMethodTypes[thisName] = classMethodTypes[node->getParent()];
+            classProps[self.value()] = classProps[node->getParent()];
+            classMethodTypes[self.value()] = classMethodTypes[node->getParent()];
         }
 
         node->getBody()->infer(*this);
 
-        if (!classMethodTypes[thisName].contains(CONSTRUCTOR_FN_NAME)) {
-            classMethodTypes[thisName][CONSTRUCTOR_FN_NAME] = {{}, Type::voidTy()};
+        if (!classMethodTypes[self.value()].contains(CONSTRUCTOR_FN_NAME)) {
+            classMethodTypes[self.value()][CONSTRUCTOR_FN_NAME] = {{{}, Type::voidTy()}};
         }
 
-        thisName.clear();
+        self.reset();
 
         return Type::voidTy();
     }
@@ -372,12 +379,16 @@ namespace X::Pipes {
 
         checkIfLvalueTypeIsValid(type);
 
-        classProps[thisName][node->getName()] = type;
+        classProps[self.value()][node->getName()] = {type, node->getIsStatic()};
 
         return Type::voidTy();
     }
 
     Type TypeInferrer::infer(MethodDefNode *node) {
+        if (!node->getIsStatic()) {
+            that = self;
+        }
+
         std::vector<Type> args;
         args.reserve(node->getFnDef()->getArgs().size());
 
@@ -389,12 +400,14 @@ namespace X::Pipes {
 
         auto &retType = node->getFnDef()->getReturnType();
         checkIfTypeIsValid(retType);
-        classMethodTypes[thisName][node->getFnDef()->getName()] = {args, retType};
+        classMethodTypes[self.value()][node->getFnDef()->getName()] = {{args, retType}, node->getIsStatic()};
         currentFnRetType = retType;
 
         node->getFnDef()->getBody()->infer(*this);
 
         vars.clear();
+
+        that.reset();
 
         return Type::voidTy();
     }
@@ -409,22 +422,22 @@ namespace X::Pipes {
     }
 
     Type TypeInferrer::infer(FetchStaticPropNode *node) {
-        return getPropType(node->getClassName(), node->getPropName());
+        return getPropType(node->getClassName(), node->getPropName(), true);
     }
 
     Type TypeInferrer::infer(MethodCallNode *node) {
         auto objType = node->getObj()->infer(*this);
         const auto &className = getObjectClassName(objType);
 
-        auto &fnType = getMethodType(className, node->getName());
-        checkFnCall(fnType, node->getArgs());
-        return fnType.retType;
+        auto &methodType = getMethodType(className, node->getName());
+        checkFnCall(methodType, node->getArgs());
+        return methodType.retType;
     }
 
     Type TypeInferrer::infer(StaticMethodCallNode *node) {
-        auto &fnType = getMethodType(node->getClassName(), node->getMethodName());
-        checkFnCall(fnType, node->getArgs());
-        return fnType.retType;
+        auto &methodType = getMethodType(node->getClassName(), node->getMethodName(), true);
+        checkFnCall(methodType, node->getArgs());
+        return methodType.retType;
     }
 
     Type TypeInferrer::infer(AssignPropNode *node) {
@@ -444,7 +457,7 @@ namespace X::Pipes {
     }
 
     Type TypeInferrer::infer(AssignStaticPropNode *node) {
-        auto &propType = getPropType(node->getClassName(), node->getPropName());
+        auto &propType = getPropType(node->getClassName(), node->getPropName(), true);
         auto exprType = node->getExpr()->infer(*this);
 
         if (!canCastTo(exprType, propType)) {
@@ -460,8 +473,8 @@ namespace X::Pipes {
             throw TypeInferrerException(fmt::format("class {} not found", name));
         }
 
-        auto &fnType = getMethodType(name, CONSTRUCTOR_FN_NAME);
-        checkFnCall(fnType, node->getArgs());
+        auto &methodType = getMethodType(name, CONSTRUCTOR_FN_NAME);
+        checkFnCall(methodType, node->getArgs());
         return Type::klass(name);
     }
 
@@ -475,17 +488,17 @@ namespace X::Pipes {
 
         auto &retType = node->getFnDecl()->getReturnType();
         checkIfTypeIsValid(retType);
-        classMethodTypes[thisName][node->getFnDecl()->getName()] = {args, retType};
+        classMethodTypes[self.value()][node->getFnDecl()->getName()] = {{args, retType}, node->getIsStatic()};
 
         return Type::voidTy();
     }
 
     Type TypeInferrer::infer(InterfaceNode *node) {
-        thisName = node->getName();
+        self = node->getName();
 
         node->getBody()->infer(*this);
 
-        thisName.clear();
+        self.reset();
 
         return Type::voidTy();
     }
@@ -574,11 +587,11 @@ namespace X::Pipes {
             return varIt->second;
         }
 
-        if (!thisName.empty()) {
-            auto &props = classProps.at(thisName);
+        if (self) {
+            auto &props = classProps.at(self.value());
             auto propIt = props.find(name);
-            if (propIt != props.cend()) {
-                return propIt->second;
+            if (propIt != props.cend() && (that || propIt->second.isStatic)) {
+                return propIt->second.type;
             }
         }
 
@@ -591,10 +604,10 @@ namespace X::Pipes {
             return fnTypeIt->second;
         }
 
-        if (!thisName.empty()) {
-            auto methods = classMethodTypes.at(thisName);
+        if (self) {
+            auto methods = classMethodTypes.at(self.value());
             auto methodIt = methods.find(fnName);
-            if (methodIt != methods.cend()) {
+            if (methodIt != methods.cend() && (that || methodIt->second.isStatic)) {
                 return methodIt->second;
             }
         }
@@ -602,32 +615,36 @@ namespace X::Pipes {
         throw TypeInferrerException(fmt::format("fn {} not found", fnName));
     }
 
-    const FnType &TypeInferrer::getMethodType(const std::string &className, const std::string &methodName) const {
+    const MethodType &TypeInferrer::getMethodType(const std::string &className, const std::string &methodName, bool isStatic) const {
         auto methodTypesIt = classMethodTypes.find(className);
         if (methodTypesIt == classMethodTypes.cend()) {
             throw TypeInferrerException(fmt::format("class {} not found", className));
         }
 
-        auto fnTypeIt = methodTypesIt->second.find(methodName);
-        if (fnTypeIt == methodTypesIt->second.cend()) {
+        auto methodTypeIt = methodTypesIt->second.find(methodName);
+        // second condition is for case when we call non-static method from static context
+        if (methodTypeIt == methodTypesIt->second.cend() || (!methodTypeIt->second.isStatic && isStatic)) {
             throw TypeInferrerException(fmt::format("method {}::{} not found", className, methodName));
         }
 
-        return fnTypeIt->second;
+        return methodTypeIt->second;
     }
 
-    const Type &TypeInferrer::getPropType(const std::string &className, const std::string &propName) const {
-        auto classPropsIt = classProps.find(className);
+    const Type &TypeInferrer::getPropType(const std::string &className, const std::string &propName, bool isStatic) const {
+        auto &klassName = isStatic && className == SELF_KEYWORD && self ? self.value() : className;
+
+        auto classPropsIt = classProps.find(klassName);
         if (classPropsIt == classProps.cend()) {
-            throw TypeInferrerException(fmt::format("class {} not found", className));
+            throw TypeInferrerException(fmt::format("class {} not found", klassName));
         }
 
         auto propTypeIt = classPropsIt->second.find(propName);
-        if (propTypeIt == classPropsIt->second.cend()) {
-            throw TypeInferrerException(fmt::format("prop {}::{} not found", className, propName));
+        // second condition is for case when we get non-static prop from static context
+        if (propTypeIt == classPropsIt->second.cend() || (!propTypeIt->second.isStatic && isStatic)) {
+            throw TypeInferrerException(fmt::format("prop {}::{} not found", klassName, propName));
         }
 
-        return propTypeIt->second;
+        return propTypeIt->second.type;
     }
 
     std::string TypeInferrer::getObjectClassName(const Type &objType) const {

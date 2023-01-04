@@ -41,7 +41,7 @@ namespace X::Runtime {
         auto that = fn->getArg(0);
         auto len = fn->getArg(1);
 
-        that->setName("this");
+        that->setName(THIS_KEYWORD);
         len->setName("len");
 
         auto bb = llvm::BasicBlock::Create(context, "entry", fn);
@@ -118,7 +118,7 @@ namespace X::Runtime {
         auto that = fn->getArg(0);
         auto index = fn->getArg(1);
 
-        that->setName("this");
+        that->setName(THIS_KEYWORD);
         index->setName("index");
 
         auto bb = llvm::BasicBlock::Create(context, "entry", fn);
@@ -171,7 +171,7 @@ namespace X::Runtime {
         auto index = fn->getArg(1);
         auto val = fn->getArg(2);
 
-        that->setName("this");
+        that->setName(THIS_KEYWORD);
         index->setName("index");
         val->setName("val");
 
@@ -219,7 +219,7 @@ namespace X::Runtime {
                                          mangler.mangleMethod(arrayType->getName().str(), "length"), module);
 
         auto that = fn->getArg(0);
-        that->setName("this");
+        that->setName(THIS_KEYWORD);
 
         auto bb = llvm::BasicBlock::Create(context, "entry", fn);
         llvm::IRBuilder<> builder(&fn->getEntryBlock(), fn->getEntryBlock().begin());
@@ -236,7 +236,7 @@ namespace X::Runtime {
                                          mangler.mangleMethod(arrayType->getName().str(), "isEmpty"), module);
 
         auto that = fn->getArg(0);
-        that->setName("this");
+        that->setName(THIS_KEYWORD);
 
         auto bb = llvm::BasicBlock::Create(context, "entry", fn);
         llvm::IRBuilder<> builder(&fn->getEntryBlock(), fn->getEntryBlock().begin());
@@ -255,7 +255,7 @@ namespace X::Runtime {
 
         auto that = fn->getArg(0);
         auto val = fn->getArg(1);
-        that->setName("this");
+        that->setName(THIS_KEYWORD);
         val->setName("val");
 
         auto bb = llvm::BasicBlock::Create(context, "entry", fn);
