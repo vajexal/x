@@ -1,5 +1,7 @@
 #include "codegen.h"
 
+#include "llvm/IR/Intrinsics.h"
+
 #include "runtime/runtime.h"
 #include "utils.h"
 
@@ -111,7 +113,7 @@ namespace X::Codegen {
             }
         }
 
-        if (node->getType() == OpType::DIV) {
+        if (node->getType() == OpType::DIV || node->getType() == OpType::POW) {
             std::tie(lhs, rhs) = forceUpcast(lhs, rhs);
         } else {
             std::tie(lhs, rhs) = upcast(lhs, rhs);
@@ -153,6 +155,8 @@ namespace X::Codegen {
                         return builder.CreateFMul(lhs, rhs);
                     case OpType::DIV:
                         return builder.CreateFDiv(lhs, rhs);
+                    case OpType::POW:
+                        return builder.CreateBinaryIntrinsic(llvm::Intrinsic::pow, lhs, rhs);
                     case OpType::EQUAL:
                         return builder.CreateFCmpOEQ(lhs, rhs);
                     case OpType::NOT_EQUAL:
