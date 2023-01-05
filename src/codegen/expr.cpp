@@ -128,6 +128,8 @@ namespace X::Codegen {
                         return builder.CreateSub(lhs, rhs);
                     case OpType::MUL:
                         return builder.CreateMul(lhs, rhs);
+                    case OpType::MOD:
+                        return builder.CreateSRem(lhs, rhs);
                     case OpType::EQUAL:
                         return builder.CreateICmpEQ(lhs, rhs);
                     case OpType::NOT_EQUAL:
@@ -143,7 +145,6 @@ namespace X::Codegen {
                     default:
                         throw InvalidOpTypeException();
                 }
-                break;
             }
             case llvm::Type::TypeID::DoubleTyID: {
                 switch (node->getType()) {
@@ -157,6 +158,8 @@ namespace X::Codegen {
                         return builder.CreateFDiv(lhs, rhs);
                     case OpType::POW:
                         return builder.CreateBinaryIntrinsic(llvm::Intrinsic::pow, lhs, rhs);
+                    case OpType::MOD:
+                        return builder.CreateFRem(lhs, rhs);
                     case OpType::EQUAL:
                         return builder.CreateFCmpOEQ(lhs, rhs);
                     case OpType::NOT_EQUAL:
@@ -172,13 +175,10 @@ namespace X::Codegen {
                     default:
                         throw InvalidOpTypeException();
                 }
-                break;
             }
             default:
                 throw InvalidTypeException();
         }
-
-        return nullptr;
     }
 
     llvm::Value *Codegen::gen(VarNode *node) {

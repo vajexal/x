@@ -24,3 +24,17 @@ TEST_F(MathTest, pow) {
 16
 0.5)output");
 }
+
+TEST_F(MathTest, mod) {
+    checkCode(R"code(
+    println(0 % 2)
+    println(5 % 2)
+    println(-4 % 3)
+    println(3.14 % 1.2)
+    println(-3.14 % 2)
+)code", R"output(0
+1
+-1
+0.74
+-1.14)output");
+}

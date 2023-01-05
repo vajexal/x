@@ -33,6 +33,7 @@ namespace X {
         DIV,
         NOT,
         POW,
+        MOD,
         EQUAL,
         NOT_EQUAL,
         SMALLER,

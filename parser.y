@@ -29,7 +29,7 @@
 %nonassoc EQUAL NOT_EQUAL
 %nonassoc '<' SMALLER_OR_EQUAL '>' GREATER_OR_EQUAL
 %left '+' '-'
-%left '*' '/'
+%left '*' '/' '%'
 %precedence '!'
 %right POW
 
@@ -207,6 +207,7 @@ INC identifier { $$ = new UnaryNode(OpType::PRE_INC, $2); }
 | '(' expr ')' { $$ = $2; }
 | '!' expr { $$ = new UnaryNode(OpType::NOT, $2); }
 | expr POW expr { $$ = new BinaryNode(OpType::POW, $1, $3); }
+| expr '%' expr { $$ = new BinaryNode(OpType::MOD, $1, $3); }
 | expr EQUAL expr { $$ = new BinaryNode(OpType::EQUAL, $1, $3); }
 | expr NOT_EQUAL expr { $$ = new BinaryNode(OpType::NOT_EQUAL, $1, $3); }
 | expr '<' expr { $$ = new BinaryNode(OpType::SMALLER, $1, $3); }

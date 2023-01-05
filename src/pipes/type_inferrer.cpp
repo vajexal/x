@@ -113,6 +113,7 @@ namespace X::Pipes {
 
                 throw InvalidTypeException();
             case OpType::MUL:
+            case OpType::MOD:
                 if (lhs.isOneOf(Type::TypeID::INT, Type::TypeID::FLOAT) && rhs.isOneOf(Type::TypeID::INT, Type::TypeID::FLOAT)) {
                     if (lhs.getTypeID() == Type::TypeID::FLOAT || rhs.getTypeID() == Type::TypeID::FLOAT) {
                         return Type::scalar(Type::TypeID::FLOAT);

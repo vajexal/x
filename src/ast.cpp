@@ -61,6 +61,7 @@ namespace X {
             case OpType::DIV: return out << "/";
             case OpType::NOT: return out << "!";
             case OpType::POW: return out << "**";
+            case OpType::MOD: return out << "%";
             case OpType::EQUAL: return out << "==";
             case OpType::NOT_EQUAL: return out << "!=";
             case OpType::SMALLER: return out << "<";
