@@ -39,7 +39,8 @@ namespace X::Pipes {
 
                 // cache extended interfaces
                 auto &extendedInterfaces = compilerRuntime.implementedInterfaces[name];
-                extendedInterfaces.merge(compilerRuntime.implementedInterfaces[parent]);
+                auto &parentExtendedInterfaces = compilerRuntime.implementedInterfaces[parent];
+                extendedInterfaces.insert(parentExtendedInterfaces.cbegin(), parentExtendedInterfaces.cend());
                 extendedInterfaces.insert(parent);
             }
         }
@@ -57,12 +58,11 @@ namespace X::Pipes {
         }
 
         auto &methods = compilerRuntime.interfaceMethods[interfaceName];
-        // todo maybe insert and then check if value is created because "collision" probability is low
-        auto methodDecl = methods.find(node->getFnDecl()->getName());
-        if (methodDecl == methods.cend()) {
-            methods[methodName] = node;
-        } else if (*methodDecl->second != *node) {
-            throw CheckInterfacesException(fmt::format("interface method {}::{} is incompatible", interfaceName, methodName));
+        auto [it, inserted] = methods.insert({methodName, node});
+        if (!inserted) {
+            if (*it->second != *node) {
+                throw CheckInterfacesException(fmt::format("interface method {}::{} is incompatible", interfaceName, methodName));
+            }
         }
     }
 
@@ -70,34 +70,50 @@ namespace X::Pipes {
         auto &name = node->getName();
         classMethods[name] = node->getMethods();
         auto &klassMethods = classMethods[name];
+        auto &classImplementedInterfaces = compilerRuntime.implementedInterfaces[name];
+        std::set<std::string> interfacesToImplement(node->getInterfaces().cbegin(), node->getInterfaces().cend());
+
         if (node->hasParent()) {
             auto &parentName = node->getParent();
-            klassMethods.merge(classMethods[parentName]);
-            compilerRuntime.implementedInterfaces[name].merge(compilerRuntime.implementedInterfaces[parentName]);
+            auto &parentClassMethods = classMethods[parentName];
+            klassMethods.insert(parentClassMethods.cbegin(), parentClassMethods.cend());
+            auto &parentImplementedInterfaces = compilerRuntime.implementedInterfaces[parentName];
+            classImplementedInterfaces.insert(parentImplementedInterfaces.begin(), parentImplementedInterfaces.end());
+
+            if (abstractClasses.contains(parentName)) {
+                interfacesToImplement.insert(parentImplementedInterfaces.cbegin(), parentImplementedInterfaces.cend());
+            }
         }
 
-        for (auto &interfaceName: node->getInterfaces()) {
+        if (node->isAbstract()) {
+            abstractClasses.insert(name);
+        }
+
+        for (auto &interfaceName: interfacesToImplement) {
             auto methods = compilerRuntime.interfaceMethods.find(interfaceName);
             if (methods == compilerRuntime.interfaceMethods.end()) {
                 throw CheckInterfacesException(fmt::format("interface {} not found", interfaceName));
             }
 
-            for (auto &[methodName, methodDecl]: methods->second) {
-                auto methodIt = klassMethods.find(methodName);
-                if (methodIt == klassMethods.cend()) {
-                    throw CheckInterfacesException(fmt::format("interface method {}::{} must be implemented", interfaceName, methodName));
-                }
+            // abstract classes don't need to implement interfaces
+            if (!node->isAbstract()) {
+                for (auto &[methodName, methodDecl]: methods->second) {
+                    auto methodIt = klassMethods.find(methodName);
+                    if (methodIt == klassMethods.cend()) {
+                        throw CheckInterfacesException(fmt::format("interface method {}::{} must be implemented", interfaceName, methodName));
+                    }
 
-                if (!compareDeclAndDef(methodDecl, methodIt->second)) {
-                    throw CheckInterfacesException(
-                            fmt::format("declaration of {}::{} must be compatible with interface {}", name,
-                                        methodIt->second->getFnDef()->getName(), interfaceName));
+                    if (!compareDeclAndDef(methodDecl, methodIt->second)) {
+                        throw CheckInterfacesException(
+                                fmt::format("declaration of {}::{} must be compatible with interface {}", name,
+                                            methodIt->second->getFnDef()->getName(), interfaceName));
+                    }
                 }
             }
 
             // cache implemented interfaces
-            auto &classImplementedInterfaces = compilerRuntime.implementedInterfaces[name];
-            classImplementedInterfaces.merge(compilerRuntime.implementedInterfaces[interfaceName]);
+            auto &interfaceExtendedInterfaces = compilerRuntime.implementedInterfaces[interfaceName];
+            classImplementedInterfaces.insert(interfaceExtendedInterfaces.cbegin(), interfaceExtendedInterfaces.cend());
             classImplementedInterfaces.insert(interfaceName);
         }
     }

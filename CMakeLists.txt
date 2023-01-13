@@ -97,8 +97,8 @@ add_executable(x_test ${X_SOURCES}
         tests/casts_test.cpp
         tests/function_test.cpp
         tests/class_test.cpp
-        tests/check_interfaces_test.cpp
-        tests/check_abstract_classes_test.cpp
+        tests/interface_test.cpp
+        tests/abstract_class_test.cpp
         tests/type_inferrer_test.cpp
         tests/tour_test.cpp
         tests/math_test.cpp)

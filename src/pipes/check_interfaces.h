@@ -13,6 +13,7 @@ namespace X::Pipes {
         // class name -> all methods (including parents) {method name -> method def}
         std::map<std::string, std::map<std::string, MethodDefNode *>> classMethods;
 
+        std::set<std::string> abstractClasses;
     public:
         CheckInterfaces(CompilerRuntime &compilerRuntime) : compilerRuntime(compilerRuntime) {}
 

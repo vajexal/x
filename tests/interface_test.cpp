@@ -2,10 +2,10 @@
 
 #include "pipes/check_interfaces.h"
 
-class CheckInterfacesTest : public CompilerTest {
+class InterfaceTest : public CompilerTest {
 };
 
-TEST_P(CheckInterfacesTest, interfaces) {
+TEST_P(InterfaceTest, interfaces) {
     auto [code, exceptionMessage] = GetParam();
 
     try {
@@ -18,7 +18,7 @@ fn main() void {}
     }
 }
 
-INSTANTIATE_TEST_SUITE_P(Code, CheckInterfacesTest, testing::Values(
+INSTANTIATE_TEST_SUITE_P(Code, InterfaceTest, testing::Values(
         std::make_pair(
                 R"code(
 class Bar implements Foo {
@@ -127,10 +127,22 @@ interface C extends A, B {
     public fn c() void
 }
 )code",
-                "interface method C::a is incompatible")
+                "interface method C::a is incompatible"),
+        std::make_pair(
+                R"code(
+interface Foo {
+    public fn a(int foo) void
+}
+
+abstract class Bar implements Foo {
+}
+
+class Baz extends Bar {}
+)code",
+                "interface method Foo::a must be implemented")
 ));
 
-TEST_F(CheckInterfacesTest, hiddenImplementation) {
+TEST_F(InterfaceTest, hiddenImplementation) {
     checkProgram(R"code(
 interface A {
     public fn a() void
@@ -151,7 +163,7 @@ fn main() void {
 )code", "foo");
 }
 
-TEST_F(CheckInterfacesTest, methodAlreadyDeclared) {
+TEST_F(InterfaceTest, methodAlreadyDeclared) {
     try {
         compiler.compile(R"code(
 interface Foo {
@@ -165,4 +177,17 @@ fn main() void {}
     } catch (const AstException &e) {
         ASSERT_STREQ(e.what(), "method Foo::a already declared");
     }
+}
+
+TEST_F(InterfaceTest, abstractClassesDontNeedToImplementInterfaces) {
+    checkProgram(R"code(
+interface Foo {
+    public fn a() void
+}
+
+abstract class Bar implements Foo {
+}
+
+fn main() void {}
+)code", "");
 }

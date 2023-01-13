@@ -28,7 +28,8 @@ namespace X::Pipes {
 
         // cache extended classes
         auto &extendedClasses = compilerRuntime.extendedClasses[name];
-        extendedClasses.merge(compilerRuntime.extendedClasses[parent]);
+        auto &parentExtendedClasses = compilerRuntime.extendedClasses[parent];
+        extendedClasses.insert(parentExtendedClasses.cbegin(), parentExtendedClasses.cend());
         extendedClasses.insert(parent);
 
         auto classMethods = node->getMethods();

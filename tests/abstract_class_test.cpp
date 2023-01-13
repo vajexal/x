@@ -2,10 +2,10 @@
 
 #include "pipes/check_abstract_classes.h"
 
-class CheckAbstractClassesTest : public CompilerTest {
+class AbstractClassTest : public CompilerTest {
 };
 
-TEST_P(CheckAbstractClassesTest, abstract_classes) {
+TEST_P(AbstractClassTest, abstract_classes) {
     auto [code, exceptionMessage] = GetParam();
 
     try {
@@ -18,7 +18,7 @@ fn main() void {}
     }
 }
 
-INSTANTIATE_TEST_SUITE_P(Code, CheckAbstractClassesTest, testing::Values(
+INSTANTIATE_TEST_SUITE_P(Code, AbstractClassTest, testing::Values(
         std::make_pair(
                 R"code(
 class Foo {
