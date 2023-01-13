@@ -28,8 +28,13 @@ namespace X::Pipes {
 
         codegen.gen(node);
 
-        llvm::verifyModule(*module, &llvm::errs());
 //        module->print(llvm::outs(), nullptr);
+
+        std::string buf;
+        llvm::raw_string_ostream os(buf);
+        if (llvm::verifyModule(*module, &os)) {
+            throw CodeGeneratorException(os.str());
+        }
 
         auto jitter = throwOnError(llvm::orc::LLJITBuilder().create());
         jitter->getIRTransformLayer().setTransform(OptimizationTransform());
