@@ -6,7 +6,16 @@
 #include "utils.h"
 
 namespace X::Pipes {
-    StatementListNode *TypeInferrer::handle(StatementListNode *node) {
+    TopStatementListNode *TypeInferrer::handle(TopStatementListNode *node) {
+        addRuntime();
+        declFuncs(node);
+
+        infer(node);
+
+        return node;
+    }
+
+    void TypeInferrer::addRuntime() {
         fnTypes["exit"] = {{}, Type::voidTy()};
 
         classMethodTypes[Runtime::String::CLASS_NAME].insert({
@@ -28,10 +37,21 @@ namespace X::Pipes {
                                                                     {"length", {{{}, Type::scalar(Type::TypeID::INT)}}},
                                                                     {"isEmpty", {{{}, Type::scalar(Type::TypeID::BOOL)}}},
                                                             });
+    }
 
-        infer(node);
+    void TypeInferrer::declFuncs(TopStatementListNode *node) {
+        for (auto fnDef: node->getFuncs()) {
+            std::vector<Type> args;
+            args.reserve(fnDef->getArgs().size());
 
-        return node;
+            for (auto arg: fnDef->getArgs()) {
+                args.push_back(arg->infer(*this));
+            }
+
+            auto &retType = fnDef->getReturnType();
+            checkIfTypeIsValid(retType);
+            fnTypes[fnDef->getName()] = {args, retType};
+        }
     }
 
     Type TypeInferrer::infer(Node *node) {
@@ -298,19 +318,11 @@ namespace X::Pipes {
     }
 
     Type TypeInferrer::infer(FnDefNode *node) {
-        std::vector<Type> args;
-        args.reserve(node->getArgs().size());
-
         for (auto arg: node->getArgs()) {
-            auto argType = arg->infer(*this);
-            vars[arg->getName()] = argType;
-            args.push_back(argType);
+            vars[arg->getName()] = arg->infer(*this);
         }
 
-        auto &retType = node->getReturnType();
-        checkIfTypeIsValid(retType);
-        fnTypes[node->getName()] = {args, retType};
-        currentFnRetType = retType;
+        currentFnRetType = node->getReturnType();
 
         node->getBody()->infer(*this);
 
@@ -326,6 +338,10 @@ namespace X::Pipes {
     }
 
     Type TypeInferrer::infer(ReturnNode *node) {
+        if (!node->getVal()) {
+            return Type::voidTy();
+        }
+
         auto retType = node->getVal()->infer(*this);
 
         if (retType.getTypeID() == Type::TypeID::VOID) {
@@ -470,6 +486,7 @@ namespace X::Pipes {
 
     Type TypeInferrer::infer(NewNode *node) {
         auto &name = node->getName();
+        // need to check class existence here, otherwise it's possible to get type error with non-existent class
         if (!classes.contains(name)) {
             throw TypeInferrerException(fmt::format("class {} not found", name));
         }

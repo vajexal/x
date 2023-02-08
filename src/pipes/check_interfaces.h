@@ -17,7 +17,7 @@ namespace X::Pipes {
     public:
         CheckInterfaces(CompilerRuntime &compilerRuntime) : compilerRuntime(compilerRuntime) {}
 
-        StatementListNode *handle(StatementListNode *node) override;
+        TopStatementListNode *handle(TopStatementListNode *node) override;
 
     private:
         void addInterface(InterfaceNode *node);

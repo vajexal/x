@@ -4,7 +4,7 @@
 #include "parser.tab.hh"
 
 namespace X::Pipes {
-    StatementListNode *ParseCode::handle(StatementListNode *node) {
+    TopStatementListNode *ParseCode::handle(TopStatementListNode *node) {
         Driver driver(code);
         yy::parser parser(driver);
 

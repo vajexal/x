@@ -16,7 +16,7 @@ namespace X::Pipes {
     public:
         CheckVirtualMethods(CompilerRuntime &compilerRuntime) : compilerRuntime(compilerRuntime) {}
 
-        StatementListNode *handle(StatementListNode *node) override;
+        TopStatementListNode *handle(TopStatementListNode *node) override;
 
     private:
         void checkClass(ClassNode *node);

@@ -69,7 +69,6 @@ namespace X::Codegen {
 
     class Codegen {
         static const int INTEGER_BIT_WIDTH = 64;
-        static inline const std::string MAIN_FN_NAME = "main";
 
         llvm::LLVMContext &context;
         llvm::IRBuilder<> &builder;
@@ -88,11 +87,19 @@ namespace X::Codegen {
         std::set<std::string> symbols;
 
     public:
+        static inline const std::string MAIN_FN_NAME = "main";
+
         Codegen(llvm::LLVMContext &context, llvm::IRBuilder<> &builder, llvm::Module &module, CompilerRuntime &compilerRuntime) :
                 context(context), builder(builder), module(module), compilerRuntime(compilerRuntime), arrayRuntime(Runtime::ArrayRuntime(context, module)) {}
 
+        void genProgram(TopStatementListNode *node);
+
+        void declClasses(TopStatementListNode *node);
+        void declFuncs(TopStatementListNode *node);
+
         llvm::Value *gen(Node *node);
         llvm::Value *gen(StatementListNode *node);
+        llvm::Value *gen(TopStatementListNode *node);
         llvm::Value *gen(ScalarNode *node);
         llvm::Value *gen(UnaryNode *node);
         llvm::Value *gen(BinaryNode *node);

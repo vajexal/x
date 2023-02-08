@@ -41,3 +41,15 @@ fn main() int {}
         ASSERT_STREQ(e.what(), "main must return void");
     }
 }
+
+TEST_F(FunctionTest, declOrder) {
+    checkProgram(R"code(
+fn main() void {
+    foo()
+}
+
+fn foo() void {
+    println("foo")
+}
+)code", "foo");
+}

@@ -18,7 +18,7 @@ namespace X::Pipes {
     public:
         CodeGenerator(CompilerRuntime &compilerRuntime, std::string sourceName) : compilerRuntime(compilerRuntime), sourceName(std::move(sourceName)) {}
 
-        StatementListNode *handle(StatementListNode *node) override;
+        TopStatementListNode *handle(TopStatementListNode *node) override;
 
     private:
         void throwOnError(llvm::Error &&err) const;

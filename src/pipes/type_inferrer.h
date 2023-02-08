@@ -43,7 +43,10 @@ namespace X::Pipes {
     public:
         explicit TypeInferrer(CompilerRuntime &compilerRuntime) : compilerRuntime(compilerRuntime) {}
 
-        StatementListNode *handle(StatementListNode *node) override;
+        TopStatementListNode *handle(TopStatementListNode *node) override;
+
+        void addRuntime();
+        void declFuncs(TopStatementListNode *node);
 
         // todo a lot of copying, maybe make unique types, like in llvm
         Type infer(Node *node);

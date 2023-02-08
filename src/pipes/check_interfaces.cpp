@@ -5,13 +5,13 @@
 #include "utils.h"
 
 namespace X::Pipes {
-    StatementListNode *CheckInterfaces::handle(StatementListNode *node) {
-        for (auto child: node->getChildren()) {
-            if (auto interfaceNode = llvm::dyn_cast<InterfaceNode>(child)) {
-                addInterface(interfaceNode);
-            } else if (auto classNode = llvm::dyn_cast<ClassNode>(child)) {
-                checkClass(classNode);
-            }
+    TopStatementListNode *CheckInterfaces::handle(TopStatementListNode *node) {
+        for (auto interface: node->getInterfaces()) {
+            addInterface(interface);
+        }
+
+        for (auto klass: node->getClasses()) {
+            checkClass(klass);
         }
 
         return node;

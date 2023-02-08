@@ -84,7 +84,7 @@
 %token THIS "this"
 %token SELF "self"
 
-%nterm <StatementListNode *> top_statement_list
+%nterm <TopStatementListNode *> top_statement_list
 %nterm <Node *> top_statement
 %nterm <StatementListNode *> statement_list
 %nterm <StatementListNode *> statement_block
@@ -140,7 +140,7 @@ maybe_comment:
 ;
 
 top_statement_list:
-%empty { $$ = new StatementListNode; }
+%empty { $$ = new TopStatementListNode; }
 | top_statement_list top_statement maybe_comment '\n' {
     $1->add($2);
     if ($3) $1->add($3);

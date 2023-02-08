@@ -7,7 +7,7 @@
 namespace X::Pipes {
     class PrintAst : public Pipe {
     public:
-        StatementListNode *handle(X::StatementListNode *node) override {
+        TopStatementListNode *handle(X::TopStatementListNode *node) override {
             print<StatementListNode>(node);
 
             return node;

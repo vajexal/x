@@ -13,7 +13,7 @@
 #include "runtime/runtime.h"
 
 namespace X::Pipes {
-    StatementListNode *CodeGenerator::handle(StatementListNode *node) {
+    TopStatementListNode *CodeGenerator::handle(TopStatementListNode *node) {
         auto context = std::make_unique<llvm::LLVMContext>();
         context->setOpaquePointers(false); // todo migrate to opaque pointers
         llvm::IRBuilder<> builder(*context);
@@ -26,7 +26,7 @@ namespace X::Pipes {
 
         runtime.addDeclarations(*context, builder, *module);
 
-        codegen.gen(node);
+        codegen.genProgram(node);
 
 //        module->print(llvm::outs(), nullptr);
 
@@ -43,7 +43,7 @@ namespace X::Pipes {
         llvm::orc::MangleAndInterner llvmMangle(jitter->getExecutionSession(), jitter->getDataLayout());
         runtime.addDefinitions(jitter->getMainJITDylib(), llvmMangle);
 
-        auto mainFn = throwOnError(jitter->lookup("main"));
+        auto mainFn = throwOnError(jitter->lookup(Codegen::Codegen::MAIN_FN_NAME));
         auto *fn = mainFn.toPtr<void()>();
 
         fn();

@@ -14,18 +14,14 @@ namespace X {
     int Compiler::compile(const std::string &code, const std::string &sourceName) {
         CompilerRuntime compilerRuntime;
 
-        Pipeline pipeline{};
-        auto node = pipeline
+        (Pipeline{})
                 .pipe(new Pipes::ParseCode(code))
 //                .pipe(new Pipes::PrintAst())
                 .pipe(new Pipes::CheckInterfaces(compilerRuntime))
                 .pipe(new Pipes::CheckAbstractClasses())
                 .pipe(new Pipes::CheckVirtualMethods(compilerRuntime))
                 .pipe(new Pipes::TypeInferrer(compilerRuntime))
-                .pipe(new Pipes::CodeGenerator(compilerRuntime, sourceName))
-                .get();
-
-        delete node;
+                .pipe(new Pipes::CodeGenerator(compilerRuntime, sourceName));
 
         return 0;
     }

@@ -12,7 +12,7 @@ namespace X::Pipes {
         std::map<std::string, std::map<std::string, MethodDeclNode *>> classAbstractMethods;
 
     public:
-        StatementListNode *handle(StatementListNode *node) override;
+        TopStatementListNode *handle(TopStatementListNode *node) override;
 
     private:
         void checkClass(ClassNode *node);

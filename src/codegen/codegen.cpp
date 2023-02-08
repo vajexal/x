@@ -5,6 +5,41 @@
 #include "utils.h"
 
 namespace X::Codegen {
+    void Codegen::genProgram(TopStatementListNode *node) {
+        declClasses(node);
+        declFuncs(node);
+        gen(node);
+    }
+
+    void Codegen::declClasses(TopStatementListNode *node) {
+        // order is important for now
+        // todo
+        for (auto child: node->getChildren()) {
+            if (auto classNode = llvm::dyn_cast<ClassNode>(child)) {
+                classNode->gen(*this);
+            } else if (auto interfaceNode = llvm::dyn_cast<InterfaceNode>(child)) {
+                interfaceNode->gen(*this);
+            }
+        }
+    }
+
+    void Codegen::declFuncs(TopStatementListNode *node) {
+        for (auto fnDef: node->getFuncs()) {
+            auto &name = fnDef->getName();
+
+            if (module.getFunction(name)) {
+                throw FnAlreadyDeclaredException(name);
+            }
+
+            if (name == MAIN_FN_NAME) {
+                checkMainFn(fnDef);
+            }
+
+            auto fnType = genFnType(fnDef->getArgs(), fnDef->getReturnType());
+            llvm::Function::Create(fnType, llvm::Function::ExternalLinkage, name, module);
+        }
+    }
+
     llvm::Value *Codegen::gen(Node *node) {
         throw CodegenException("can't gen node");
     }
@@ -16,6 +51,14 @@ namespace X::Codegen {
             if (child->isTerminate()) {
                 break;
             }
+        }
+
+        return nullptr;
+    }
+
+    llvm::Value *Codegen::gen(TopStatementListNode *node) {
+        for (auto fnDef: node->getFuncs()) {
+            fnDef->gen(*this);
         }
 
         return nullptr;

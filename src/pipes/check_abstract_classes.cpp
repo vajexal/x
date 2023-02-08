@@ -5,11 +5,9 @@
 #include "utils.h"
 
 namespace X::Pipes {
-    StatementListNode *CheckAbstractClasses::handle(StatementListNode *node) {
-        for (auto child: node->getChildren()) {
-            if (auto classNode = llvm::dyn_cast<ClassNode>(child)) {
-                checkClass(classNode);
-            }
+    TopStatementListNode *CheckAbstractClasses::handle(TopStatementListNode *node) {
+        for (auto klass: node->getClasses()) {
+            checkClass(klass);
         }
 
         return node;

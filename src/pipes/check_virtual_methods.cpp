@@ -5,11 +5,9 @@
 #include "utils.h"
 
 namespace X::Pipes {
-    StatementListNode *CheckVirtualMethods::handle(StatementListNode *node) {
-        for (auto child: node->getChildren()) {
-            if (auto classNode = llvm::dyn_cast<ClassNode>(child)) {
-                checkClass(classNode);
-            }
+    TopStatementListNode *CheckVirtualMethods::handle(TopStatementListNode *node) {
+        for (auto klass: node->getClasses()) {
+            checkClass(klass);
         }
 
         return node;

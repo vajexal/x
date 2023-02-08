@@ -10,17 +10,7 @@ namespace X::Codegen {
     }
 
     llvm::Value *Codegen::gen(FnDefNode *node) {
-        auto &name = node->getName();
-
-        if (module.getFunction(name)) {
-            throw FnAlreadyDeclaredException(name);
-        }
-
-        if (name == "main") {
-            checkMainFn(node);
-        }
-
-        genFn(name, node->getArgs(), node->getReturnType(), node->getBody());
+        genFn(node->getName(), node->getArgs(), node->getReturnType(), node->getBody());
 
         return nullptr;
     }
@@ -60,8 +50,13 @@ namespace X::Codegen {
     void Codegen::genFn(const std::string &name, const std::vector<ArgNode *> &args, const Type &returnType, StatementListNode *body,
                         llvm::StructType *thisType) {
         size_t paramsOffset = thisType ? 1 : 0; // this is special
-        auto fnType = genFnType(args, returnType, thisType);
-        auto fn = llvm::Function::Create(fnType, llvm::Function::ExternalLinkage, name, module);
+        // plain functions could be declared earlier
+        // @see declFuncs
+        llvm::Function *fn = module.getFunction(name);
+        if (!fn) {
+            auto fnType = genFnType(args, returnType, thisType);
+            fn = llvm::Function::Create(fnType, llvm::Function::ExternalLinkage, name, module);
+        }
         if (thisType) {
             fn->getArg(0)->setName(THIS_KEYWORD);
         }

@@ -7,7 +7,7 @@
 namespace X {
     class Driver {
     public:
-        StatementListNode *root = nullptr;
+        TopStatementListNode *root = nullptr;
         const char *s;
         yy::location location;
 

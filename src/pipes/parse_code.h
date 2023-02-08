@@ -12,7 +12,7 @@ namespace X::Pipes {
             this->code = std::move(code + '\n'); // hack for parser
         }
 
-        StatementListNode *handle(StatementListNode *node) override;
+        TopStatementListNode *handle(TopStatementListNode *node) override;
     };
 
     class ParseCodeException : public std::exception {
