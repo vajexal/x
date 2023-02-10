@@ -559,3 +559,27 @@ fn main() void {
 )code", R"output(a
 b)output");
 }
+
+TEST_F(ClassTest, classDeclOrder) {
+    checkProgram(R"code(
+fn main() void {
+    auto foo = new Foo()
+
+    foo.bar.a()
+}
+
+class Foo {
+    public Bar bar
+
+    fn construct() void {
+        bar = new Bar()
+    }
+}
+
+class Bar {
+    public fn a() void {
+        println("a")
+    }
+}
+)code", "a");
+}

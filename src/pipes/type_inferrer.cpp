@@ -8,6 +8,7 @@
 namespace X::Pipes {
     TopStatementListNode *TypeInferrer::handle(TopStatementListNode *node) {
         addRuntime();
+        declClasses(node);
         declMethods(node);
         declFuncs(node);
 
@@ -40,10 +41,47 @@ namespace X::Pipes {
                                                             });
     }
 
+    void TypeInferrer::declClasses(TopStatementListNode *node) {
+        for (auto klass: node->getClasses()) {
+            auto &name = klass->getName();
+            classes.insert(name);
+
+            classProps[name] = {};
+
+            if (klass->hasParent()) {
+                classProps[name] = classProps[klass->getParent()];
+            }
+
+            for (auto prop: klass->getProps()) {
+                auto &type = prop->getType();
+                checkIfLvalueTypeIsValid(type);
+                classProps[name][prop->getName()] = {type, prop->getIsStatic()};
+            }
+        }
+    }
+
     void TypeInferrer::declMethods(TopStatementListNode *node) {
         for (auto klass: node->getClasses()) {
+            auto &name = klass->getName();
+
             if (klass->hasParent()) {
-                classMethodTypes[klass->getName()] = classMethodTypes[klass->getParent()];
+                classMethodTypes[name] = classMethodTypes[klass->getParent()];
+            }
+
+            auto &classMethods = classMethodTypes[name];
+
+            for (auto &[methodName, methodDecl]: klass->getAbstractMethods()) {
+                auto fnDecl = methodDecl->getFnDecl();
+                std::vector<Type> args;
+                args.reserve(fnDecl->getArgs().size());
+
+                for (auto arg: fnDecl->getArgs()) {
+                    args.push_back(arg->infer(*this));
+                }
+
+                auto &retType = fnDecl->getReturnType();
+                checkIfTypeIsValid(retType);
+                classMethods[fnDecl->getName()] = {{args, retType}, methodDecl->getIsStatic()};
             }
 
             for (auto &[methodName, methodDef]: klass->getMethods()) {
@@ -56,7 +94,11 @@ namespace X::Pipes {
 
                 auto &retType = methodDef->getFnDef()->getReturnType();
                 checkIfTypeIsValid(retType);
-                classMethodTypes[klass->getName()][methodName] = {{args, retType}, methodDef->getIsStatic()};
+                classMethods[methodName] = {{args, retType}, methodDef->getIsStatic()};
+            }
+
+            if (!classMethods.contains(CONSTRUCTOR_FN_NAME)) {
+                classMethods[CONSTRUCTOR_FN_NAME] = {{{}, Type::voidTy()}};
             }
         }
     }
@@ -392,32 +434,14 @@ namespace X::Pipes {
     }
 
     Type TypeInferrer::infer(ClassNode *node) {
+        // all we need to do is infer method bodies
         self = node->getName();
-        classes.insert(self.value());
 
-        classProps[self.value()] = {};
-
-        if (node->hasParent()) {
-            classProps[self.value()] = classProps[node->getParent()];
-        }
-
-        node->getBody()->infer(*this);
-
-        if (!classMethodTypes[self.value()].contains(CONSTRUCTOR_FN_NAME)) {
-            classMethodTypes[self.value()][CONSTRUCTOR_FN_NAME] = {{{}, Type::voidTy()}};
+        for (auto &[_, methodDef]: node->getMethods()) {
+            methodDef->infer(*this);
         }
 
         self.reset();
-
-        return Type::voidTy();
-    }
-
-    Type TypeInferrer::infer(PropDeclNode *node) {
-        auto &type = node->getType();
-
-        checkIfLvalueTypeIsValid(type);
-
-        classProps[self.value()][node->getName()] = {type, node->getIsStatic()};
 
         return Type::voidTy();
     }

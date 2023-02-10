@@ -9,55 +9,8 @@ namespace X::Codegen {
     llvm::Value *Codegen::gen(ClassNode *node) {
         auto &name = node->getName();
         const auto &mangledName = mangler.mangleClass(name);
-        auto &classDecl = classes[mangledName];
-        auto klass = classDecl.type;
 
-        std::vector<llvm::Type *> props;
-        props.reserve(node->getProps().size());
-        uint64_t propPos = 0;
-
-        classDecl.isAbstract = node->isAbstract();
-
-        if (node->hasParent()) {
-            const auto &mangledParentName = mangler.mangleClass(node->getParent());
-            auto &parentClassDecl = getClassDecl(mangledParentName);
-            props.push_back(parentClassDecl.type);
-            propPos++;
-            classDecl.parent = const_cast<ClassDecl *>(&parentClassDecl);
-        }
-
-        auto it = compilerRuntime.virtualMethods.find(name);
-        if (it != compilerRuntime.virtualMethods.cend() && !it->second.empty()) {
-            auto vtableType = genVtable(node, klass, classDecl);
-            props.push_back(vtableType->getPointerTo());
-            propPos++;
-            classDecl.vtableType = vtableType;
-        }
-
-        for (auto prop: node->getProps()) {
-            auto &propName = prop->getName();
-            auto type = mapType(prop->getType());
-            if (prop->getIsStatic()) {
-                // check if static prop already declared here, because module.getOrInsertGlobal could return ConstantExpr
-                // (if prop will be redeclared with different type)
-                if (classDecl.staticProps.contains(propName)) {
-                    throw PropAlreadyDeclaredException(name, propName);
-                }
-                const auto &mangledPropName = mangler.mangleStaticProp(mangledName, propName);
-                auto global = llvm::cast<llvm::GlobalVariable>(module.getOrInsertGlobal(mangledPropName, type));
-                global->setInitializer(getDefaultValue(prop->getType()));
-                classDecl.staticProps[propName] = {global, prop->getAccessModifier()};
-            } else {
-                props.push_back(type);
-                auto [_, inserted] = classDecl.props.try_emplace(propName, type, propPos++, prop->getAccessModifier());
-                if (!inserted) {
-                    throw PropAlreadyDeclaredException(name, propName);
-                }
-            }
-        }
-
-        klass->setBody(props);
-        self = &classDecl;
+        self = &classes[mangledName];
 
         auto &abstractMethods = node->getAbstractMethods();
         for (auto &[methodName, method]: node->getMethods()) {
@@ -71,7 +24,7 @@ namespace X::Codegen {
                 checkConstructor(method, name);
             }
             const auto &fnName = mangler.mangleMethod(mangledName, fn->getName());
-            genFn(fnName, fn->getArgs(), fn->getReturnType(), fn->getBody(), method->getIsStatic() ? nullptr : klass);
+            genFn(fnName, fn->getArgs(), fn->getReturnType(), fn->getBody(), method->getIsStatic() ? nullptr : self->type);
         }
 
         self->methods[CONSTRUCTOR_FN_NAME] = {AccessModifier::PUBLIC, false};

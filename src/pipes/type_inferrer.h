@@ -68,7 +68,6 @@ namespace X::Pipes {
         Type infer(PrintlnNode *node);
         Type infer(CommentNode *node);
         Type infer(ClassNode *node);
-        Type infer(PropDeclNode *node);
         Type infer(MethodDefNode *node);
         Type infer(FetchPropNode *node);
         Type infer(FetchStaticPropNode *node);
@@ -85,6 +84,7 @@ namespace X::Pipes {
 
     private:
         void addRuntime();
+        void declClasses(TopStatementListNode *node);
         void declMethods(TopStatementListNode *node);
         void declFuncs(TopStatementListNode *node);
 

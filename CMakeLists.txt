@@ -37,6 +37,7 @@ set(X_SOURCES lexer.cpp
         src/codegen/statement.cpp
         src/codegen/function.cpp
         src/codegen/class.cpp
+        src/codegen/decl.cpp
         src/runtime/runtime.cpp
         src/runtime/string.cpp
         src/runtime/array.cpp

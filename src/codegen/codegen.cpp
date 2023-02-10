@@ -1,7 +1,5 @@
 #include "codegen.h"
 
-#include <fmt/core.h>
-
 #include "utils.h"
 
 namespace X::Codegen {
@@ -9,77 +7,11 @@ namespace X::Codegen {
         declInterfaces(node);
         declClasses(node);
         declMethods(node);
+        // declare props here, so we can calc class size (for allocating objects)
+        declProps(node);
         declFuncs(node);
+
         gen(node);
-    }
-
-    void Codegen::declInterfaces(TopStatementListNode *node) {
-        for (auto interfaceNode: node->getInterfaces()) {
-            auto &name = interfaceNode->getName();
-            addSymbol(name);
-            const auto &mangledName = mangler.mangleInterface(name);
-
-            auto interface = llvm::StructType::create(context, mangledName);
-
-            InterfaceDecl interfaceDecl;
-            interfaceDecl.name = name;
-            interfaceDecl.type = interface;
-            interfaces[mangledName] = std::move(interfaceDecl);
-        }
-    }
-
-    void Codegen::declClasses(TopStatementListNode *node) {
-        for (auto klassNode: node->getClasses()) {
-            auto &name = klassNode->getName();
-            addSymbol(name);
-            const auto &mangledName = mangler.mangleClass(name);
-            if (classes.contains(mangledName)) {
-                throw ClassAlreadyExistsException(name);
-            }
-
-            auto klass = llvm::StructType::create(context, mangledName);
-
-            ClassDecl classDecl;
-            classDecl.name = name;
-            classDecl.type = klass;
-            classes[mangledName] = std::move(classDecl);
-        }
-    }
-
-    void Codegen::declMethods(TopStatementListNode *node) {
-        for (auto klass: node->getClasses()) {
-            const auto &mangledName = mangler.mangleClass(klass->getName());
-            auto classDecl = &classes[mangledName];
-
-            for (auto &[methodName, methodDef]: klass->getMethods()) {
-                if (methodName == CONSTRUCTOR_FN_NAME) {
-                    continue;
-                }
-
-                auto fnDef = methodDef->getFnDef();
-                const auto &fnName = mangler.mangleMethod(mangledName, fnDef->getName());
-                auto fnType = genFnType(fnDef->getArgs(), fnDef->getReturnType(), methodDef->getIsStatic() ? nullptr : classDecl->type);
-                llvm::Function::Create(fnType, llvm::Function::ExternalLinkage, fnName, module);
-                classDecl->methods[methodName] = {methodDef->getAccessModifier(), false};
-            }
-        }
-    }
-
-    void Codegen::declFuncs(TopStatementListNode *node) {
-        for (auto fnDef: node->getFuncs()) {
-            auto &name = fnDef->getName();
-
-            if (module.getFunction(name)) {
-                throw FnAlreadyDeclaredException(name);
-            }
-
-            if (name == MAIN_FN_NAME) {
-                checkMainFn(fnDef);
-            }
-
-            auto fnType = genFnType(fnDef->getArgs(), fnDef->getReturnType());
-            llvm::Function::Create(fnType, llvm::Function::ExternalLinkage, name, module);
-        }
     }
 
     llvm::Value *Codegen::gen(Node *node) {

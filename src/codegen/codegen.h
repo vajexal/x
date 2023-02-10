@@ -132,6 +132,7 @@ namespace X::Codegen {
         void declInterfaces(TopStatementListNode *node);
         void declClasses(TopStatementListNode *node);
         void declMethods(TopStatementListNode *node);
+        void declProps(TopStatementListNode *node);
         void declFuncs(TopStatementListNode *node);
 
         llvm::Type *mapType(const Type &type);
