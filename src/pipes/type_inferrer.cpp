@@ -8,6 +8,7 @@
 namespace X::Pipes {
     TopStatementListNode *TypeInferrer::handle(TopStatementListNode *node) {
         addRuntime();
+        declMethods(node);
         declFuncs(node);
 
         infer(node);
@@ -37,6 +38,27 @@ namespace X::Pipes {
                                                                     {"length", {{{}, Type::scalar(Type::TypeID::INT)}}},
                                                                     {"isEmpty", {{{}, Type::scalar(Type::TypeID::BOOL)}}},
                                                             });
+    }
+
+    void TypeInferrer::declMethods(TopStatementListNode *node) {
+        for (auto klass: node->getClasses()) {
+            if (klass->hasParent()) {
+                classMethodTypes[klass->getName()] = classMethodTypes[klass->getParent()];
+            }
+
+            for (auto &[methodName, methodDef]: klass->getMethods()) {
+                std::vector<Type> args;
+                args.reserve(methodDef->getFnDef()->getArgs().size());
+
+                for (auto arg: methodDef->getFnDef()->getArgs()) {
+                    args.push_back(arg->infer(*this));
+                }
+
+                auto &retType = methodDef->getFnDef()->getReturnType();
+                checkIfTypeIsValid(retType);
+                classMethodTypes[klass->getName()][methodName] = {{args, retType}, methodDef->getIsStatic()};
+            }
+        }
     }
 
     void TypeInferrer::declFuncs(TopStatementListNode *node) {
@@ -377,7 +399,6 @@ namespace X::Pipes {
 
         if (node->hasParent()) {
             classProps[self.value()] = classProps[node->getParent()];
-            classMethodTypes[self.value()] = classMethodTypes[node->getParent()];
         }
 
         node->getBody()->infer(*this);
@@ -410,15 +431,10 @@ namespace X::Pipes {
         args.reserve(node->getFnDef()->getArgs().size());
 
         for (auto arg: node->getFnDef()->getArgs()) {
-            auto argType = arg->infer(*this);
-            vars[arg->getName()] = argType;
-            args.push_back(argType);
+            vars[arg->getName()] = arg->infer(*this);
         }
 
-        auto &retType = node->getFnDef()->getReturnType();
-        checkIfTypeIsValid(retType);
-        classMethodTypes[self.value()][node->getFnDef()->getName()] = {{args, retType}, node->getIsStatic()};
-        currentFnRetType = retType;
+        currentFnRetType = node->getFnDef()->getReturnType();
 
         node->getFnDef()->getBody()->infer(*this);
 

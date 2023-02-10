@@ -94,9 +94,6 @@ namespace X::Codegen {
 
         void genProgram(TopStatementListNode *node);
 
-        void declClasses(TopStatementListNode *node);
-        void declFuncs(TopStatementListNode *node);
-
         llvm::Value *gen(Node *node);
         llvm::Value *gen(StatementListNode *node);
         llvm::Value *gen(TopStatementListNode *node);
@@ -132,6 +129,11 @@ namespace X::Codegen {
         llvm::Value *gen(AppendArrNode *node);
 
     private:
+        void declInterfaces(TopStatementListNode *node);
+        void declClasses(TopStatementListNode *node);
+        void declMethods(TopStatementListNode *node);
+        void declFuncs(TopStatementListNode *node);
+
         llvm::Type *mapType(const Type &type);
         llvm::Type *mapArgType(const Type &type);
         llvm::Constant *getDefaultValue(const Type &type);

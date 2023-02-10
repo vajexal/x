@@ -51,7 +51,7 @@ namespace X::Codegen {
                         llvm::StructType *thisType) {
         size_t paramsOffset = thisType ? 1 : 0; // this is special
         // plain functions could be declared earlier
-        // @see declFuncs
+        // see declFuncs and declMethods
         llvm::Function *fn = module.getFunction(name);
         if (!fn) {
             auto fnType = genFnType(args, returnType, thisType);

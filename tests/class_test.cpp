@@ -536,3 +536,26 @@ class Foo {
         FAIL() << "expected exception";
     } catch (const std::exception &e) {}
 }
+
+TEST_F(ClassTest, methodDeclOrder) {
+    checkProgram(R"code(
+class Foo {
+    public fn a() void {
+        println("a")
+
+        b()
+    }
+
+    public fn b() void {
+        println("b")
+    }
+}
+
+fn main() void {
+    auto foo = new Foo()
+
+    foo.a()
+}
+)code", R"output(a
+b)output");
+}

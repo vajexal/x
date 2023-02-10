@@ -8,19 +8,14 @@
 namespace X::Codegen {
     llvm::Value *Codegen::gen(ClassNode *node) {
         auto &name = node->getName();
-        addSymbol(name);
         const auto &mangledName = mangler.mangleClass(name);
-        if (classes.contains(mangledName)) {
-            throw ClassAlreadyExistsException(name);
-        }
+        auto &classDecl = classes[mangledName];
+        auto klass = classDecl.type;
 
-        auto klass = llvm::StructType::create(context, mangledName);
         std::vector<llvm::Type *> props;
         props.reserve(node->getProps().size());
-        ClassDecl classDecl;
         uint64_t propPos = 0;
 
-        classDecl.name = name;
         classDecl.isAbstract = node->isAbstract();
 
         if (node->hasParent()) {
@@ -62,9 +57,7 @@ namespace X::Codegen {
         }
 
         klass->setBody(props);
-        classDecl.type = klass;
-        classes[mangledName] = std::move(classDecl);
-        self = &classes[mangledName];
+        self = &classDecl;
 
         auto &abstractMethods = node->getAbstractMethods();
         for (auto &[methodName, method]: node->getMethods()) {
@@ -79,10 +72,6 @@ namespace X::Codegen {
             }
             const auto &fnName = mangler.mangleMethod(mangledName, fn->getName());
             genFn(fnName, fn->getArgs(), fn->getReturnType(), fn->getBody(), method->getIsStatic() ? nullptr : klass);
-            if (!isConstructor) {
-                // "insert" to avoid virtual methods overriding
-                self->methods.insert({methodName, {method->getAccessModifier(), false}});
-            }
         }
 
         self->methods[CONSTRUCTOR_FN_NAME] = {AccessModifier::PUBLIC, false};
@@ -174,20 +163,14 @@ namespace X::Codegen {
     }
 
     llvm::Value *Codegen::gen(InterfaceNode *node) {
-        auto &name = node->getName();
-        addSymbol(name);
-        const auto &mangledName = mangler.mangleInterface(name);
-        InterfaceDecl interfaceDecl;
-        interfaceDecl.name = name;
+        const auto &mangledName = mangler.mangleInterface(node->getName());
+        auto &interfaceDecl = interfaces[mangledName];
+        auto interface = interfaceDecl.type;
 
-        auto interface = llvm::StructType::create(context, mangledName);
         auto vtableType = genVtable(node, interface, interfaceDecl);
-        std::array<llvm::Type *, 2> props{vtableType->getPointerTo(), builder.getInt8PtrTy()};
         interfaceDecl.vtableType = vtableType;
-
+        std::array<llvm::Type *, 2> props{vtableType->getPointerTo(), builder.getInt8PtrTy()};
         interface->setBody(props);
-        interfaceDecl.type = interface;
-        interfaces[mangledName] = std::move(interfaceDecl);
 
         return nullptr;
     }

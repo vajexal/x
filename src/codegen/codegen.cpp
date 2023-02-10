@@ -6,19 +6,61 @@
 
 namespace X::Codegen {
     void Codegen::genProgram(TopStatementListNode *node) {
+        declInterfaces(node);
         declClasses(node);
+        declMethods(node);
         declFuncs(node);
         gen(node);
     }
 
+    void Codegen::declInterfaces(TopStatementListNode *node) {
+        for (auto interfaceNode: node->getInterfaces()) {
+            auto &name = interfaceNode->getName();
+            addSymbol(name);
+            const auto &mangledName = mangler.mangleInterface(name);
+
+            auto interface = llvm::StructType::create(context, mangledName);
+
+            InterfaceDecl interfaceDecl;
+            interfaceDecl.name = name;
+            interfaceDecl.type = interface;
+            interfaces[mangledName] = std::move(interfaceDecl);
+        }
+    }
+
     void Codegen::declClasses(TopStatementListNode *node) {
-        // order is important for now
-        // todo
-        for (auto child: node->getChildren()) {
-            if (auto classNode = llvm::dyn_cast<ClassNode>(child)) {
-                classNode->gen(*this);
-            } else if (auto interfaceNode = llvm::dyn_cast<InterfaceNode>(child)) {
-                interfaceNode->gen(*this);
+        for (auto klassNode: node->getClasses()) {
+            auto &name = klassNode->getName();
+            addSymbol(name);
+            const auto &mangledName = mangler.mangleClass(name);
+            if (classes.contains(mangledName)) {
+                throw ClassAlreadyExistsException(name);
+            }
+
+            auto klass = llvm::StructType::create(context, mangledName);
+
+            ClassDecl classDecl;
+            classDecl.name = name;
+            classDecl.type = klass;
+            classes[mangledName] = std::move(classDecl);
+        }
+    }
+
+    void Codegen::declMethods(TopStatementListNode *node) {
+        for (auto klass: node->getClasses()) {
+            const auto &mangledName = mangler.mangleClass(klass->getName());
+            auto classDecl = &classes[mangledName];
+
+            for (auto &[methodName, methodDef]: klass->getMethods()) {
+                if (methodName == CONSTRUCTOR_FN_NAME) {
+                    continue;
+                }
+
+                auto fnDef = methodDef->getFnDef();
+                const auto &fnName = mangler.mangleMethod(mangledName, fnDef->getName());
+                auto fnType = genFnType(fnDef->getArgs(), fnDef->getReturnType(), methodDef->getIsStatic() ? nullptr : classDecl->type);
+                llvm::Function::Create(fnType, llvm::Function::ExternalLinkage, fnName, module);
+                classDecl->methods[methodName] = {methodDef->getAccessModifier(), false};
             }
         }
     }
@@ -57,8 +99,8 @@ namespace X::Codegen {
     }
 
     llvm::Value *Codegen::gen(TopStatementListNode *node) {
-        for (auto fnDef: node->getFuncs()) {
-            fnDef->gen(*this);
+        for (auto child: node->getChildren()) {
+            child->gen(*this);
         }
 
         return nullptr;

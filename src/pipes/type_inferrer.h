@@ -45,9 +45,6 @@ namespace X::Pipes {
 
         TopStatementListNode *handle(TopStatementListNode *node) override;
 
-        void addRuntime();
-        void declFuncs(TopStatementListNode *node);
-
         // todo a lot of copying, maybe make unique types, like in llvm
         Type infer(Node *node);
         Type infer(StatementListNode *node);
@@ -87,6 +84,10 @@ namespace X::Pipes {
         Type infer(AppendArrNode *node);
 
     private:
+        void addRuntime();
+        void declMethods(TopStatementListNode *node);
+        void declFuncs(TopStatementListNode *node);
+
         void checkIfTypeIsValid(const Type &type) const;
         void checkIfLvalueTypeIsValid(const Type &type) const;
         void checkFnCall(const FnType &fnType, const ExprList &args);
