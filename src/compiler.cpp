@@ -15,13 +15,13 @@ namespace X {
         CompilerRuntime compilerRuntime;
 
         (Pipeline{})
-                .pipe(new Pipes::ParseCode(code))
+                .pipe(Pipes::ParseCode(code))
 //                .pipe(new Pipes::PrintAst())
-                .pipe(new Pipes::CheckInterfaces(compilerRuntime))
-                .pipe(new Pipes::CheckAbstractClasses())
-                .pipe(new Pipes::CheckVirtualMethods(compilerRuntime))
-                .pipe(new Pipes::TypeInferrer(compilerRuntime))
-                .pipe(new Pipes::CodeGenerator(compilerRuntime, sourceName));
+                .pipe(Pipes::CheckInterfaces(compilerRuntime))
+                .pipe(Pipes::CheckAbstractClasses())
+                .pipe(Pipes::CheckVirtualMethods(compilerRuntime))
+                .pipe(Pipes::TypeInferrer(compilerRuntime))
+                .pipe(Pipes::CodeGenerator(compilerRuntime, sourceName));
 
         return 0;
     }

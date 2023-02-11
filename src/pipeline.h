@@ -18,9 +18,8 @@ namespace X {
         }
 
     public:
-        // todo pass by ref
-        Pipeline &pipe(Pipe *pipe) {
-            node = pipe->handle(node);
+        Pipeline &pipe(Pipe &&pipe) {
+            node = pipe.handle(node);
 
             return *this;
         }
