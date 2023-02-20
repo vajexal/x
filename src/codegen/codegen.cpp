@@ -105,7 +105,7 @@ namespace X::Codegen {
                 auto arrType = getArrayForType(type.getSubtype());
                 auto arr = createAlloca(arrType);
                 auto len = llvm::ConstantInt::getSigned(llvm::Type::getInt64Ty(context), 0);
-                builder.CreateCall(getConstructor(arrType->getName().str()), {arr, len});
+                builder.CreateCall(getInternalConstructor(arrType->getName().str()), {arr, len});
                 return arr;
             }
             default:
@@ -195,13 +195,13 @@ namespace X::Codegen {
                 return builder.CreateFCmpONE(value, llvm::ConstantFP::get(llvm::Type::getDoubleTy(context), 0));
             default:
                 if (Runtime::String::isStringType(value->getType())) {
-                    const auto &stringIsEmptyFnName = mangler.mangleMethod(Runtime::String::CLASS_NAME, "isEmpty");
+                    const auto &stringIsEmptyFnName = mangler.mangleInternalMethod(Runtime::String::CLASS_NAME, "isEmpty");
                     auto stringIsEmptyFn = module.getFunction(stringIsEmptyFnName);
                     auto val = builder.CreateCall(stringIsEmptyFn, {value});
                     return negate(val);
                 } else if (Runtime::Array::isArrayType(value->getType())) {
                     auto arrType = deref(value->getType());
-                    const auto &arrayIsEmptyFnName = mangler.mangleMethod(arrType->getStructName().str(), "isEmpty");
+                    const auto &arrayIsEmptyFnName = mangler.mangleInternalMethod(arrType->getStructName().str(), "isEmpty");
                     auto arrayIsEmptyFn = module.getFunction(arrayIsEmptyFnName);
                     auto val = builder.CreateCall(arrayIsEmptyFn, {value});
                     return negate(val);
@@ -304,7 +304,7 @@ namespace X::Codegen {
 
     void Codegen::fillArray(llvm::Value *arr, const std::vector<llvm::Value *> &values) {
         auto arrType = deref(arr->getType());
-        auto arrSetFn = module.getFunction(mangler.mangleMethod(arrType->getStructName().str(), "set[]"));
+        auto arrSetFn = module.getFunction(mangler.mangleInternalMethod(arrType->getStructName().str(), "set[]"));
         if (!arrSetFn) {
             throw InvalidArrayAccessException();
         }

@@ -24,6 +24,10 @@ namespace X {
             return mangledClassName + "_" + methodName;
         }
 
+        std::string mangleInternalMethod(const std::string &mangledClassName, const std::string &methodName) const {
+            return INTERNAL_PREFIX + mangleMethod(mangledClassName, methodName);
+        }
+
         std::string mangleStaticProp(const std::string &mangledClassName, const std::string &propName) const {
             return mangledClassName + "_" + propName;
         }

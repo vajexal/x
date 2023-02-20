@@ -160,7 +160,7 @@ namespace X::Codegen {
         namedValues[valVarName] = valVar;
 
         // init stop value
-        auto lengthFn = module.getFunction(mangler.mangleMethod(exprType->getStructName().str(), "length"));
+        auto lengthFn = module.getFunction(mangler.mangleInternalMethod(exprType->getStructName().str(), "length"));
         auto iterStopValue = builder.CreateCall(lengthFn, {expr});
 
         builder.CreateBr(loopCondBB);
@@ -183,7 +183,7 @@ namespace X::Codegen {
         }
 
         // set val
-        auto getFn = module.getFunction(mangler.mangleMethod(exprType->getStructName().str(), "get[]"));
+        auto getFn = module.getFunction(mangler.mangleInternalMethod(exprType->getStructName().str(), "get[]"));
         auto val = builder.CreateCall(getFn, {expr, iter});
         builder.CreateStore(val, valVar);
 
@@ -223,7 +223,7 @@ namespace X::Codegen {
                     node->getStep()->gen(*this) :
                     llvm::ConstantInt::getSigned(llvm::Type::getInt64Ty(context), 1);
 
-        auto rangeCreateFn = module.getFunction(mangler.mangleMethod(Runtime::Range::CLASS_NAME, "create"));
+        auto rangeCreateFn = module.getFunction(mangler.mangleInternalMethod(Runtime::Range::CLASS_NAME, "create"));
         return builder.CreateCall(rangeCreateFn, {start, stop, step});
     }
 
@@ -298,7 +298,7 @@ namespace X::Codegen {
         auto arrElemType = arrayRuntime.getContainedType(llvm::cast<llvm::StructType>(arrType));
         expr = castTo(expr, arrElemType);
 
-        auto arrSetFn = module.getFunction(mangler.mangleMethod(arrType->getStructName().str(), "set[]"));
+        auto arrSetFn = module.getFunction(mangler.mangleInternalMethod(arrType->getStructName().str(), "set[]"));
         if (!arrSetFn) {
             throw InvalidArrayAccessException();
         }
@@ -318,7 +318,7 @@ namespace X::Codegen {
         auto arrElemType = arrayRuntime.getContainedType(llvm::cast<llvm::StructType>(arrType));
         expr = castTo(expr, arrElemType);
 
-        auto arrAppendFn = module.getFunction(mangler.mangleMethod(arrType->getStructName().str(), "append[]"));
+        auto arrAppendFn = module.getFunction(mangler.mangleInternalMethod(arrType->getStructName().str(), "append[]"));
         if (!arrAppendFn) {
             throw InvalidArrayAccessException();
         }

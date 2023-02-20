@@ -148,7 +148,8 @@ namespace X::Codegen {
         std::string getClassName(llvm::Value *obj) const;
         bool isObject(llvm::Value *value) const;
         llvm::AllocaInst *createAlloca(llvm::Type *type, const std::string &name = "") const;
-        llvm::Function *getConstructor(const std::string &mangledClassName) const;
+        // get constructor of internal class (String, Array, ...)
+        llvm::Function *getInternalConstructor(const std::string &mangledClassName) const;
         void checkConstructor(MethodDefNode *node, const std::string &className) const;
         llvm::Value *callMethod(llvm::Value *obj, const std::string &methodName, const std::vector<ExprNode *> &args);
         llvm::Value *callStaticMethod(const std::string &className, const std::string &methodName, const std::vector<ExprNode *> &args);

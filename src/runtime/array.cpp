@@ -36,7 +36,7 @@ namespace X::Runtime {
                 false
         );
         auto fn = llvm::Function::Create(fnType, llvm::Function::ExternalLinkage,
-                                         mangler.mangleMethod(arrayType->getName().str(), CONSTRUCTOR_FN_NAME), module);
+                                         mangler.mangleInternalMethod(arrayType->getName().str(), CONSTRUCTOR_FN_NAME), module);
 
         auto that = fn->getArg(0);
         auto len = fn->getArg(1);
@@ -113,7 +113,7 @@ namespace X::Runtime {
                 false
         );
         auto fn = llvm::Function::Create(fnType, llvm::Function::ExternalLinkage,
-                                         mangler.mangleMethod(arrayType->getName().str(), "get[]"), module);
+                                         mangler.mangleInternalMethod(arrayType->getName().str(), "get[]"), module);
 
         auto that = fn->getArg(0);
         auto index = fn->getArg(1);
@@ -165,7 +165,7 @@ namespace X::Runtime {
                 false
         );
         auto fn = llvm::Function::Create(fnType, llvm::Function::ExternalLinkage,
-                                         mangler.mangleMethod(arrayType->getName().str(), "set[]"), module);
+                                         mangler.mangleInternalMethod(arrayType->getName().str(), "set[]"), module);
 
         auto that = fn->getArg(0);
         auto index = fn->getArg(1);
@@ -216,7 +216,7 @@ namespace X::Runtime {
     void ArrayRuntime::addLength(llvm::StructType *arrayType, llvm::Type *elemType) {
         auto fnType = llvm::FunctionType::get(llvm::Type::getInt64Ty(context), {arrayType->getPointerTo()}, false);
         auto fn = llvm::Function::Create(fnType, llvm::Function::ExternalLinkage,
-                                         mangler.mangleMethod(arrayType->getName().str(), "length"), module);
+                                         mangler.mangleInternalMethod(arrayType->getName().str(), "length"), module);
 
         auto that = fn->getArg(0);
         that->setName(THIS_KEYWORD);
@@ -233,7 +233,7 @@ namespace X::Runtime {
     void ArrayRuntime::addIsEmpty(llvm::StructType *arrayType, llvm::Type *elemType) {
         auto fnType = llvm::FunctionType::get(llvm::Type::getInt1Ty(context), {arrayType->getPointerTo()}, false);
         auto fn = llvm::Function::Create(fnType, llvm::Function::ExternalLinkage,
-                                         mangler.mangleMethod(arrayType->getName().str(), "isEmpty"), module);
+                                         mangler.mangleInternalMethod(arrayType->getName().str(), "isEmpty"), module);
 
         auto that = fn->getArg(0);
         that->setName(THIS_KEYWORD);
@@ -242,7 +242,7 @@ namespace X::Runtime {
         llvm::IRBuilder<> builder(&fn->getEntryBlock(), fn->getEntryBlock().begin());
         builder.SetInsertPoint(bb);
 
-        auto arrLengthFn = module.getFunction(mangler.mangleMethod(arrayType->getName().str(), "length"));
+        auto arrLengthFn = module.getFunction(mangler.mangleInternalMethod(arrayType->getName().str(), "length"));
         auto arrLen = builder.CreateCall(arrLengthFn, {that});
         auto isEmpty = builder.CreateICmpEQ(arrLen, llvm::ConstantInt::get(llvm::Type::getInt64Ty(context), 0));
         builder.CreateRet(isEmpty);
@@ -251,7 +251,7 @@ namespace X::Runtime {
     void ArrayRuntime::addAppend(llvm::StructType *arrayType, llvm::Type *elemType) {
         auto fnType = llvm::FunctionType::get(llvm::Type::getVoidTy(context), {arrayType->getPointerTo(), elemType}, false);
         auto fn = llvm::Function::Create(fnType, llvm::Function::ExternalLinkage,
-                                         mangler.mangleMethod(arrayType->getName().str(), "append[]"), module);
+                                         mangler.mangleInternalMethod(arrayType->getName().str(), "append[]"), module);
 
         auto that = fn->getArg(0);
         auto val = fn->getArg(1);

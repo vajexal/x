@@ -20,7 +20,7 @@ namespace X::Codegen {
             case Type::TypeID::STRING: {
                 auto str = newObj(llvm::StructType::getTypeByName(context, Runtime::String::CLASS_NAME));
                 auto dataPtr = builder.CreateGlobalStringPtr(std::get<std::string>(value));
-                builder.CreateCall(getConstructor(Runtime::String::CLASS_NAME), {str, dataPtr});
+                builder.CreateCall(getInternalConstructor(Runtime::String::CLASS_NAME), {str, dataPtr});
                 return str;
             }
             case Type::TypeID::ARRAY: {
@@ -34,7 +34,7 @@ namespace X::Codegen {
                 auto arrType = getArrayForType(type.getSubtype());
                 auto arr = newObj(arrType);
                 auto len = llvm::ConstantInt::getSigned(llvm::Type::getInt64Ty(context), (int64_t)exprList.size());
-                builder.CreateCall(getConstructor(arrType->getName().str()), {arr, len});
+                builder.CreateCall(getInternalConstructor(arrType->getName().str()), {arr, len});
                 fillArray(arr, arrayValues);
                 return arr;
             }
@@ -100,7 +100,7 @@ namespace X::Codegen {
         if (Runtime::String::isStringType(lhs->getType()) && Runtime::String::isStringType(rhs->getType())) {
             switch (node->getType()) {
                 case OpType::PLUS: {
-                    const auto &stringConcatFnName = mangler.mangleMethod(Runtime::String::CLASS_NAME, "concat");
+                    const auto &stringConcatFnName = mangler.mangleInternalMethod(Runtime::String::CLASS_NAME, "concat");
                     auto stringConcatFn = module.getFunction(stringConcatFnName);
                     return builder.CreateCall(stringConcatFn, {lhs, rhs});
                 }
@@ -200,7 +200,7 @@ namespace X::Codegen {
 
         auto idx = node->getIdx()->gen(*this);
 
-        auto arrGetFn = module.getFunction(mangler.mangleMethod(arrType->getStructName().str(), "get[]"));
+        auto arrGetFn = module.getFunction(mangler.mangleInternalMethod(arrType->getStructName().str(), "get[]"));
         if (!arrGetFn) {
             throw InvalidArrayAccessException();
         }

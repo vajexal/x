@@ -302,8 +302,8 @@ namespace X::Codegen {
         builder.CreateStore(vtable, vtablePtr);
     }
 
-    llvm::Function *Codegen::getConstructor(const std::string &mangledClassName) const {
-        return module.getFunction(mangler.mangleMethod(mangledClassName, CONSTRUCTOR_FN_NAME));
+    llvm::Function *Codegen::getInternalConstructor(const std::string &mangledClassName) const {
+        return module.getFunction(mangler.mangleInternalMethod(mangledClassName, CONSTRUCTOR_FN_NAME));
     }
 
     void Codegen::checkConstructor(MethodDefNode *node, const std::string &className) const {
@@ -371,7 +371,7 @@ namespace X::Codegen {
     std::tuple<llvm::Value *, llvm::FunctionType *, llvm::Type *> Codegen::findMethod(
             llvm::StructType *type, const std::string &methodName, llvm::Value *obj) const {
         if (Runtime::String::isStringType(type) || Runtime::Array::isArrayType(type)) {
-            const auto &name = mangler.mangleMethod(type->getName().str(), methodName);
+            const auto &name = mangler.mangleInternalMethod(type->getName().str(), methodName);
             auto fn = module.getFunction(name);
             return {fn, fn->getFunctionType(), nullptr};
         }
