@@ -103,7 +103,7 @@ namespace X::Pipes {
                         throw CheckInterfacesException(fmt::format("interface method {}::{} must be implemented", interfaceName, methodName));
                     }
 
-                    if (!compareDeclAndDef(methodDecl, methodIt->second)) {
+                    if (*methodIt->second != *methodDecl) {
                         throw CheckInterfacesException(
                                 fmt::format("declaration of {}::{} must be compatible with interface {}", name,
                                             methodIt->second->getFnDef()->getName(), interfaceName));

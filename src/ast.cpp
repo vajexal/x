@@ -178,6 +178,38 @@ namespace X {
         return !(*this == other);
     }
 
+    bool MethodDefNode::operator==(const MethodDeclNode &decl) const {
+        if (decl.getAccessModifier() != getAccessModifier()) {
+            return false;
+        }
+
+        if (decl.getIsStatic() != getIsStatic()) {
+            return false;
+        }
+
+        auto fnDecl = decl.getFnDecl();
+
+        if (fnDecl->getReturnType() != fnDef->getReturnType()) {
+            return false;
+        }
+
+        if (fnDecl->getArgs().size() != fnDef->getArgs().size()) {
+            return false;
+        }
+
+        for (auto i = 0; i < fnDecl->getArgs().size(); i++) {
+            if (*fnDecl->getArgs()[i] != *fnDef->getArgs()[i]) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    bool MethodDefNode::operator!=(const MethodDeclNode &decl) const {
+        return !(*this == decl);
+    }
+
     bool StatementListNode::isLastNodeTerminate() const {
         for (auto it = children.crbegin(); it != children.crend(); it++) {
             if (llvm::isa<CommentNode>(*it)) {

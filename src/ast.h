@@ -750,6 +750,8 @@ namespace X {
 
         bool operator==(const MethodDefNode &other) const;
         bool operator!=(const MethodDefNode &other) const;
+        bool operator==(const MethodDeclNode &decl) const;
+        bool operator!=(const MethodDeclNode &decl) const;
 
         static bool classof(const Node *node) {
             return node->getKind() == NodeKind::MethodDef;

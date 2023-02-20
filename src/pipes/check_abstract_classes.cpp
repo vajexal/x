@@ -50,7 +50,7 @@ namespace X::Pipes {
                 throw CheckAbstractClassesException(fmt::format("abstract method {}::{} must be implemented", parentClassName, methodName));
             }
 
-            if (!compareDeclAndDef(methodDecl, methodDef->second)) {
+            if (*methodDef->second != *methodDecl) {
                 throw CheckAbstractClassesException(fmt::format("declaration of {}::{} must be compatible with abstract class {}",
                                                                 className, methodDef->second->getFnDef()->getName(), parentClassName));
             }
