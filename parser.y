@@ -204,7 +204,6 @@ INC identifier { $$ = new UnaryNode(OpType::PRE_INC, $2); }
 | expr '-' expr { $$ = new BinaryNode(OpType::MINUS, $1, $3); }
 | expr '*' expr { $$ = new BinaryNode(OpType::MUL, $1, $3); }
 | expr '/' expr { $$ = new BinaryNode(OpType::DIV, $1, $3); }
-| '(' expr ')' { $$ = $2; }
 | '!' expr { $$ = new UnaryNode(OpType::NOT, $2); }
 | expr POW expr { $$ = new BinaryNode(OpType::POW, $1, $3); }
 | expr '%' expr { $$ = new BinaryNode(OpType::MOD, $1, $3); }
@@ -270,8 +269,9 @@ expr { $$ = std::vector<ExprNode *>(); $$.push_back($1); }
 ;
 
 dereferenceable:
-identifier { $$ = std::move($1); }
+identifier { $$ = $1; }
 | THIS { $$ = new VarNode(THIS_KEYWORD); }
+| '(' expr ')' { $$ = $2; }
 | dereferenceable '.' IDENTIFIER { $$ = new FetchPropNode($1, std::move($3)); }
 | dereferenceable '[' expr ']' { $$ = new FetchArrNode($1, $3); }
 | dereferenceable '.' IDENTIFIER '(' expr_list ')' { $$ = new MethodCallNode($1, std::move($3), std::move($5)); }

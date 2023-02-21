@@ -24,3 +24,9 @@ false
 false
 false)output");
 }
+
+TEST_F(ExprTest, methodOnExpr) {
+    checkCode(R"code(
+    println(("foo" + "bar").length())
+)code", "6");
+}
