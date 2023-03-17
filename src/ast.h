@@ -54,7 +54,8 @@ namespace X {
             ARRAY,
             VOID,
             CLASS,
-            AUTO
+            AUTO,
+            SELF
         };
     private:
         TypeID id;
@@ -69,17 +70,18 @@ namespace X {
         static Type array(Type *subtype);
         static Type voidTy();
         static Type autoTy();
+        static Type selfTy();
 
         TypeID getTypeID() const { return id; }
         const std::string &getClassName() const { return className.value(); }
         Type *getSubtype() const { return subtype; }
 
-        bool isOneOf(TypeID typeId) {
+        bool isOneOf(TypeID typeId) const {
             return id == typeId;
         }
 
         template<typename... Args>
-        bool isOneOf(TypeID typeID, Args... ids) {
+        bool isOneOf(TypeID typeID, Args... ids) const {
             return id == typeID || isOneOf(ids...);
         }
 
@@ -517,6 +519,7 @@ namespace X {
         const std::string &getName() const { return name; }
         const std::vector<ArgNode *> &getArgs() const { return args; }
         const Type &getReturnType() const { return returnType; }
+        void setReturnType(const Type &type) { returnType = type; }
 
         bool operator==(const FnDeclNode &other) const;
         bool operator!=(const FnDeclNode &other) const;
@@ -551,6 +554,7 @@ namespace X {
         const std::string &getName() const { return name; }
         const std::vector<ArgNode *> &getArgs() const { return args; }
         const Type &getReturnType() const { return returnType; }
+        void setReturnType(const Type &type) { returnType = type; }
         StatementListNode *getBody() const { return body; }
 
         bool operator==(const FnDefNode &other) const;

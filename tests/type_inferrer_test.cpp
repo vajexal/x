@@ -264,5 +264,12 @@ fn main() void {
     a[] = "hello"
 }
 )code",
+                "invalid type"),
+        // self return type on function
+        std::make_pair(
+                R"code(
+fn foo() self {
+}
+)code",
                 "invalid type")
 ));

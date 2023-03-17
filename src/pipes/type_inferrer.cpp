@@ -79,20 +79,21 @@ namespace X::Pipes {
                     args.push_back(arg->infer(*this));
                 }
 
-                auto &retType = fnDecl->getReturnType();
+                auto &retType = getMethodReturnType(fnDecl, name);
                 checkIfTypeIsValid(retType);
                 classMethods[fnDecl->getName()] = {{args, retType}, methodDecl->getIsStatic()};
             }
 
             for (auto &[methodName, methodDef]: klass->getMethods()) {
+                auto fnDef = methodDef->getFnDef();
                 std::vector<Type> args;
-                args.reserve(methodDef->getFnDef()->getArgs().size());
+                args.reserve(fnDef->getArgs().size());
 
-                for (auto arg: methodDef->getFnDef()->getArgs()) {
+                for (auto arg: fnDef->getArgs()) {
                     args.push_back(arg->infer(*this));
                 }
 
-                auto &retType = methodDef->getFnDef()->getReturnType();
+                auto &retType = getMethodReturnType(fnDef, name);
                 checkIfTypeIsValid(retType);
                 classMethods[methodName] = {{args, retType}, methodDef->getIsStatic()};
             }
@@ -544,7 +545,7 @@ namespace X::Pipes {
             args.push_back(arg->infer(*this));
         }
 
-        auto &retType = node->getFnDecl()->getReturnType();
+        auto &retType = getMethodReturnType(node->getFnDecl(), self.value());
         checkIfTypeIsValid(retType);
         classMethodTypes[self.value()][node->getFnDecl()->getName()] = {{args, retType}, node->getIsStatic()};
 
@@ -613,7 +614,7 @@ namespace X::Pipes {
             throw InvalidTypeException();
         }
 
-        if (type.getTypeID() == Type::TypeID::AUTO) {
+        if (type.isOneOf(Type::TypeID::AUTO, Type::TypeID::SELF)) {
             throw InvalidTypeException();
         }
     }
@@ -637,6 +638,24 @@ namespace X::Pipes {
                 throw InvalidTypeException();
             }
         }
+    }
+
+    const Type &TypeInferrer::getMethodReturnType(FnDeclNode *fnDecl, const std::string &className) const {
+        if (fnDecl->getReturnType().getTypeID() == Type::TypeID::SELF) {
+            fnDecl->setReturnType(Type::klass(className));
+            return fnDecl->getReturnType();
+        }
+
+        return fnDecl->getReturnType();
+    }
+
+    const Type &TypeInferrer::getMethodReturnType(FnDefNode *fnDef, const std::string &className) const {
+        if (fnDef->getReturnType().getTypeID() == Type::TypeID::SELF) {
+            fnDef->setReturnType(Type::klass(className));
+            return fnDef->getReturnType();
+        }
+
+        return fnDef->getReturnType();
     }
 
     const Type TypeInferrer::getVarType(const std::string &name) const {

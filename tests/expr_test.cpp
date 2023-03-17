@@ -34,19 +34,19 @@ TEST_F(ExprTest, methodOnExpr) {
 TEST_F(ExprTest, multilineChainCall) {
     checkProgram(R"code(
 class Foo {
-    public fn a() Foo {
+    public fn a() self {
         println("a")
 
         return this
     }
 
-    public fn b() Foo {
+    public fn b() self {
         println("b")
 
         return this
     }
 
-    public fn c() Foo {
+    public fn c() self {
         println("c")
 
         return this

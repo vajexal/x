@@ -93,6 +93,7 @@
 %nterm <ExprNode *> expr
 %nterm <Type> type
 %nterm <Type> array_type
+%nterm <Type> return_type
 %nterm <DeclNode *> var_decl
 %nterm <VarNode *> identifier
 %nterm <std::string> static_identifier
@@ -235,6 +236,11 @@ array_type:
 '[' ']' type { $$ = std::move(Type::array(new Type($3))); }
 ;
 
+return_type:
+type { $$ = std::move($1); }
+| SELF { $$ = std::move(Type::selfTy()); }
+;
+
 var_decl:
 type IDENTIFIER '=' expr { $$ = new DeclNode(std::move($1), std::move($2), $4); }
 | AUTO_TYPE IDENTIFIER '=' expr { $$ = new DeclNode(Type::autoTy(), std::move($2), $4); }
@@ -306,11 +312,11 @@ RANGE '(' expr ')' { $$ = new RangeNode($3); }
 ;
 
 fn_def:
-FN IDENTIFIER '(' decl_arg_list ')' type statement_block { $$ = new FnDefNode(std::move($2), std::move($4), std::move($6), $7); }
+FN IDENTIFIER '(' decl_arg_list ')' return_type statement_block { $$ = new FnDefNode(std::move($2), std::move($4), std::move($6), $7); }
 ;
 
 fn_decl:
-FN IDENTIFIER '(' decl_arg_list ')' type { $$ = new FnDeclNode(std::move($2), std::move($4), std::move($6)); }
+FN IDENTIFIER '(' decl_arg_list ')' return_type { $$ = new FnDeclNode(std::move($2), std::move($4), std::move($6)); }
 ;
 
 decl_arg_list:

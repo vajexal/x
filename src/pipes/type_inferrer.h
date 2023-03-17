@@ -91,6 +91,8 @@ namespace X::Pipes {
         void checkIfTypeIsValid(const Type &type) const;
         void checkIfLvalueTypeIsValid(const Type &type) const;
         void checkFnCall(const FnType &fnType, const ExprList &args);
+        const Type &getMethodReturnType(FnDeclNode *fnDecl, const std::string &className) const;
+        const Type &getMethodReturnType(FnDefNode *fnDef, const std::string &className) const;
         const Type getVarType(const std::string &name) const;
         const FnType &getFnType(const std::string &fnName) const;
         const MethodType &getMethodType(const std::string &className, const std::string &methodName, bool isStatic = false) const;
