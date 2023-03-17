@@ -30,3 +30,38 @@ TEST_F(ExprTest, methodOnExpr) {
     println(("foo" + "bar").length())
 )code", "6");
 }
+
+TEST_F(ExprTest, multilineChainCall) {
+    checkProgram(R"code(
+class Foo {
+    public fn a() Foo {
+        println("a")
+
+        return this
+    }
+
+    public fn b() Foo {
+        println("b")
+
+        return this
+    }
+
+    public fn c() Foo {
+        println("c")
+
+        return this
+    }
+}
+
+fn main() void {
+    auto foo = new Foo()
+
+    foo.
+        a().
+        b().
+        c()
+}
+)code", R"output(a
+b
+c)output");
+}

@@ -275,6 +275,7 @@ identifier { $$ = $1; }
 | dereferenceable '.' IDENTIFIER { $$ = new FetchPropNode($1, std::move($3)); }
 | dereferenceable '[' expr ']' { $$ = new FetchArrNode($1, $3); }
 | dereferenceable '.' IDENTIFIER '(' expr_list ')' { $$ = new MethodCallNode($1, std::move($3), std::move($5)); }
+| dereferenceable '.' '\n' IDENTIFIER '(' expr_list ')' { $$ = new MethodCallNode($1, std::move($4), std::move($6)); }
 ;
 
 if_statement:
