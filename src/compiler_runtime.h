@@ -1,5 +1,4 @@
-#ifndef X_COMPILER_RUNTIME_H
-#define X_COMPILER_RUNTIME_H
+#pragma once
 
 #include <map>
 #include <string>
@@ -21,5 +20,3 @@ namespace X {
         std::map<std::string, std::set<std::string>> extendedClasses;
     };
 }
-
-#endif //X_COMPILER_RUNTIME_H

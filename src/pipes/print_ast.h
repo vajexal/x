@@ -1,5 +1,4 @@
-#ifndef X_PRINT_AST_H
-#define X_PRINT_AST_H
+#pragma once
 
 #include "pipeline.h"
 #include "ast.h"
@@ -70,5 +69,3 @@ namespace X::Pipes {
         }
     };
 }
-
-#endif //X_PRINT_AST_H

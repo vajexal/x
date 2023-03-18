@@ -1,5 +1,4 @@
-#ifndef X_MANGLER_H
-#define X_MANGLER_H
+#pragma once
 
 #include <string>
 
@@ -37,5 +36,3 @@ namespace X {
         }
     };
 }
-
-#endif //X_MANGLER_H

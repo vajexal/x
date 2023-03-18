@@ -1,5 +1,4 @@
-#ifndef X_AST_H
-#define X_AST_H
+#pragma once
 
 #include <iostream>
 #include <utility>
@@ -1072,5 +1071,3 @@ namespace X {
         }
     };
 }
-
-#endif //X_AST_H

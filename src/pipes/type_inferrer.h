@@ -1,5 +1,4 @@
-#ifndef X_TYPE_INFERRER_H
-#define X_TYPE_INFERRER_H
+#pragma once
 
 #include <vector>
 #include <map>
@@ -118,5 +117,3 @@ namespace X::Pipes {
         InvalidTypeException() : TypeInferrerException("invalid type") {}
     };
 }
-
-#endif //X_TYPE_INFERRER_H

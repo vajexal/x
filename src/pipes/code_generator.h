@@ -1,5 +1,4 @@
-#ifndef X_CODE_GENERATOR_H
-#define X_CODE_GENERATOR_H
+#pragma once
 
 #include "llvm/Support/Error.h"
 #include "llvm/IR/LegacyPassManager.h"
@@ -51,5 +50,3 @@ namespace X::Pipes {
         }
     };
 }
-
-#endif //X_CODE_GENERATOR_H

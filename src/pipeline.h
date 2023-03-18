@@ -1,5 +1,4 @@
-#ifndef X_PIPELINE_H
-#define X_PIPELINE_H
+#pragma once
 
 #include "ast.h"
 
@@ -25,5 +24,3 @@ namespace X {
         }
     };
 }
-
-#endif //X_PIPELINE_H

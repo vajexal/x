@@ -1,5 +1,4 @@
-#ifndef X_UTILS_H
-#define X_UTILS_H
+#pragma once
 
 #include "llvm/IR/Type.h"
 
@@ -10,5 +9,3 @@ namespace X {
 
     llvm::Type *deref(llvm::Type *type);
 }
-
-#endif //X_UTILS_H

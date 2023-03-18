@@ -1,5 +1,4 @@
-#ifndef X_CODEGEN_H
-#define X_CODEGEN_H
+#pragma once
 
 #include <map>
 #include <stack>
@@ -290,5 +289,3 @@ namespace X::Codegen {
         BinaryArgIsEmptyException() : CodegenException("binary arg is empty") {}
     };
 }
-
-#endif //X_CODEGEN_H

@@ -1,5 +1,4 @@
-#ifndef X_ARRAY_H
-#define X_ARRAY_H
+#pragma once
 
 #include <map>
 #include <string>
@@ -53,5 +52,3 @@ namespace X::Runtime {
         }
     };
 }
-
-#endif //X_ARRAY_H

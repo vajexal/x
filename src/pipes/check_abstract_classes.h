@@ -1,5 +1,4 @@
-#ifndef X_CHECK_ABSTRACT_CLASSES_H
-#define X_CHECK_ABSTRACT_CLASSES_H
+#pragma once
 
 #include <map>
 
@@ -30,5 +29,3 @@ namespace X::Pipes {
         }
     };
 }
-
-#endif //X_CHECK_ABSTRACT_CLASSES_H

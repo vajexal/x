@@ -1,5 +1,4 @@
-#ifndef X_PARSE_CODE_H
-#define X_PARSE_CODE_H
+#pragma once
 
 #include "pipeline.h"
 
@@ -26,5 +25,3 @@ namespace X::Pipes {
         }
     };
 }
-
-#endif //X_PARSE_CODE_H

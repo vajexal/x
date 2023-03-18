@@ -1,5 +1,4 @@
-#ifndef X_CASTS_H
-#define X_CASTS_H
+#pragma once
 
 #include "string.h"
 
@@ -8,5 +7,3 @@ namespace X::Runtime {
     String *castIntToString(int64_t value);
     String *castFloatToString(double value);
 }
-
-#endif //X_CASTS_H

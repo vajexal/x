@@ -1,5 +1,4 @@
-#ifndef X_DRIVER_H
-#define X_DRIVER_H
+#pragma once
 
 #include "ast.h"
 #include "location.hh"
@@ -15,6 +14,3 @@ namespace X {
         Driver(const std::string &s) : s(s.c_str()) {}
     };
 }
-
-
-#endif //X_DRIVER_H

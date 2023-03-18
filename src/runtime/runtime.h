@@ -1,5 +1,4 @@
-#ifndef X_RUNTIME_H
-#define X_RUNTIME_H
+#pragma once
 
 #include <map>
 
@@ -42,5 +41,3 @@ namespace X::Runtime {
                                   const llvm::orc::SymbolLookupSet &LookupSet) override;
     };
 }
-
-#endif //X_RUNTIME_H

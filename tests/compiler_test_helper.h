@@ -1,5 +1,4 @@
-#ifndef X_COMPILER_TEST_HELPER_H
-#define X_COMPILER_TEST_HELPER_H
+#pragma once
 
 #include <gtest/gtest.h>
 
@@ -14,5 +13,3 @@ protected:
     void checkCode(const std::string &code, const std::string &expectedOutput);
     void checkProgram(const std::string &code, const std::string &expectedOutput);
 };
-
-#endif //X_COMPILER_TEST_HELPER_H

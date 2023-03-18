@@ -1,5 +1,4 @@
-#ifndef X_CHECK_VIRTUAL_METHODS_H
-#define X_CHECK_VIRTUAL_METHODS_H
+#pragma once
 
 #include "pipeline.h"
 
@@ -35,5 +34,3 @@ namespace X::Pipes {
         }
     };
 }
-
-#endif //X_CHECK_VIRTUAL_METHODS_H

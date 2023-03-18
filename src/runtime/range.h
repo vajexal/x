@@ -1,5 +1,4 @@
-#ifndef X_RANGE_H
-#define X_RANGE_H
+#pragma once
 
 #include <string>
 
@@ -18,5 +17,3 @@ namespace X::Runtime {
     int64_t Range_length(Range *that);
     int64_t Range_get(Range *that, int64_t idx);
 }
-
-#endif //X_RANGE_H

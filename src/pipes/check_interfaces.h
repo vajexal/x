@@ -1,5 +1,4 @@
-#ifndef X_CHECK_INTERFACES_H
-#define X_CHECK_INTERFACES_H
+#pragma once
 
 #include "pipeline.h"
 #include "compiler_runtime.h"
@@ -37,5 +36,3 @@ namespace X::Pipes {
         }
     };
 }
-
-#endif //X_CHECK_INTERFACES_H

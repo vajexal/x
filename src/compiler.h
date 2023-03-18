@@ -1,5 +1,4 @@
-#ifndef X_COMPILER_H
-#define X_COMPILER_H
+#pragma once
 
 #include <string>
 
@@ -9,5 +8,3 @@ namespace X {
         int compile(const std::string &code, const std::string &sourceName = "narnia");
     };
 }
-
-#endif //X_COMPILER_H

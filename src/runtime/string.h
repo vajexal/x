@@ -1,5 +1,4 @@
-#ifndef X_STRING_H
-#define X_STRING_H
+#pragma once
 
 #include <string>
 
@@ -33,5 +32,3 @@ namespace X::Runtime {
 
     String *createEmptyString();
 }
-
-#endif //X_STRING_H
