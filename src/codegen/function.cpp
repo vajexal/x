@@ -75,6 +75,8 @@ namespace X::Codegen {
             that = fn->getArg(0);
         }
 
+        gcPushStackFrame();
+
         namedValues.clear(); // todo global vars
         for (auto i = paramsOffset; i < fn->arg_size(); i++) {
             auto arg = fn->getArg(i);
@@ -82,10 +84,18 @@ namespace X::Codegen {
             auto alloca = createAlloca(arg->getType(), argName);
             builder.CreateStore(arg, alloca);
             namedValues[argName] = alloca;
+
+            if (isClassInst(arg)) {
+                auto argVoidPtr = builder.CreateBitCast(alloca, builder.getInt8PtrTy()->getPointerTo());
+                auto classType = deref(arg->getType());
+                auto classId = getClassIdByMangledName(classType->getStructName().str());
+                gcAddRoot(argVoidPtr, classId);
+            }
         }
 
         body->gen(*this);
         if (!body->isLastNodeTerminate()) {
+            gcPopStackFrame();
             builder.CreateRetVoid();
         }
 

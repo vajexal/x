@@ -29,11 +29,12 @@ namespace X::Codegen {
 
             auto klass = llvm::StructType::create(context, mangledName);
 
-            ClassDecl classDecl;
-            classDecl.name = name;
-            classDecl.type = klass;
-            classDecl.isAbstract = klassNode->isAbstract();
-            classes[mangledName] = std::move(classDecl);
+            classes[mangledName] = {
+                    .name = name,
+                    .id = globalClassId++,
+                    .type = klass,
+                    .isAbstract = klassNode->isAbstract(),
+            };
         }
     }
 
@@ -43,6 +44,7 @@ namespace X::Codegen {
             const auto &mangledName = mangler.mangleClass(name);
             auto &classDecl = classes[mangledName];
             auto klass = classDecl.type;
+            PointerList pointerList;
 
             std::vector<llvm::Type *> props;
             props.reserve(klassNode->getProps().size());
@@ -54,6 +56,7 @@ namespace X::Codegen {
                 props.push_back(parentClassDecl.type);
                 propPos++;
                 classDecl.parent = const_cast<ClassDecl *>(&parentClassDecl);
+                pointerList = compilerRuntime.classPointerLists.at(parentClassDecl.id);
             }
 
             auto it = compilerRuntime.virtualMethods.find(name);
@@ -87,6 +90,19 @@ namespace X::Codegen {
             }
 
             klass->setBody(props);
+
+            // build class pointer list
+            auto structLayout = module.getDataLayout().getStructLayout(klass);
+            for (auto i = 0; i < klass->getNumElements(); i++) {
+                auto type = klass->getElementType(i);
+                if (type->isPointerTy() && isClassType(type)) {
+                    auto offset = structLayout->getElementOffset(i);
+                    auto classId = getClassIdByMangledName(deref(type)->getStructName().str());
+                    pointerList.emplace_back(offset, classId);
+                }
+            }
+
+            compilerRuntime.classPointerLists[classDecl.id] = std::move(pointerList);
         }
     }
 

@@ -196,9 +196,28 @@ namespace X::Codegen {
         return std::move(mangler.unmangleClass(type->getStructName().str()));
     }
 
+    unsigned long Codegen::getClassIdByMangledName(const std::string &mangledName) const {
+        auto &classDecl = getClassDecl(mangledName);
+        return classDecl.id;
+    }
+
+    unsigned long Codegen::getClassIdByName(const std::string &name) const {
+        auto mangledName = mangler.mangleClass(name);
+        return getClassIdByMangledName(mangledName);
+    }
+
     bool Codegen::isObject(llvm::Value *value) const {
         auto type = deref(value->getType());
         return type->isStructTy();
+    }
+
+    bool Codegen::isClassType(llvm::Type *type) const {
+        type = deref(type);
+        return type->isStructTy() && mangler.isMangledClass(type->getStructName().str());
+    }
+
+    bool Codegen::isClassInst(llvm::Value *value) const {
+        return isClassType(value->getType());
     }
 
     llvm::StructType *Codegen::genVtable(ClassNode *classNode, llvm::StructType *klass, ClassDecl &classDecl) {
@@ -216,7 +235,7 @@ namespace X::Codegen {
             classDecl.methods[methodName] = {methodDef->getAccessModifier(), true, vtablePos++};
         }
 
-        return llvm::StructType::create(context, vtableProps, classMangledName + ".vtable");
+        return llvm::StructType::create(context, vtableProps, "vtable." + classMangledName);
     }
 
     llvm::StructType *Codegen::genVtable(InterfaceNode *node, llvm::StructType *interfaceType, InterfaceDecl &interfaceDecl) {
@@ -232,7 +251,7 @@ namespace X::Codegen {
             interfaceDecl.methods[methodName] = {methodDecl->getAccessModifier(), true, vtablePos++};
         }
 
-        return llvm::StructType::create(context, vtableProps, interfaceMangledName + ".vtable");
+        return llvm::StructType::create(context, vtableProps, "vtable." + interfaceMangledName);
     }
 
     void Codegen::initVtable(llvm::Value *obj) {

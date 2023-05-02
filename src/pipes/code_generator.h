@@ -6,11 +6,13 @@
 #include "llvm/ExecutionEngine/Orc/Core.h"
 
 #include "pipeline.h"
+#include "mangler.h"
 #include "compiler_runtime.h"
 
 namespace X::Pipes {
     // todo rename
     class CodeGenerator : public Pipe {
+        Mangler mangler;
         CompilerRuntime &compilerRuntime;
         std::string sourceName;
 

@@ -2,6 +2,7 @@
 
 #include <iostream>
 
+#include "llvm/IR/GlobalVariable.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
 
 #include "casts.h"
@@ -12,8 +13,25 @@ namespace X::Runtime {
         std::cout << str->str << std::endl;
     }
 
+    /// returns true is stings are equal
     bool compareStrings(String *first, String *second) {
         return first->len == second->len && std::strncmp(first->str, second->str, first->len) == 0;
+    }
+
+    void *gc_alloc(GC::GC **gc, std::size_t size) {
+        return (*gc)->alloc(size);
+    }
+
+    void gc_pushStackFrame(GC::GC **gc) {
+        (*gc)->pushStackFrame();
+    }
+
+    void gc_popStackFrame(GC::GC **gc) {
+        (*gc)->popStackFrame();
+    }
+
+    void gc_addRoot(GC::GC **gc, void **root, unsigned long classId) {
+        (*gc)->addRoot(root, classId);
     }
 
     void Runtime::addDeclarations(llvm::LLVMContext &context, llvm::IRBuilder<> &builder, llvm::Module &module) {
@@ -23,7 +41,9 @@ namespace X::Runtime {
         auto rangeType = llvm::StructType::create(
                 context, {llvm::Type::getInt64Ty(context), llvm::Type::getInt64Ty(context), llvm::Type::getInt64Ty(context)}, Range::CLASS_NAME);
 
-        // function name, return type, param types, function pointer
+        auto gcType = llvm::Type::getInt8PtrTy(context)->getPointerTo();
+
+        // function name, return type, param types
         std::vector<std::tuple<std::string, llvm::Type *, llvm::ArrayRef<llvm::Type *>>> funcs{
                 {mangler.mangleInternalFunction("malloc"),
                  llvm::Type::getInt8PtrTy(context), {llvm::Type::getInt64Ty(context)}},
@@ -71,12 +91,23 @@ namespace X::Runtime {
                  llvm::Type::getInt64Ty(context), {rangeType->getPointerTo()}},
                 {mangler.mangleInternalMethod(Range::CLASS_NAME, "get[]"),
                  llvm::Type::getInt64Ty(context), {rangeType->getPointerTo(), llvm::Type::getInt64Ty(context)}},
+
+                // gc
+                {mangler.mangleInternalFunction("gcAlloc"), llvm::Type::getInt8PtrTy(context), {gcType, llvm::Type::getInt64Ty(context)}},
+                {mangler.mangleInternalFunction("gcPushStackFrame"), llvm::Type::getVoidTy(context), {gcType}},
+                {mangler.mangleInternalFunction("gcPopStackFrame"), llvm::Type::getVoidTy(context), {gcType}},
+                {mangler.mangleInternalFunction("gcAddRoot"), llvm::Type::getInt8PtrTy(context),
+                 {gcType, llvm::Type::getInt8PtrTy(context)->getPointerTo(), llvm::Type::getInt64Ty(context)}},
         };
 
         for (auto &[fnName, retType, paramTypes]: funcs) {
             auto fnType = llvm::FunctionType::get(retType, paramTypes, false);
             module.getOrInsertFunction(fnName, fnType).getCallee();
         }
+
+        auto gc = llvm::cast<llvm::GlobalVariable>(
+                module.getOrInsertGlobal(mangler.mangleInternalSymbol("gc"), llvm::Type::getInt8PtrTy(context)));
+        gc->setInitializer(llvm::ConstantPointerNull::get(llvm::Type::getInt8PtrTy(context)));
     }
 
     void Runtime::addDefinitions(llvm::orc::JITDylib &JD, llvm::orc::MangleAndInterner &llvmMangle) {
@@ -113,6 +144,12 @@ namespace X::Runtime {
                 {mangler.mangleInternalMethod(Range::CLASS_NAME, "create"), reinterpret_cast<void *>(Range_create)},
                 {mangler.mangleInternalMethod(Range::CLASS_NAME, "length"), reinterpret_cast<void *>(Range_length)},
                 {mangler.mangleInternalMethod(Range::CLASS_NAME, "get[]"), reinterpret_cast<void *>(Range_get)},
+
+                // gc
+                {mangler.mangleInternalFunction("gcAlloc"), reinterpret_cast<void *>(gc_alloc)},
+                {mangler.mangleInternalFunction("gcPushStackFrame"), reinterpret_cast<void *>(gc_pushStackFrame)},
+                {mangler.mangleInternalFunction("gcPopStackFrame"), reinterpret_cast<void *>(gc_popStackFrame)},
+                {mangler.mangleInternalFunction("gcAddRoot"), reinterpret_cast<void *>(gc_addRoot)},
         };
 
         builtinFuncs.init(funcs.size());

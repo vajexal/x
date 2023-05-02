@@ -19,6 +19,10 @@ namespace X {
             return mangledClassName.substr(std::strlen("class."));
         }
 
+        bool isMangledClass(const std::string &name) const {
+            return name.starts_with("class.");
+        }
+
         std::string mangleMethod(const std::string &mangledClassName, const std::string &methodName) const {
             return mangledClassName + "_" + methodName;
         }
@@ -33,6 +37,10 @@ namespace X {
 
         std::string mangleInternalFunction(const std::string &fnName) const {
             return INTERNAL_PREFIX + fnName;
+        }
+
+        std::string mangleInternalSymbol(const std::string &symbol) const {
+            return INTERNAL_PREFIX + symbol;
         }
     };
 }

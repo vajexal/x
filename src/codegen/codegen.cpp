@@ -142,19 +142,14 @@ namespace X::Codegen {
 
     // allocates object on heap
     llvm::Value *Codegen::newObj(llvm::StructType *type) {
-        auto mallocFn = module.getFunction(mangler.mangleInternalFunction("malloc"));
-        auto mallocSizeType = llvm::Type::getInt64Ty(context);
         auto typeSize = module.getDataLayout().getTypeAllocSize(type);
         if (typeSize.isScalable()) {
             throw CodegenException("can't calc obj size");
         }
         auto allocSize = builder.getInt64(typeSize.getFixedSize());
 
-        auto obj = llvm::CallInst::CreateMalloc(
-                builder.GetInsertBlock(), mallocSizeType, type, allocSize, nullptr, mallocFn);
-        builder.Insert(obj);
-
-        builder.CreateMemSet(obj, llvm::ConstantInt::getSigned(llvm::Type::getInt8Ty(context), 0), allocSize, llvm::None);
+        auto objPtr = gcAlloc(allocSize);
+        auto obj = builder.CreateBitCast(objPtr, type->getPointerTo());
 
         return obj;
     }

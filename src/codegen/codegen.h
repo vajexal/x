@@ -50,12 +50,13 @@ namespace X::Codegen {
 
     struct ClassDecl {
         std::string name;
+        unsigned long id;
         llvm::StructType *type;
         std::map<std::string, Prop> props;
         std::map<std::string, StaticProp> staticProps;
         std::map<std::string, Method> methods;
         ClassDecl *parent = nullptr;
-        bool isAbstract;
+        bool isAbstract = false;
         llvm::StructType *vtableType = nullptr;
     };
 
@@ -84,6 +85,7 @@ namespace X::Codegen {
         std::map<std::string, ClassDecl> classes;
         std::map<std::string, InterfaceDecl> interfaces;
         std::set<std::string> symbols;
+        unsigned long globalClassId = 0;
 
     public:
         static inline const std::string MAIN_FN_NAME = "main";
@@ -145,7 +147,11 @@ namespace X::Codegen {
         const ClassDecl &getClassDecl(const std::string &mangledName) const;
         const InterfaceDecl *findInterfaceDecl(const std::string &mangledName) const;
         std::string getClassName(llvm::Value *obj) const;
+        unsigned long getClassIdByMangledName(const std::string &mangledName) const;
+        unsigned long getClassIdByName(const std::string &name) const;
         bool isObject(llvm::Value *value) const;
+        bool isClassType(llvm::Type *type) const;
+        bool isClassInst(llvm::Value *value) const;
         llvm::AllocaInst *createAlloca(llvm::Type *type, const std::string &name = "") const;
         // get constructor of internal class (String, Array, ...)
         llvm::Function *getInternalConstructor(const std::string &mangledClassName) const;
@@ -184,6 +190,12 @@ namespace X::Codegen {
         void fillArray(llvm::Value *arr, const std::vector<llvm::Value *> &values);
 
         void addSymbol(const std::string &symbol);
+
+        // gc helpers
+        llvm::Value *gcAlloc(llvm::Value *size);
+        void gcPushStackFrame();
+        void gcPopStackFrame();
+        void gcAddRoot(llvm::Value *root, unsigned long classId);
     };
 
     class CodegenException : public std::exception {

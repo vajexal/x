@@ -13,14 +13,10 @@
 #include "runtime/string.h"
 #include "runtime/array.h"
 #include "runtime/range.h"
+#include "runtime/gc/gc.h"
 #include "mangler.h"
 
 namespace X::Runtime {
-    void println(String *str);
-
-    /// returns true is stings are equal
-    bool compareStrings(String *first, String *second);
-
     class Runtime {
         Mangler mangler;
 

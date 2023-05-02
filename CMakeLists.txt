@@ -38,11 +38,13 @@ set(X_SOURCES lexer.cpp
         src/codegen/function.cpp
         src/codegen/class.cpp
         src/codegen/decl.cpp
+        src/codegen/gc.cpp
         src/runtime/runtime.cpp
         src/runtime/string.cpp
         src/runtime/array.cpp
         src/runtime/range.cpp
         src/runtime/casts.cpp
+        src/runtime/gc/gc.cpp
         src/compiler.cpp
         src/pipes/parse_code.cpp
         src/pipes/print_ast.cpp

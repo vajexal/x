@@ -20,6 +20,13 @@ namespace X::Codegen {
         builder.CreateStore(value, stackVar);
 
         namedValues[name] = stackVar;
+
+        if (node->getType().getTypeID() == Type::TypeID::CLASS) {
+            auto varVoidPtr = builder.CreateBitCast(stackVar, builder.getInt8PtrTy()->getPointerTo());
+            auto classId = getClassIdByName(node->getType().getClassName());
+            gcAddRoot(varVoidPtr, classId);
+        }
+
         return nullptr;
     }
 
@@ -250,6 +257,8 @@ namespace X::Codegen {
     }
 
     llvm::Value *Codegen::gen(ReturnNode *node) {
+        gcPopStackFrame();
+
         if (!node->getVal()) {
             builder.CreateRetVoid();
             return nullptr;

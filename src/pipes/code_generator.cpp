@@ -43,10 +43,20 @@ namespace X::Pipes {
         llvm::orc::MangleAndInterner llvmMangle(jitter->getExecutionSession(), jitter->getDataLayout());
         runtime.addDefinitions(jitter->getMainJITDylib(), llvmMangle);
 
+        // link gc
+        Runtime::GC::GC gc(compilerRuntime);
+        auto runtimeGCSymbol = throwOnError(jitter->lookup(mangler.mangleInternalSymbol("gc")));
+        auto runtimeGCPtr = runtimeGCSymbol.toPtr<Runtime::GC::GC **>();
+        *runtimeGCPtr = &gc; // nolint
+
         auto mainFn = throwOnError(jitter->lookup(Codegen::Codegen::MAIN_FN_NAME));
         auto *fn = mainFn.toPtr<void()>();
 
         fn();
+
+        // we can't run gc in alloc for now because we don't have all roots (arrays and interfaces),
+        // so run after main to collect all garbage
+        gc.run();
 
         return node;
     }
