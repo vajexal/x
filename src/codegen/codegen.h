@@ -85,7 +85,7 @@ namespace X::Codegen {
         std::map<std::string, ClassDecl> classes;
         std::map<std::string, InterfaceDecl> interfaces;
         std::set<std::string> symbols;
-        unsigned long globalClassId = 0;
+        unsigned long globalClassId = 1;
 
     public:
         static inline const std::string MAIN_FN_NAME = "main";
@@ -152,6 +152,7 @@ namespace X::Codegen {
         bool isObject(llvm::Value *value) const;
         bool isClassType(llvm::Type *type) const;
         bool isClassInst(llvm::Value *value) const;
+        bool isInterfaceInst(llvm::Value *value) const;
         llvm::AllocaInst *createAlloca(llvm::Type *type, const std::string &name = "") const;
         // get constructor of internal class (String, Array, ...)
         llvm::Function *getInternalConstructor(const std::string &mangledClassName) const;

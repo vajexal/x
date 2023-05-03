@@ -265,9 +265,16 @@ namespace X::Codegen {
 
         initInterfaceVtable(value, interface);
 
+        // set obj ptr
         auto objPtr = builder.CreateStructGEP(interfaceDecl.type, interface, 1);
         auto valueVoidPtr = builder.CreateBitCast(value, builder.getInt8PtrTy());
         builder.CreateStore(valueVoidPtr, objPtr);
+
+        // set class id
+        const auto &valueClassName = deref(value->getType())->getStructName().str();
+        auto classId = getClassIdByMangledName(valueClassName);
+        auto classIdPtr = builder.CreateStructGEP(interfaceDecl.type, interface, 2);
+        builder.CreateStore(builder.getInt64(classId), classIdPtr);
 
         return interface;
     }

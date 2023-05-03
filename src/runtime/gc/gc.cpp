@@ -62,6 +62,13 @@ namespace X::Runtime::GC {
 
             it->second = true;
 
+            if (classId == CompilerRuntime::INTERFACE_CLASS_ID) {
+                auto objPtr = (void **)((uint64_t)ptr + 8);
+                auto classIdPtr = (unsigned long *)((uint64_t)ptr + 16);
+                objects.emplace_back(*objPtr, *classIdPtr);
+                continue;
+            }
+
             for (auto [offset, fieldClassId]: compilerRuntime.classPointerLists.at(classId)) {
                 auto fieldPtr = (void **)((uint64_t)ptr + offset);
                 if (*fieldPtr) {

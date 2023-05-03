@@ -122,8 +122,8 @@ namespace X::Codegen {
 
         auto vtableType = genVtable(node, interface, interfaceDecl);
         interfaceDecl.vtableType = vtableType;
-        std::array<llvm::Type *, 2> props{vtableType->getPointerTo(), builder.getInt8PtrTy()};
-        interface->setBody(props);
+        // {vtable, obj ptr, obj class id}
+        interface->setBody({vtableType->getPointerTo(), builder.getInt8PtrTy(), builder.getInt64Ty()});
 
         return nullptr;
     }
@@ -197,6 +197,11 @@ namespace X::Codegen {
     }
 
     unsigned long Codegen::getClassIdByMangledName(const std::string &mangledName) const {
+        auto interfaceDecl = findInterfaceDecl(mangledName);
+        if (interfaceDecl) {
+            return CompilerRuntime::INTERFACE_CLASS_ID;
+        }
+
         auto &classDecl = getClassDecl(mangledName);
         return classDecl.id;
     }
@@ -218,6 +223,11 @@ namespace X::Codegen {
 
     bool Codegen::isClassInst(llvm::Value *value) const {
         return isClassType(value->getType());
+    }
+
+    bool Codegen::isInterfaceInst(llvm::Value *value) const {
+        auto type = deref(value->getType());
+        return type->isStructTy() && mangler.isMangledInterface(type->getStructName().str());
     }
 
     llvm::StructType *Codegen::genVtable(ClassNode *classNode, llvm::StructType *klass, ClassDecl &classDecl) {

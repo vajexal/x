@@ -11,16 +11,20 @@ namespace X {
             return "class." + className;
         }
 
-        std::string mangleInterface(const std::string &interfaceName) const {
-            return "interface." + interfaceName;
-        }
-
         std::string unmangleClass(const std::string &mangledClassName) const {
             return mangledClassName.substr(std::strlen("class."));
         }
 
         bool isMangledClass(const std::string &name) const {
             return name.starts_with("class.");
+        }
+
+        std::string mangleInterface(const std::string &interfaceName) const {
+            return "interface." + interfaceName;
+        }
+
+        bool isMangledInterface(const std::string &name) const {
+            return name.starts_with("interface.");
         }
 
         std::string mangleMethod(const std::string &mangledClassName, const std::string &methodName) const {
