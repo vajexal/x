@@ -85,12 +85,7 @@ namespace X::Codegen {
             builder.CreateStore(arg, alloca);
             namedValues[argName] = alloca;
 
-            if (isClassInst(arg) || isInterfaceInst(arg)) {
-                auto argVoidPtr = builder.CreateBitCast(alloca, builder.getInt8PtrTy()->getPointerTo());
-                auto classType = deref(arg->getType());
-                auto classId = getClassIdByMangledName(classType->getStructName().str());
-                gcAddRoot(argVoidPtr, classId);
-            }
+            gcAddRoot(alloca);
         }
 
         body->gen(*this);

@@ -3,6 +3,8 @@
 #include "utils.h"
 
 namespace X::Runtime {
+    // todo gc
+
     String *String_new(uint64_t len) {
         auto res = new String;
         res->len = len;

@@ -4,8 +4,8 @@
 
 namespace X {
     llvm::Type *deref(llvm::Type *type) {
-        if (type->isPointerTy()) {
-            return type->getPointerElementType();
+        while (type->isPointerTy()) {
+            type = type->getPointerElementType();
         }
 
         return type;

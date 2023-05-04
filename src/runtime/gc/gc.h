@@ -13,6 +13,11 @@ namespace X::Runtime::GC {
     };
 
     class GC {
+    public:
+        static const int INTERFACE_CLASS_ID = 0;
+        static const int STRING_CLASS_ID = 1;
+
+    private:
         CompilerRuntime &compilerRuntime;
 
         // {ptr -> is alive}

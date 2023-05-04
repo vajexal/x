@@ -21,11 +21,7 @@ namespace X::Codegen {
 
         namedValues[name] = stackVar;
 
-        if (node->getType().getTypeID() == Type::TypeID::CLASS) {
-            auto varVoidPtr = builder.CreateBitCast(stackVar, builder.getInt8PtrTy()->getPointerTo());
-            auto classId = getClassIdByName(node->getType().getClassName());
-            gcAddRoot(varVoidPtr, classId);
-        }
+        gcAddRoot(stackVar);
 
         return nullptr;
     }

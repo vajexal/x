@@ -54,7 +54,7 @@ namespace X::Pipes {
 
         fn();
 
-        // we can't run gc in alloc for now because we don't have all roots (arrays and strings),
+        // we can't run gc in alloc for now because we don't have all roots (arrays),
         // so run after main to collect all garbage
         gc.run();
 

@@ -12,8 +12,6 @@ namespace X {
     using PointerList = std::vector<std::pair<unsigned long, unsigned long>>;
 
     struct CompilerRuntime {
-        static const int INTERFACE_CLASS_ID = 0;
-
         std::map<std::string, std::set<std::string>> virtualMethods;
 
         // interface name -> {method name -> method decl}

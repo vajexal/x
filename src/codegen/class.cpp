@@ -197,18 +197,8 @@ namespace X::Codegen {
     }
 
     unsigned long Codegen::getClassIdByMangledName(const std::string &mangledName) const {
-        auto interfaceDecl = findInterfaceDecl(mangledName);
-        if (interfaceDecl) {
-            return CompilerRuntime::INTERFACE_CLASS_ID;
-        }
-
         auto &classDecl = getClassDecl(mangledName);
         return classDecl.id;
-    }
-
-    unsigned long Codegen::getClassIdByName(const std::string &name) const {
-        auto mangledName = mangler.mangleClass(name);
-        return getClassIdByMangledName(mangledName);
     }
 
     bool Codegen::isObject(llvm::Value *value) const {
@@ -221,12 +211,8 @@ namespace X::Codegen {
         return type->isStructTy() && mangler.isMangledClass(type->getStructName().str());
     }
 
-    bool Codegen::isClassInst(llvm::Value *value) const {
-        return isClassType(value->getType());
-    }
-
-    bool Codegen::isInterfaceInst(llvm::Value *value) const {
-        auto type = deref(value->getType());
+    bool Codegen::isInterfaceType(llvm::Type *type) const {
+        type = deref(type);
         return type->isStructTy() && mangler.isMangledInterface(type->getStructName().str());
     }
 

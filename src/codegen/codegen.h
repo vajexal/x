@@ -85,7 +85,7 @@ namespace X::Codegen {
         std::map<std::string, ClassDecl> classes;
         std::map<std::string, InterfaceDecl> interfaces;
         std::set<std::string> symbols;
-        unsigned long globalClassId = 1;
+        unsigned long globalClassId = 2;
 
     public:
         static inline const std::string MAIN_FN_NAME = "main";
@@ -148,11 +148,9 @@ namespace X::Codegen {
         const InterfaceDecl *findInterfaceDecl(const std::string &mangledName) const;
         std::string getClassName(llvm::Value *obj) const;
         unsigned long getClassIdByMangledName(const std::string &mangledName) const;
-        unsigned long getClassIdByName(const std::string &name) const;
         bool isObject(llvm::Value *value) const;
         bool isClassType(llvm::Type *type) const;
-        bool isClassInst(llvm::Value *value) const;
-        bool isInterfaceInst(llvm::Value *value) const;
+        bool isInterfaceType(llvm::Type *type) const;
         llvm::AllocaInst *createAlloca(llvm::Type *type, const std::string &name = "") const;
         // get constructor of internal class (String, Array, ...)
         llvm::Function *getInternalConstructor(const std::string &mangledClassName) const;
@@ -196,7 +194,7 @@ namespace X::Codegen {
         llvm::Value *gcAlloc(llvm::Value *size);
         void gcPushStackFrame();
         void gcPopStackFrame();
-        void gcAddRoot(llvm::Value *root, unsigned long classId);
+        void gcAddRoot(llvm::Value *root);
     };
 
     class CodegenException : public std::exception {
