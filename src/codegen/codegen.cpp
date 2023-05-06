@@ -270,11 +270,10 @@ namespace X::Codegen {
         auto valueVoidPtr = builder.CreateBitCast(value, builder.getInt8PtrTy());
         builder.CreateStore(valueVoidPtr, objPtr);
 
-        // set class id
-        const auto &valueClassName = deref(value->getType())->getStructName().str();
-        auto classId = getClassIdByMangledName(valueClassName);
-        auto classIdPtr = builder.CreateStructGEP(interfaceDecl.type, interface, 2);
-        builder.CreateStore(builder.getInt64(classId), classIdPtr);
+        // set gc meta
+        auto meta = getValueGCMeta(value);
+        auto metaPtr = builder.CreateStructGEP(interfaceDecl.type, interface, 2);
+        builder.CreateStore(meta, metaPtr);
 
         return interface;
     }

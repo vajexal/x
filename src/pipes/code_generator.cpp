@@ -18,7 +18,8 @@ namespace X::Pipes {
         context->setOpaquePointers(false); // todo migrate to opaque pointers
         llvm::IRBuilder<> builder(*context);
         auto module = std::make_unique<llvm::Module>(sourceName, *context);
-        Codegen::Codegen codegen(*context, builder, *module, compilerRuntime);
+        Runtime::GC::GC gc;
+        Codegen::Codegen codegen(*context, builder, *module, compilerRuntime, gc);
         Runtime::Runtime runtime{};
 
         llvm::InitializeNativeTarget();
@@ -44,7 +45,6 @@ namespace X::Pipes {
         runtime.addDefinitions(jitter->getMainJITDylib(), llvmMangle);
 
         // link gc
-        Runtime::GC::GC gc(compilerRuntime);
         auto runtimeGCSymbol = throwOnError(jitter->lookup(mangler.mangleInternalSymbol("gc")));
         auto runtimeGCPtr = runtimeGCSymbol.toPtr<Runtime::GC::GC **>();
         *runtimeGCPtr = &gc; // nolint
@@ -54,8 +54,7 @@ namespace X::Pipes {
 
         fn();
 
-        // we can't run gc in alloc for now because we don't have all roots (arrays),
-        // so run after main to collect all garbage
+        // we can't run gc in alloc for now because we don't have intermediate roots ("h(f(), g())"),
         gc.run();
 
         return node;

@@ -50,7 +50,6 @@ namespace X::Codegen {
 
     struct ClassDecl {
         std::string name;
-        unsigned long id;
         llvm::StructType *type;
         std::map<std::string, Prop> props;
         std::map<std::string, StaticProp> staticProps;
@@ -58,6 +57,7 @@ namespace X::Codegen {
         ClassDecl *parent = nullptr;
         bool isAbstract = false;
         llvm::StructType *vtableType = nullptr;
+        Runtime::GC::Metadata *meta;
     };
 
     struct InterfaceDecl {
@@ -76,6 +76,7 @@ namespace X::Codegen {
         CompilerRuntime &compilerRuntime;
         Mangler mangler;
         Runtime::ArrayRuntime arrayRuntime;
+        Runtime::GC::GC &gc;
 
         std::map<std::string, llvm::AllocaInst *> namedValues;
         std::stack<Loop> loops;
@@ -85,13 +86,15 @@ namespace X::Codegen {
         std::map<std::string, ClassDecl> classes;
         std::map<std::string, InterfaceDecl> interfaces;
         std::set<std::string> symbols;
-        unsigned long globalClassId = 2;
+
+        std::map<std::string, Runtime::GC::Metadata *> gcMetaCache;
 
     public:
         static inline const std::string MAIN_FN_NAME = "main";
 
-        Codegen(llvm::LLVMContext &context, llvm::IRBuilder<> &builder, llvm::Module &module, CompilerRuntime &compilerRuntime) :
-                context(context), builder(builder), module(module), compilerRuntime(compilerRuntime), arrayRuntime(Runtime::ArrayRuntime(context, module)) {}
+        Codegen(llvm::LLVMContext &context, llvm::IRBuilder<> &builder, llvm::Module &module, CompilerRuntime &compilerRuntime, Runtime::GC::GC &gc) :
+                context(context), builder(builder), module(module), compilerRuntime(compilerRuntime), arrayRuntime(Runtime::ArrayRuntime(context, module)),
+                gc(gc) {}
 
         void genProgram(TopStatementListNode *node);
 
@@ -147,7 +150,9 @@ namespace X::Codegen {
         const ClassDecl &getClassDecl(const std::string &mangledName) const;
         const InterfaceDecl *findInterfaceDecl(const std::string &mangledName) const;
         std::string getClassName(llvm::Value *obj) const;
-        unsigned long getClassIdByMangledName(const std::string &mangledName) const;
+        Runtime::GC::Metadata *getTypeGCMeta(llvm::Type *type);
+        Runtime::GC::Metadata *genTypeGCMeta(llvm::Type *type);
+        llvm::Value *getValueGCMeta(llvm::Value *value);
         bool isObject(llvm::Value *value) const;
         bool isClassType(llvm::Type *type) const;
         bool isInterfaceType(llvm::Type *type) const;

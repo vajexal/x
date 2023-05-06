@@ -8,9 +8,6 @@
 namespace X {
     class MethodDeclNode;
 
-    // pair<offset, class id>
-    using PointerList = std::vector<std::pair<unsigned long, unsigned long>>;
-
     struct CompilerRuntime {
         std::map<std::string, std::set<std::string>> virtualMethods;
 
@@ -22,8 +19,5 @@ namespace X {
 
         // class name -> all extended classes
         std::map<std::string, std::set<std::string>> extendedClasses;
-
-        // class id -> [{offset, class id}]
-        std::map<unsigned long, PointerList> classPointerLists;
     };
 }

@@ -7,32 +7,49 @@
 #include "compiler_runtime.h"
 
 namespace X::Runtime::GC {
+    struct Metadata;
+
     struct Root {
         void **ptr;
-        unsigned long classId;
+        Metadata *meta;
+    };
+
+    enum class NodeType {
+        CLASS,
+        INTERFACE,
+        ARRAY,
+    };
+
+    // pair<offset, meta>
+    using PointerList = std::vector<std::pair<unsigned long, Metadata *>>;
+
+    struct Metadata {
+        NodeType type;
+        PointerList pointerList;
     };
 
     class GC {
-    public:
-        static const int INTERFACE_CLASS_ID = 0;
-        static const int STRING_CLASS_ID = 1;
-
-    private:
-        CompilerRuntime &compilerRuntime;
+        std::vector<Metadata *> metaBag;
 
         // {ptr -> is alive}
         std::unordered_map<void *, bool> allocs;
         std::deque<std::vector<Root>> stackFrames;
 
     public:
-        explicit GC(CompilerRuntime &compilerRuntime) : compilerRuntime(compilerRuntime) {}
+        virtual ~GC() {
+            for (auto meta: metaBag) {
+                delete meta;
+            }
+        }
+
+        Metadata *addMeta(NodeType type, PointerList &&pointerList);
 
         void run();
 
         void *alloc(std::size_t size);
         void pushStackFrame();
         void popStackFrame();
-        void addRoot(void **root, unsigned long classId);
+        void addRoot(void **root, Metadata *meta);
 
     private:
         void mark();

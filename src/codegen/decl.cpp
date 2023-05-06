@@ -31,7 +31,6 @@ namespace X::Codegen {
 
             classes[mangledName] = {
                     .name = name,
-                    .id = globalClassId++,
                     .type = klass,
                     .isAbstract = klassNode->isAbstract(),
             };
@@ -44,7 +43,7 @@ namespace X::Codegen {
             const auto &mangledName = mangler.mangleClass(name);
             auto &classDecl = classes[mangledName];
             auto klass = classDecl.type;
-            PointerList pointerList;
+            Runtime::GC::PointerList pointerList;
 
             std::vector<llvm::Type *> props;
             props.reserve(klassNode->getProps().size());
@@ -56,7 +55,7 @@ namespace X::Codegen {
                 props.push_back(parentClassDecl.type);
                 propPos++;
                 classDecl.parent = const_cast<ClassDecl *>(&parentClassDecl);
-                pointerList = compilerRuntime.classPointerLists.at(parentClassDecl.id);
+                pointerList = parentClassDecl.meta->pointerList;
             }
 
             auto it = compilerRuntime.virtualMethods.find(name);
@@ -95,14 +94,14 @@ namespace X::Codegen {
             auto structLayout = module.getDataLayout().getStructLayout(klass);
             for (auto i = 0; i < klass->getNumElements(); i++) {
                 auto type = klass->getElementType(i);
-                if (type->isPointerTy() && isClassType(type)) {
+                if (type->isPointerTy()) {
                     auto offset = structLayout->getElementOffset(i);
-                    auto classId = getClassIdByMangledName(deref(type)->getStructName().str());
-                    pointerList.emplace_back(offset, classId);
+                    auto meta = getTypeGCMeta(type);
+                    pointerList.emplace_back(offset, meta);
                 }
             }
 
-            compilerRuntime.classPointerLists[classDecl.id] = std::move(pointerList);
+            classDecl.meta = gc.addMeta(Runtime::GC::NodeType::CLASS, std::move(pointerList));
         }
     }
 

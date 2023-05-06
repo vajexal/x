@@ -30,8 +30,8 @@ namespace X::Runtime {
         (*gc)->popStackFrame();
     }
 
-    void gc_addRoot(GC::GC **gc, void **root, unsigned long classId) {
-        (*gc)->addRoot(root, classId);
+    void gc_addRoot(GC::GC **gc, void **root, GC::Metadata *meta) {
+        (*gc)->addRoot(root, meta);
     }
 
     void Runtime::addDeclarations(llvm::LLVMContext &context, llvm::IRBuilder<> &builder, llvm::Module &module) {
@@ -97,7 +97,7 @@ namespace X::Runtime {
                 {mangler.mangleInternalFunction("gcPushStackFrame"), llvm::Type::getVoidTy(context), {gcType}},
                 {mangler.mangleInternalFunction("gcPopStackFrame"), llvm::Type::getVoidTy(context), {gcType}},
                 {mangler.mangleInternalFunction("gcAddRoot"), llvm::Type::getInt8PtrTy(context),
-                 {gcType, llvm::Type::getInt8PtrTy(context)->getPointerTo(), llvm::Type::getInt64Ty(context)}},
+                 {gcType, llvm::Type::getInt8PtrTy(context)->getPointerTo(), llvm::Type::getInt8PtrTy(context)}},
         };
 
         for (auto &[fnName, retType, paramTypes]: funcs) {

@@ -4,6 +4,12 @@
 #include <cstring>
 
 namespace X::Runtime::GC {
+    Metadata *GC::addMeta(NodeType type, PointerList &&pointerList) {
+        auto meta = new Metadata{type, std::move(pointerList)};
+        metaBag.push_back(meta);
+        return meta;
+    }
+
     void *GC::alloc(std::size_t size) {
         auto ptr = std::malloc(size);
         if (!ptr) {
@@ -24,8 +30,8 @@ namespace X::Runtime::GC {
         stackFrames.pop_back();
     }
 
-    void GC::addRoot(void **root, unsigned long classId) {
-        stackFrames.back().push_back({root, classId});
+    void GC::addRoot(void **root, Metadata *meta) {
+        stackFrames.back().push_back({root, meta});
     }
 
     void GC::run() {
@@ -38,17 +44,17 @@ namespace X::Runtime::GC {
             alloc.second = false;
         }
 
-        std::deque<std::pair<void *, unsigned long>> objects;
+        std::deque<std::pair<void *, Metadata *>> objects;
         for (auto &roots: stackFrames) {
             for (auto &root: roots) {
                 if (*root.ptr) {
-                    objects.emplace_back(*root.ptr, root.classId);
+                    objects.emplace_back(*root.ptr, root.meta);
                 }
             }
         }
 
         while (!objects.empty()) {
-            auto [ptr, classId] = objects.back();
+            auto [ptr, meta] = objects.back();
             objects.pop_back();
 
             auto it = allocs.find(ptr);
@@ -62,22 +68,40 @@ namespace X::Runtime::GC {
 
             it->second = true;
 
-            switch (classId) {
-                case INTERFACE_CLASS_ID: {
-                    auto objPtr = (void **)((uint64_t)ptr + 8);
-                    auto classIdPtr = (unsigned long *)((uint64_t)ptr + 16);
-                    objects.emplace_back(*objPtr, *classIdPtr);
-                    break;
-                }
-                case STRING_CLASS_ID:
-                    break;
-                default:
-                    for (auto [offset, fieldClassId]: compilerRuntime.classPointerLists.at(classId)) {
+            switch (meta->type) {
+                case NodeType::CLASS:
+                    for (auto [offset, fieldMeta]: meta->pointerList) {
                         auto fieldPtr = (void **)((uint64_t)ptr + offset);
                         if (*fieldPtr) {
-                            objects.emplace_back(*fieldPtr, fieldClassId);
+                            objects.emplace_back(*fieldPtr, fieldMeta);
                         }
                     }
+
+                    break;
+                case NodeType::INTERFACE: {
+                    auto objPtr = (void **)((uint64_t)ptr + sizeof(void *));
+                    auto metaPtr = (Metadata **)((uint64_t)ptr + 2 * sizeof(void *));
+                    objects.emplace_back(*objPtr, *metaPtr);
+                    break;
+                }
+                case NodeType::ARRAY: {
+                    if (meta->pointerList.empty()) { // if it's scalar array, then there's no need to process
+                        break;
+                    }
+
+                    auto arr = *(void **)ptr;
+                    auto lenPtr = (int64_t *)((uint64_t)ptr + sizeof(void *));
+                    auto len = *lenPtr;
+
+                    for (auto i = 0; i < len; i++) {
+                        auto elemPtr = (void **)((uint64_t)arr + i * sizeof(void *));
+                        if (*elemPtr) {
+                            objects.emplace_back(*elemPtr, meta->pointerList.front().second);
+                        }
+                    }
+
+                    break;
+                }
             }
         }
     }

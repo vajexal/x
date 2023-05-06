@@ -122,8 +122,8 @@ namespace X::Codegen {
 
         auto vtableType = genVtable(node, interface, interfaceDecl);
         interfaceDecl.vtableType = vtableType;
-        // {vtable, obj ptr, obj class id}
-        interface->setBody({vtableType->getPointerTo(), builder.getInt8PtrTy(), builder.getInt64Ty()});
+        // {vtable, obj ptr, gc meta}
+        interface->setBody({vtableType->getPointerTo(), builder.getInt8PtrTy(), builder.getInt8PtrTy()});
 
         return nullptr;
     }
@@ -196,9 +196,50 @@ namespace X::Codegen {
         return std::move(mangler.unmangleClass(type->getStructName().str()));
     }
 
-    unsigned long Codegen::getClassIdByMangledName(const std::string &mangledName) const {
-        auto &classDecl = getClassDecl(mangledName);
-        return classDecl.id;
+    Runtime::GC::Metadata *Codegen::getTypeGCMeta(llvm::Type *type) {
+        type = deref(type);
+        if (!type->isStructTy()) {
+            return nullptr;
+        }
+
+        const auto &typeName = type->getStructName().str();
+        auto metaIt = gcMetaCache.find(typeName);
+        if (metaIt != gcMetaCache.cend()) {
+            return metaIt->second;
+        }
+
+        auto meta = genTypeGCMeta(type);
+        if (meta) {
+            gcMetaCache[typeName] = meta;
+        }
+
+        return meta;
+    }
+
+    Runtime::GC::Metadata *Codegen::genTypeGCMeta(llvm::Type *type) {
+        if (Runtime::String::isStringType(type)) {
+            return gc.addMeta(Runtime::GC::NodeType::CLASS, {});
+        } else if (Runtime::Array::isArrayType(type)) {
+            Runtime::GC::PointerList pointerList;
+            auto containedType = arrayRuntime.getContainedType(llvm::cast<llvm::StructType>(type));
+            auto containedMeta = getTypeGCMeta(containedType);
+            if (containedMeta) {
+                pointerList.emplace_back(0, containedMeta);
+            }
+            return gc.addMeta(Runtime::GC::NodeType::ARRAY, std::move(pointerList));
+        } else if (isInterfaceType(type)) {
+            return gc.addMeta(Runtime::GC::NodeType::INTERFACE, {});
+        } else if (isClassType(type)) {
+            auto &classDecl = getClassDecl(type->getStructName().str());
+            return classDecl.meta;
+        } else {
+            return nullptr;
+        }
+    }
+
+    llvm::Value *Codegen::getValueGCMeta(llvm::Value *value) {
+        auto meta = getTypeGCMeta(value->getType());
+        return meta ? builder.CreateIntToPtr(builder.getInt64((uint64_t)meta), builder.getInt8PtrTy()) : nullptr;
     }
 
     bool Codegen::isObject(llvm::Value *value) const {
