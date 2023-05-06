@@ -119,6 +119,12 @@ namespace X::Codegen {
         auto expr = node->getExpr()->gen(*this);
         auto exprType = deref(expr->getType());
 
+        // add expr gc root
+        gcPushStackFrame();
+        auto exprAlloc = createAlloca(expr->getType());
+        builder.CreateStore(expr, exprAlloc);
+        gcAddRoot(exprAlloc);
+
         auto parentFunction = builder.GetInsertBlock()->getParent();
         auto loopInitBB = llvm::BasicBlock::Create(context, "loopInit", parentFunction);
         auto loopCondBB = llvm::BasicBlock::Create(context, "loopCond");
@@ -213,6 +219,7 @@ namespace X::Codegen {
         }
         namedValues.erase(valVarName);
         loops.pop();
+        gcPopStackFrame();
 
         return nullptr;
     }
@@ -226,8 +233,37 @@ namespace X::Codegen {
                     node->getStep()->gen(*this) :
                     llvm::ConstantInt::getSigned(llvm::Type::getInt64Ty(context), 1);
 
-        auto rangeCreateFn = module.getFunction(mangler.mangleInternalMethod(Runtime::Range::CLASS_NAME, "create"));
-        return builder.CreateCall(rangeCreateFn, {start, stop, step});
+        auto parentFunction = builder.GetInsertBlock()->getParent();
+        auto invalidStepBB = llvm::BasicBlock::Create(context, "invalid_step", parentFunction);
+        auto mergeBB = llvm::BasicBlock::Create(context, "merge");
+
+        // validate step
+        auto cond = builder.CreateICmpEQ(step, builder.getInt64(0));
+        builder.CreateCondBr(cond, invalidStepBB, mergeBB);
+
+        builder.SetInsertPoint(invalidStepBB);
+
+        // print error and exit
+        auto dieFn = module.getFunction(mangler.mangleInternalFunction("die"));
+        auto message = builder.CreateGlobalStringPtr("step must not be zero");
+        builder.CreateCall(dieFn, {message});
+        builder.CreateUnreachable();
+
+        parentFunction->getBasicBlockList().push_back(mergeBB);
+        builder.SetInsertPoint(mergeBB);
+
+        // create range object
+        auto rangeType = llvm::StructType::getTypeByName(context, Runtime::Range::CLASS_NAME);
+        auto rangeObj = newObj(rangeType);
+
+        auto startPtr = builder.CreateStructGEP(rangeType, rangeObj, 0);
+        builder.CreateStore(start, startPtr);
+        auto stopPtr = builder.CreateStructGEP(rangeType, rangeObj, 1);
+        builder.CreateStore(stop, stopPtr);
+        auto stepPtr = builder.CreateStructGEP(rangeType, rangeObj, 2);
+        builder.CreateStore(step, stepPtr);
+
+        return rangeObj;
     }
 
     llvm::Value *Codegen::gen(BreakNode *node) {

@@ -217,7 +217,7 @@ namespace X::Codegen {
     }
 
     Runtime::GC::Metadata *Codegen::genTypeGCMeta(llvm::Type *type) {
-        if (Runtime::String::isStringType(type)) {
+        if (Runtime::String::isStringType(type) || Runtime::Range::isRangeType(type)) {
             return gc.addMeta(Runtime::GC::NodeType::CLASS, {});
         } else if (Runtime::Array::isArrayType(type)) {
             Runtime::GC::PointerList pointerList;

@@ -2,13 +2,12 @@
 
 #include <cmath>
 
-namespace X::Runtime {
-    Range *Range_create(int64_t start, int64_t stop, int64_t step) {
-        if (step == 0) {
-            std::abort(); // todo nice error
-        }
+#include "utils.h"
 
-        return new Range{start, stop, step};
+namespace X::Runtime {
+    bool Range::isRangeType(llvm::Type *type) {
+        type = deref(type);
+        return type->isStructTy() && type->getStructName() == Runtime::Range::CLASS_NAME;
     }
 
     int64_t Range_length(Range *that) {

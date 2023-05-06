@@ -13,6 +13,11 @@ namespace X::Runtime {
         std::cout << str->str << std::endl;
     }
 
+    void die(const char *s) {
+        std::cout << s << std::endl;
+        std::exit(1);
+    }
+
     /// returns true is stings are equal
     bool compareStrings(String *first, String *second) {
         return first->len == second->len && std::strncmp(first->str, second->str, first->len) == 0;
@@ -49,6 +54,7 @@ namespace X::Runtime {
                  llvm::Type::getInt8PtrTy(context), {llvm::Type::getInt64Ty(context)}},
                 {mangler.mangleInternalFunction("realloc"), llvm::Type::getInt8PtrTy(context),
                  {llvm::Type::getInt8PtrTy(context), llvm::Type::getInt64Ty(context)}},
+                {mangler.mangleInternalFunction("die"), llvm::Type::getVoidTy(context), {llvm::Type::getInt8PtrTy(context)}},
                 {"exit", llvm::Type::getVoidTy(context), {llvm::Type::getInt64Ty(context)}},
                 {"println", llvm::Type::getVoidTy(context), {stringType->getPointerTo()}},
 
@@ -118,6 +124,7 @@ namespace X::Runtime {
         static std::vector<std::tuple<std::string, void *>> funcs{
                 {mangler.mangleInternalFunction("malloc"), reinterpret_cast<void *>(std::malloc)},
                 {mangler.mangleInternalFunction("realloc"), reinterpret_cast<void *>(std::realloc)},
+                {mangler.mangleInternalFunction("die"), reinterpret_cast<void *>(die)},
                 {"exit", reinterpret_cast<void *>(std::exit)},
                 {"println", reinterpret_cast<void *>(println)},
 
@@ -141,7 +148,6 @@ namespace X::Runtime {
                 {mangler.mangleInternalFunction("createEmptyString"), reinterpret_cast<void *>(createEmptyString)},
 
                 // range
-                {mangler.mangleInternalMethod(Range::CLASS_NAME, "create"), reinterpret_cast<void *>(Range_create)},
                 {mangler.mangleInternalMethod(Range::CLASS_NAME, "length"), reinterpret_cast<void *>(Range_length)},
                 {mangler.mangleInternalMethod(Range::CLASS_NAME, "get[]"), reinterpret_cast<void *>(Range_get)},
 
