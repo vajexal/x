@@ -27,6 +27,10 @@ namespace X::Runtime {
         return (*gc)->alloc(size);
     }
 
+    void *gc_realloc(GC::GC **gc, void *ptr, std::size_t newSize) {
+        return (*gc)->realloc(ptr, newSize);
+    }
+
     void gc_pushStackFrame(GC::GC **gc) {
         (*gc)->pushStackFrame();
     }
@@ -50,10 +54,6 @@ namespace X::Runtime {
 
         // function name, return type, param types
         std::vector<std::tuple<std::string, llvm::Type *, llvm::ArrayRef<llvm::Type *>>> funcs{
-                {mangler.mangleInternalFunction("malloc"),
-                 llvm::Type::getInt8PtrTy(context), {llvm::Type::getInt64Ty(context)}},
-                {mangler.mangleInternalFunction("realloc"), llvm::Type::getInt8PtrTy(context),
-                 {llvm::Type::getInt8PtrTy(context), llvm::Type::getInt64Ty(context)}},
                 {mangler.mangleInternalFunction("die"), llvm::Type::getVoidTy(context), {llvm::Type::getInt8PtrTy(context)}},
                 {"exit", llvm::Type::getVoidTy(context), {llvm::Type::getInt64Ty(context)}},
                 {"println", llvm::Type::getVoidTy(context), {stringType->getPointerTo()}},
@@ -100,6 +100,8 @@ namespace X::Runtime {
 
                 // gc
                 {mangler.mangleInternalFunction("gcAlloc"), llvm::Type::getInt8PtrTy(context), {gcType, llvm::Type::getInt64Ty(context)}},
+                {mangler.mangleInternalFunction("gcRealloc"), llvm::Type::getInt8PtrTy(context),
+                 {gcType, llvm::Type::getInt8PtrTy(context), llvm::Type::getInt64Ty(context)}},
                 {mangler.mangleInternalFunction("gcPushStackFrame"), llvm::Type::getVoidTy(context), {gcType}},
                 {mangler.mangleInternalFunction("gcPopStackFrame"), llvm::Type::getVoidTy(context), {gcType}},
                 {mangler.mangleInternalFunction("gcAddRoot"), llvm::Type::getInt8PtrTy(context),
@@ -122,8 +124,6 @@ namespace X::Runtime {
 
     RuntimeBuiltinGenerator::RuntimeBuiltinGenerator(llvm::orc::MangleAndInterner &llvmMangle) {
         static std::vector<std::tuple<std::string, void *>> funcs{
-                {mangler.mangleInternalFunction("malloc"), reinterpret_cast<void *>(std::malloc)},
-                {mangler.mangleInternalFunction("realloc"), reinterpret_cast<void *>(std::realloc)},
                 {mangler.mangleInternalFunction("die"), reinterpret_cast<void *>(die)},
                 {"exit", reinterpret_cast<void *>(std::exit)},
                 {"println", reinterpret_cast<void *>(println)},
@@ -153,6 +153,7 @@ namespace X::Runtime {
 
                 // gc
                 {mangler.mangleInternalFunction("gcAlloc"), reinterpret_cast<void *>(gc_alloc)},
+                {mangler.mangleInternalFunction("gcRealloc"), reinterpret_cast<void *>(gc_realloc)},
                 {mangler.mangleInternalFunction("gcPushStackFrame"), reinterpret_cast<void *>(gc_pushStackFrame)},
                 {mangler.mangleInternalFunction("gcPopStackFrame"), reinterpret_cast<void *>(gc_popStackFrame)},
                 {mangler.mangleInternalFunction("gcAddRoot"), reinterpret_cast<void *>(gc_addRoot)},

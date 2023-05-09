@@ -47,6 +47,7 @@ namespace X::Runtime::GC {
         void run();
 
         void *alloc(std::size_t size);
+        void *realloc(void *ptr, std::size_t newSize);
         void pushStackFrame();
         void popStackFrame();
         void addRoot(void **root, Metadata *meta);

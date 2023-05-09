@@ -10,4 +10,13 @@ namespace X {
 
         return type;
     }
+
+    llvm::ConstantInt *getTypeSize(llvm::Module &module, llvm::Type *type) {
+        auto typeSize = module.getDataLayout().getTypeAllocSize(type);
+        if (typeSize.isScalable()) {
+            throw std::runtime_error("can't calc obj size");
+        }
+        auto size = typeSize.getFixedSize();
+        return llvm::ConstantInt::get(llvm::Type::getInt64Ty(module.getContext()), size);
+    }
 }

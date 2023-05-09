@@ -22,6 +22,20 @@ namespace X::Runtime::GC {
         return ptr;
     }
 
+    void *GC::realloc(void *ptr, std::size_t newSize) {
+        auto newPtr = std::realloc(ptr, newSize);
+        if (!newPtr) {
+            std::abort();
+        }
+
+        if (newPtr != ptr) {
+            allocs.erase(ptr);
+            allocs[newPtr] = false;
+        }
+
+        return newPtr;
+    }
+
     void GC::pushStackFrame() {
         stackFrames.emplace_back();
     }
@@ -85,11 +99,13 @@ namespace X::Runtime::GC {
                     break;
                 }
                 case NodeType::ARRAY: {
+                    auto arr = *(void **)ptr;
+                    allocs[arr] = true;
+
                     if (meta->pointerList.empty()) { // if it's scalar array, then there's no need to process
                         break;
                     }
 
-                    auto arr = *(void **)ptr;
                     auto lenPtr = (int64_t *)((uint64_t)ptr + sizeof(void *));
                     auto len = *lenPtr;
 

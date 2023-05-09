@@ -83,17 +83,16 @@ namespace X::Runtime {
         auto capPtr = builder.CreateStructGEP(arrayType, that, 2);
         builder.CreateStore(cap, capPtr);
 
-        // malloc
-        auto mallocFn = module.getFunction(mangler.mangleInternalFunction("malloc"));
-        auto mallocSizeType = llvm::Type::getInt64Ty(context);
-        auto allocSize = llvm::ConstantExpr::getSizeOf(elemType);
-        auto arr = llvm::CallInst::CreateMalloc(
-                &fn->getBasicBlockList().back(), mallocSizeType, elemType, allocSize, cap, mallocFn, "arr");
-        builder.Insert(arr);
+        // alloc
+
+        auto allocFn = module.getFunction(mangler.mangleInternalFunction("gcAlloc"));
+        auto gcVar = module.getGlobalVariable(mangler.mangleInternalSymbol("gc"));
+        auto elemTypeSize = getTypeSize(module, elemType);
+        auto allocSize = builder.CreateMul(cap, elemTypeSize);
+        auto arrVoidPtr = builder.CreateCall(allocFn, {gcVar, allocSize});
+        auto arr = builder.CreateBitCast(arrVoidPtr, elemType->getPointerTo());
         auto arrPtr = builder.CreateStructGEP(arrayType, that, 0);
         builder.CreateStore(arr, arrPtr);
-
-        // todo zero area
 
         builder.CreateRetVoid();
 
@@ -279,14 +278,15 @@ namespace X::Runtime {
         builder.SetInsertPoint(growBB);
         auto newCap = builder.CreateShl(cap, 1);
         builder.CreateStore(newCap, capPtr);
-        auto reallocFn = module.getFunction(mangler.mangleInternalFunction("realloc"));
+
+        auto reallocFn = module.getFunction(mangler.mangleInternalFunction("gcRealloc"));
+        auto gcVar = module.getGlobalVariable(mangler.mangleInternalSymbol("gc"));
         auto arrVoidPtr = builder.CreateBitCast(arr, llvm::Type::getInt8PtrTy(context));
-        auto elemTypeSize = llvm::ConstantExpr::getSizeOf(elemType);
+        auto elemTypeSize = getTypeSize(module, elemType);
         auto allocSize = builder.CreateMul(newCap, elemTypeSize);
-        auto newArrVoidPtr = builder.CreateCall(reallocFn, {arrVoidPtr, allocSize});
+        auto newArrVoidPtr = builder.CreateCall(reallocFn, {gcVar, arrVoidPtr, allocSize});
         auto newArr = builder.CreateBitCast(newArrVoidPtr, arr->getType());
         builder.CreateStore(newArr, arrPtr);
-        // todo zero area
         builder.CreateBr(appendBB);
 
         // append val

@@ -142,16 +142,9 @@ namespace X::Codegen {
 
     // allocates object on heap
     llvm::Value *Codegen::newObj(llvm::StructType *type) {
-        auto typeSize = module.getDataLayout().getTypeAllocSize(type);
-        if (typeSize.isScalable()) {
-            throw CodegenException("can't calc obj size");
-        }
-        auto allocSize = builder.getInt64(typeSize.getFixedSize());
-
+        auto allocSize = getTypeSize(module, type);
         auto objPtr = gcAlloc(allocSize);
-        auto obj = builder.CreateBitCast(objPtr, type->getPointerTo());
-
-        return obj;
+        return builder.CreateBitCast(objPtr, type->getPointerTo());
     }
 
     std::pair<llvm::Value *, llvm::Value *> Codegen::upcast(llvm::Value *a, llvm::Value *b) const {
