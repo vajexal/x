@@ -233,7 +233,7 @@ INT_TYPE { $$ = std::move(Type::scalar(Type::TypeID::INT)); }
 ;
 
 array_type:
-'[' ']' type { $$ = std::move(Type::array(new Type($3))); }
+'[' ']' type { $$ = std::move(Type::array(std::move($3))); }
 ;
 
 return_type:

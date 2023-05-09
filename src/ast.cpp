@@ -6,6 +6,40 @@
 #include "utils.h"
 
 namespace X {
+    Type::Type(const Type &type) : id(type.id) {
+        if (type.className) {
+            className = type.className.value();
+        }
+
+        if (type.subtype) {
+            subtype = new Type(*type.subtype);
+        }
+    }
+
+    Type::Type(Type &&type) : id(type.id), className(std::move(type.className)), subtype(type.subtype) {
+        type.id = TypeID::VOID;
+        type.className = std::nullopt;
+        type.subtype = nullptr;
+    }
+
+    Type &Type::operator=(const Type &type) {
+        id = type.id;
+
+        if (type.className) {
+            className = type.className.value();
+        }
+
+        if (type.subtype) {
+            subtype = new Type(*type.subtype);
+        }
+
+        return *this;
+    }
+
+    Type::~Type() {
+        delete subtype;
+    }
+
     Type Type::scalar(Type::TypeID typeID) {
         if (typeID == TypeID::CLASS || typeID == TypeID::ARRAY || typeID == TypeID::AUTO || typeID == TypeID::SELF) {
             throw std::invalid_argument("invalid type for scalar");
@@ -25,10 +59,10 @@ namespace X {
         return std::move(type);
     }
 
-    Type Type::array(Type *subtype) {
+    Type Type::array(Type &&subtype) {
         Type type;
         type.id = TypeID::ARRAY;
-        type.subtype = subtype;
+        type.subtype = new Type(std::move(subtype));;
 
         return std::move(type);
     }

@@ -56,6 +56,7 @@ namespace X {
             AUTO,
             SELF
         };
+
     private:
         TypeID id;
         std::optional<std::string> className;
@@ -63,10 +64,15 @@ namespace X {
 
     public:
         Type() : id(TypeID::VOID) {} // need empty constructor for bison variant
+        Type(const Type &type);
+        Type(Type &&type);
+        ~Type();
+
+        Type &operator=(const Type &type);
 
         static Type scalar(TypeID typeID);
         static Type klass(std::string className);
-        static Type array(Type *subtype);
+        static Type array(Type &&subtype);
         static Type voidTy();
         static Type autoTy();
         static Type selfTy();
@@ -191,6 +197,13 @@ namespace X {
 
     public:
         ScalarNode(Type type, ScalarValue value) : ExprNode(NodeKind::Scalar), type(std::move(type)), value(std::move(value)) {}
+        ~ScalarNode() {
+            if (type.getTypeID() == Type::TypeID::ARRAY) {
+                for (auto expr: std::get<ExprList>(value)) {
+                    delete expr;
+                }
+            }
+        }
 
         void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
@@ -232,6 +245,7 @@ namespace X {
     class FnDefNode;
     class ClassNode;
     class InterfaceNode;
+
     class TopStatementListNode : public StatementListNode {
         std::vector<ClassNode *> classes;
         std::vector<InterfaceNode *> interfaces;
@@ -979,9 +993,7 @@ namespace X {
     public:
         InterfaceNode(std::string name, std::vector<std::string> parents, StatementListNode *body);
         ~InterfaceNode() {
-            for (auto &[methodName, methodDeclNode]: methods) {
-                delete methodDeclNode;
-            }
+            delete body;
         }
 
         void print(Pipes::PrintAst &astPrinter, int level = 0) override;
