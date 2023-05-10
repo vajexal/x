@@ -65,7 +65,7 @@ namespace X::Codegen {
         }
 
         if (elseNode) {
-            parentFunction->getBasicBlockList().push_back(elseBB);
+            parentFunction->insert(parentFunction->end(), elseBB);
             builder.SetInsertPoint(elseBB);
             elseNode->gen(*this);
             if (!elseNode->isLastNodeTerminate()) {
@@ -73,7 +73,7 @@ namespace X::Codegen {
             }
         }
 
-        parentFunction->getBasicBlockList().push_back(mergeBB);
+        parentFunction->insert(parentFunction->end(), mergeBB);
         builder.SetInsertPoint(mergeBB);
 
         return nullptr;
@@ -88,7 +88,7 @@ namespace X::Codegen {
         loops.emplace(loopStartBB, loopEndBB);
 
         builder.CreateBr(loopStartBB);
-        parentFunction->getBasicBlockList().push_back(loopStartBB);
+        parentFunction->insert(parentFunction->end(), loopStartBB);
         builder.SetInsertPoint(loopStartBB);
 
         auto cond = node->getCond()->gen(*this);
@@ -97,14 +97,14 @@ namespace X::Codegen {
         }
         builder.CreateCondBr(cond, loopBB, loopEndBB);
 
-        parentFunction->getBasicBlockList().push_back(loopBB);
+        parentFunction->insert(parentFunction->end(), loopBB);
         builder.SetInsertPoint(loopBB);
         node->getBody()->gen(*this);
         if (!node->getBody()->isLastNodeTerminate()) {
             builder.CreateBr(loopStartBB);
         }
 
-        parentFunction->getBasicBlockList().push_back(loopEndBB);
+        parentFunction->insert(parentFunction->end(), loopEndBB);
         builder.SetInsertPoint(loopEndBB);
 
         loops.pop();
@@ -175,7 +175,7 @@ namespace X::Codegen {
         builder.CreateBr(loopCondBB);
 
         // cond
-        parentFunction->getBasicBlockList().push_back(loopCondBB);
+        parentFunction->insert(parentFunction->end(), loopCondBB);
         builder.SetInsertPoint(loopCondBB);
 
         llvm::Value *iter = builder.CreateLoad(iterType, iterVar);
@@ -183,7 +183,7 @@ namespace X::Codegen {
         builder.CreateCondBr(cond, loopBB, loopEndBB);
 
         // body
-        parentFunction->getBasicBlockList().push_back(loopBB);
+        parentFunction->insert(parentFunction->end(), loopBB);
         builder.SetInsertPoint(loopBB);
 
         // set idx
@@ -203,7 +203,7 @@ namespace X::Codegen {
         }
 
         // post
-        parentFunction->getBasicBlockList().push_back(loopPostBB);
+        parentFunction->insert(parentFunction->end(), loopPostBB);
         builder.SetInsertPoint(loopPostBB);
 
         iter = builder.CreateAdd(iter, llvm::ConstantInt::getSigned(iterType, 1));
@@ -211,7 +211,7 @@ namespace X::Codegen {
         builder.CreateBr(loopCondBB);
 
         // end
-        parentFunction->getBasicBlockList().push_back(loopEndBB);
+        parentFunction->insert(parentFunction->end(), loopEndBB);
         builder.SetInsertPoint(loopEndBB);
 
         if (node->hasIdx()) {
@@ -249,7 +249,7 @@ namespace X::Codegen {
         builder.CreateCall(dieFn, {message});
         builder.CreateUnreachable();
 
-        parentFunction->getBasicBlockList().push_back(mergeBB);
+        parentFunction->insert(parentFunction->end(), mergeBB);
         builder.SetInsertPoint(mergeBB);
 
         // create range object

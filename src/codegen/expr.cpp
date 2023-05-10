@@ -221,7 +221,7 @@ namespace X::Codegen {
         builder.CreateCondBr(lhs, thenBB, mergeBB);
         auto lhsBB = builder.GetInsertBlock();
 
-        parentFunction->getBasicBlockList().push_back(thenBB);
+        parentFunction->insert(parentFunction->end(), thenBB);
         builder.SetInsertPoint(thenBB);
         auto rhs = node->getRhs()->gen(*this);
         if (!rhs) {
@@ -231,7 +231,7 @@ namespace X::Codegen {
         builder.CreateBr(mergeBB);
         auto rhsBB = builder.GetInsertBlock();
 
-        parentFunction->getBasicBlockList().push_back(mergeBB);
+        parentFunction->insert(parentFunction->end(), mergeBB);
         builder.SetInsertPoint(mergeBB);
         auto phi = builder.CreatePHI(builder.getInt1Ty(), 2);
         phi->addIncoming(builder.getFalse(), lhsBB);
@@ -252,7 +252,7 @@ namespace X::Codegen {
         builder.CreateCondBr(lhs, mergeBB, elseBB);
         auto lhsBB = builder.GetInsertBlock();
 
-        parentFunction->getBasicBlockList().push_back(elseBB);
+        parentFunction->insert(parentFunction->end(), elseBB);
         builder.SetInsertPoint(elseBB);
         auto rhs = node->getRhs()->gen(*this);
         if (!rhs) {
@@ -262,7 +262,7 @@ namespace X::Codegen {
         builder.CreateBr(mergeBB);
         auto rhsBB = builder.GetInsertBlock();
 
-        parentFunction->getBasicBlockList().push_back(mergeBB);
+        parentFunction->insert(parentFunction->end(), mergeBB);
         builder.SetInsertPoint(mergeBB);
         auto phi = builder.CreatePHI(builder.getInt1Ty(), 2);
         phi->addIncoming(builder.getTrue(), lhsBB);

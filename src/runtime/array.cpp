@@ -71,13 +71,13 @@ namespace X::Runtime {
         builder.CreateCondBr(cond, growCapBB, setCapBB);
 
         // grow cap
-        fn->getBasicBlockList().push_back(growCapBB);
+        fn->insert(fn->end(), growCapBB);
         builder.SetInsertPoint(growCapBB);
         builder.CreateStore(minCap, capVar);
         builder.CreateBr(setCapBB);
 
         // set cap
-        fn->getBasicBlockList().push_back(setCapBB);
+        fn->insert(fn->end(), setCapBB);
         builder.SetInsertPoint(setCapBB);
         auto cap = builder.CreateLoad(llvm::Type::getInt64Ty(context), capVar, "cap");
         auto capPtr = builder.CreateStructGEP(arrayType, that, 2);
@@ -97,7 +97,7 @@ namespace X::Runtime {
         builder.CreateRetVoid();
 
         // invalid len error
-        fn->getBasicBlockList().push_back(invalidLenBB);
+        fn->insert(fn->end(), invalidLenBB);
         builder.SetInsertPoint(invalidLenBB);
 
         auto exitFn = module.getFunction("exit");
@@ -138,7 +138,7 @@ namespace X::Runtime {
         cond = builder.CreateICmpSGE(index, arrLen);
         builder.CreateCondBr(cond, invalidIndexBB, thenBB);
 
-        fn->getBasicBlockList().push_back(thenBB);
+        fn->insert(fn->end(), thenBB);
         builder.SetInsertPoint(thenBB);
 
         // get elem
@@ -149,7 +149,7 @@ namespace X::Runtime {
         builder.CreateRet(val);
 
         // invalid index error
-        fn->getBasicBlockList().push_back(invalidIndexBB);
+        fn->insert(fn->end(), invalidIndexBB);
         builder.SetInsertPoint(invalidIndexBB);
 
         auto exitFn = module.getFunction("exit");
@@ -192,7 +192,7 @@ namespace X::Runtime {
         cond = builder.CreateICmpSGE(index, arrLen);
         builder.CreateCondBr(cond, invalidIndexBB, thenBB);
 
-        fn->getBasicBlockList().push_back(thenBB);
+        fn->insert(fn->end(), thenBB);
         builder.SetInsertPoint(thenBB);
 
         // set elem
@@ -204,7 +204,7 @@ namespace X::Runtime {
         builder.CreateRetVoid();
 
         // invalid index error
-        fn->getBasicBlockList().push_back(invalidIndexBB);
+        fn->insert(fn->end(), invalidIndexBB);
         builder.SetInsertPoint(invalidIndexBB);
 
         auto exitFn = module.getFunction("exit");
@@ -290,7 +290,7 @@ namespace X::Runtime {
         builder.CreateBr(appendBB);
 
         // append val
-        fn->getBasicBlockList().push_back(appendBB);
+        fn->insert(fn->end(), appendBB);
         builder.SetInsertPoint(appendBB);
 
         builder.CreateStore(newLen, lenPtr);
