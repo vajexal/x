@@ -5,9 +5,11 @@
 namespace X::Codegen {
     llvm::Value *Codegen::gen(DeclNode *node) {
         auto &name = node->getName();
-        if (namedValues.contains(name)) {
+        auto &vars = varScopes.back();
+        if (vars.contains(name)) {
             throw VarAlreadyExistsException(name);
         }
+
         auto type = mapType(node->getType());
         auto stackVar = createAlloca(type, name);
 
@@ -19,7 +21,7 @@ namespace X::Codegen {
 
         builder.CreateStore(value, stackVar);
 
-        namedValues[name] = stackVar;
+        vars[name] = stackVar;
 
         gcAddRoot(stackVar);
 
@@ -133,6 +135,8 @@ namespace X::Codegen {
         auto loopEndBB = llvm::BasicBlock::Create(context, "loopEnd");
 
         loops.emplace(loopPostBB, loopEndBB);
+        varScopes.emplace_back();
+        auto &vars = varScopes.back();
 
         builder.CreateBr(loopInitBB);
 
@@ -148,17 +152,11 @@ namespace X::Codegen {
         // init idx
         if (node->hasIdx()) {
             auto &idxVarName = node->getIdx();
-            if (namedValues.contains(idxVarName)) {
-                throw VarAlreadyExistsException(idxVarName);
-            }
             idxVar = createAlloca(iterType, idxVarName);
-            namedValues[idxVarName] = idxVar;
+            vars[idxVarName] = idxVar;
         }
 
         // init val
-        if (namedValues.contains(valVarName)) {
-            throw VarAlreadyExistsException(valVarName);
-        }
         auto valVarType = isRange ?
                           llvm::Type::getInt64Ty(context) :
                           arrayRuntime.getContainedType(llvm::cast<llvm::StructType>(exprType));
@@ -166,7 +164,7 @@ namespace X::Codegen {
             throw InvalidTypeException();
         }
         auto valVar = createAlloca(valVarType, valVarName);
-        namedValues[valVarName] = valVar;
+        vars[valVarName] = valVar;
 
         // init stop value
         auto lengthFn = module.getFunction(mangler.mangleInternalMethod(exprType->getStructName().str(), "length"));
@@ -214,11 +212,8 @@ namespace X::Codegen {
         parentFunction->insert(parentFunction->end(), loopEndBB);
         builder.SetInsertPoint(loopEndBB);
 
-        if (node->hasIdx()) {
-            namedValues.erase(node->getIdx());
-        }
-        namedValues.erase(valVarName);
         loops.pop();
+        varScopes.pop_back();
         gcPopStackFrame();
 
         return nullptr;

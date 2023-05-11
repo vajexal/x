@@ -76,14 +76,15 @@ namespace X::Codegen {
         }
 
         gcPushStackFrame();
+        varScopes.emplace_back();
+        auto &vars = varScopes.back();
 
-        namedValues.clear(); // todo global vars
         for (auto i = paramsOffset; i < fn->arg_size(); i++) {
             auto arg = fn->getArg(i);
             auto argName = arg->getName().str();
             auto alloca = createAlloca(arg->getType(), argName);
             builder.CreateStore(arg, alloca);
-            namedValues[argName] = alloca;
+            vars[argName] = alloca;
 
             gcAddRoot(alloca);
         }
@@ -93,6 +94,8 @@ namespace X::Codegen {
             gcPopStackFrame();
             builder.CreateRetVoid();
         }
+
+        varScopes.clear();
 
         that = nullptr;
     }

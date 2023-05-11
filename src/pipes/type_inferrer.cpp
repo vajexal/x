@@ -1,5 +1,6 @@
 #include "type_inferrer.h"
 
+#include <ranges>
 #include <fmt/core.h>
 
 #include "runtime/runtime.h"
@@ -243,7 +244,7 @@ namespace X::Pipes {
             checkIfLvalueTypeIsValid(exprType);
 
             node->setType(exprType);
-            vars[node->getName()] = exprType;
+            varScopes.back()[node->getName()] = exprType;
 
             return Type::voidTy();
         }
@@ -258,7 +259,7 @@ namespace X::Pipes {
             }
         }
 
-        vars[node->getName()] = type;
+        varScopes.back()[node->getName()] = type;
 
         return Type::voidTy();
     }
@@ -317,6 +318,9 @@ namespace X::Pipes {
             throw TypeInferrerException("for expression must be array or range");
         }
 
+        varScopes.emplace_back();
+        auto &vars = varScopes.back();
+
         if (node->hasIdx()) {
             vars[node->getIdx()] = Type::scalar(Type::TypeID::INT);
         }
@@ -325,10 +329,7 @@ namespace X::Pipes {
 
         node->getBody()->infer(*this);
 
-        if (node->hasIdx()) {
-            vars.erase(node->getIdx());
-        }
-        vars.erase(node->getVal());
+        varScopes.pop_back();
 
         return Type::voidTy();
     }
@@ -383,6 +384,8 @@ namespace X::Pipes {
     }
 
     Type TypeInferrer::infer(FnDefNode *node) {
+        varScopes.emplace_back();
+        auto &vars = varScopes.back();
         for (auto arg: node->getArgs()) {
             vars[arg->getName()] = arg->infer(*this);
         }
@@ -391,7 +394,7 @@ namespace X::Pipes {
 
         node->getBody()->infer(*this);
 
-        vars.clear();
+        varScopes.clear();
 
         return Type::voidTy();
     }
@@ -455,6 +458,8 @@ namespace X::Pipes {
         std::vector<Type> args;
         args.reserve(node->getFnDef()->getArgs().size());
 
+        varScopes.emplace_back();
+        auto &vars = varScopes.back();
         for (auto arg: node->getFnDef()->getArgs()) {
             vars[arg->getName()] = arg->infer(*this);
         }
@@ -463,7 +468,7 @@ namespace X::Pipes {
 
         node->getFnDef()->getBody()->infer(*this);
 
-        vars.clear();
+        varScopes.clear();
 
         that.reset();
 
@@ -658,10 +663,13 @@ namespace X::Pipes {
         return fnDef->getReturnType();
     }
 
-    const Type TypeInferrer::getVarType(const std::string &name) const {
-        auto varIt = vars.find(name);
-        if (varIt != vars.cend()) {
-            return varIt->second;
+    Type TypeInferrer::getVarType(const std::string &name) const {
+        // most nested scope will be last, so search in reverse order
+        for (auto &vars: std::ranges::reverse_view(varScopes)) {
+            auto var = vars.find(name);
+            if (var != vars.cend()) {
+                return var->second;
+            }
         }
 
         if (self) {

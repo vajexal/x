@@ -1,5 +1,7 @@
 #include "codegen.h"
 
+#include <ranges>
+
 #include "utils.h"
 
 namespace X::Codegen {
@@ -114,9 +116,12 @@ namespace X::Codegen {
     }
 
     std::pair<llvm::Type *, llvm::Value *> Codegen::getVar(std::string &name) const {
-        auto var = namedValues.find(name);
-        if (var != namedValues.end()) {
-            return {var->second->getAllocatedType(), var->second};
+        // most nested scope will be last, so search in reverse order
+        for (auto &vars: std::ranges::reverse_view(varScopes)) {
+            auto var = vars.find(name);
+            if (var != vars.cend()) {
+                return {var->second->getAllocatedType(), var->second};
+            }
         }
 
         if (that) {

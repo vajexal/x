@@ -140,24 +140,24 @@ fn flow() void {
 
     // it's possible to specify index name. Index modification won't affect iteration
     // Will print 0, 1, 2
-    for index, val in a {
-        println(index)
+    for i, val in a {
+        println(i)
     }
 
     // range construction can be used to generate sequence of numbers.
     // Signature is range(int start, int stop, int step). If only one parameter is specified, then start = 0 and step = 1.
     // If only two parameters are specified, then step = 1. All params can be negative. step = 0 will lead to panic.
     // If sequence is infinite (stop - start and step have opposite signs), then loop will exit immediately
-    for index in range(3) {
-        println(index) // will print 0, 1, 2
+    for i in range(3) {
+        println(i) // will print 0, 1, 2
     }
 
-    for index in range(1, 5) { 
-        println(index) // will print 1, 2, 3, 4
+    for i in range(1, 5) { 
+        println(i) // will print 1, 2, 3, 4
     }
 
-    for index in range(5, -5, -3) {
-        println(index) // will print 5, 2, -1, -4
+    for i in range(5, -5, -3) {
+        println(i) // will print 5, 2, -1, -4
     }
 }
 

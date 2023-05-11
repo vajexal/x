@@ -2,6 +2,8 @@
 
 #include <vector>
 #include <map>
+#include <unordered_map>
+#include <deque>
 #include <optional>
 #include <set>
 
@@ -27,7 +29,7 @@ namespace X::Pipes {
     class TypeInferrer : public Pipe {
         CompilerRuntime &compilerRuntime;
 
-        std::map<std::string, Type> vars;
+        std::deque<std::unordered_map<std::string, Type>> varScopes;
         std::map<std::string, FnType> fnTypes;
         // name of the current class (empty string if not in class scope)
         std::optional<std::string> self;
@@ -92,7 +94,7 @@ namespace X::Pipes {
         void checkFnCall(const FnType &fnType, const ExprList &args);
         const Type &getMethodReturnType(FnDeclNode *fnDecl, const std::string &className) const;
         const Type &getMethodReturnType(FnDefNode *fnDef, const std::string &className) const;
-        const Type getVarType(const std::string &name) const;
+        Type getVarType(const std::string &name) const;
         const FnType &getFnType(const std::string &fnName) const;
         const MethodType &getMethodType(const std::string &className, const std::string &methodName, bool isStatic = false) const;
         const Type &getPropType(const std::string &className, const std::string &propName, bool isStatic = false) const;

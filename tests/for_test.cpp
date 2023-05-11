@@ -155,32 +155,20 @@ fn main() void {
     }
 }
 
-TEST_F(ForTest, overrideVar) {
-    try {
-        compiler.compile(R"code(
-fn main() void {
-    int val
-    for val in []int{} {
-    }
-}
-)code");
-        FAIL() << "expected VarAlreadyExistsException";
-    } catch (const Codegen::VarAlreadyExistsException &e) {
-        ASSERT_STREQ(e.what(), "var val already exists");
-    }
-}
+TEST_F(ForTest, forScope) {
+    checkCode(R"code(
+    auto i = 10
 
-TEST_F(ForTest, overrideIdxVar) {
-    try {
-        compiler.compile(R"code(
-fn main() void {
-    int i
-    for i, val in []int{} {
+    println(i)
+
+    for i in range(3) {
+        println(i)
     }
-}
-)code");
-        FAIL() << "expected VarAlreadyExistsException";
-    } catch (const Codegen::VarAlreadyExistsException &e) {
-        ASSERT_STREQ(e.what(), "var i already exists");
-    }
+
+    println(i)
+)code", R"output(10
+0
+1
+2
+10)output");
 }

@@ -1,10 +1,12 @@
 #pragma once
 
 #include <map>
+#include <unordered_map>
 #include <stack>
 #include <vector>
 #include <tuple>
 #include <set>
+#include <deque>
 #include <fmt/core.h>
 
 #include "llvm/IR/LLVMContext.h"
@@ -78,7 +80,7 @@ namespace X::Codegen {
         Runtime::ArrayRuntime arrayRuntime;
         Runtime::GC::GC &gc;
 
-        std::map<std::string, llvm::AllocaInst *> namedValues;
+        std::deque<std::unordered_map<std::string, llvm::AllocaInst *>> varScopes;
         std::stack<Loop> loops;
 
         llvm::Value *that = nullptr;
