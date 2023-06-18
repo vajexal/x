@@ -11,6 +11,7 @@
 
 #include "codegen/codegen.h"
 #include "runtime/runtime.h"
+#include "gc/pass.h"
 
 namespace X::Pipes {
     TopStatementListNode *CodeGenerator::handle(TopStatementListNode *node) {
@@ -18,7 +19,7 @@ namespace X::Pipes {
         context->setOpaquePointers(false); // todo migrate to opaque pointers
         llvm::IRBuilder<> builder(*context);
         auto module = std::make_unique<llvm::Module>(sourceName, *context);
-        Runtime::GC::GC gc;
+        GC::GC gc;
         Codegen::Codegen codegen(*context, builder, *module, compilerRuntime, gc);
         Runtime::Runtime runtime{};
 
@@ -46,7 +47,7 @@ namespace X::Pipes {
 
         // link gc
         auto runtimeGCSymbol = throwOnError(jitter->lookup(mangler.mangleInternalSymbol("gc")));
-        auto runtimeGCPtr = runtimeGCSymbol.toPtr<Runtime::GC::GC **>();
+        auto runtimeGCPtr = runtimeGCSymbol.toPtr<GC::GC **>();
         *runtimeGCPtr = &gc; // nolint
 
         auto mainFn = throwOnError(jitter->lookup(Codegen::Codegen::MAIN_FN_NAME));
@@ -75,6 +76,8 @@ namespace X::Pipes {
     }
 
     OptimizationTransform::OptimizationTransform() : PM(std::make_unique<llvm::legacy::PassManager>()) {
+        PM->add(new GC::XGCLowering());
+
         llvm::PassManagerBuilder Builder;
         Builder.OptLevel = OPT_LEVEL;
         Builder.SizeLevel = SIZE_OPT_LEVEL;

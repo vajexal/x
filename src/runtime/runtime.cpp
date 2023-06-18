@@ -5,6 +5,7 @@
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
 
+#include "gc/gc.h"
 #include "casts.h"
 #include "utils.h"
 
@@ -110,7 +111,7 @@ namespace X::Runtime {
 
         for (auto &[fnName, retType, paramTypes]: funcs) {
             auto fnType = llvm::FunctionType::get(retType, paramTypes, false);
-            module.getOrInsertFunction(fnName, fnType).getCallee();
+            module.getOrInsertFunction(fnName, fnType);
         }
 
         auto gc = llvm::cast<llvm::GlobalVariable>(

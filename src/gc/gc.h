@@ -4,9 +4,7 @@
 #include <deque>
 #include <vector>
 
-#include "compiler_runtime.h"
-
-namespace X::Runtime::GC {
+namespace X::GC {
     struct Metadata;
 
     struct Root {

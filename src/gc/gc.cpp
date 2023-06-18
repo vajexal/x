@@ -2,8 +2,9 @@
 
 #include <cstdlib>
 #include <cstring>
+#include <cstdint>
 
-namespace X::Runtime::GC {
+namespace X::GC {
     Metadata *GC::addMeta(NodeType type, PointerList &&pointerList) {
         auto meta = new Metadata{type, std::move(pointerList)};
         metaBag.push_back(meta);

@@ -122,7 +122,6 @@ namespace X::Codegen {
         auto exprType = deref(expr->getType());
 
         // add expr gc root
-        gcPushStackFrame();
         auto exprAlloc = createAlloca(expr->getType());
         builder.CreateStore(expr, exprAlloc);
         gcAddRoot(exprAlloc);
@@ -214,7 +213,6 @@ namespace X::Codegen {
 
         loops.pop();
         varScopes.pop_back();
-        gcPopStackFrame();
 
         return nullptr;
     }
@@ -284,8 +282,6 @@ namespace X::Codegen {
     }
 
     llvm::Value *Codegen::gen(ReturnNode *node) {
-        gcPopStackFrame();
-
         if (!node->getVal()) {
             builder.CreateRetVoid();
             return nullptr;

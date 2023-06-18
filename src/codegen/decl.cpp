@@ -43,7 +43,7 @@ namespace X::Codegen {
             const auto &mangledName = mangler.mangleClass(name);
             auto &classDecl = classes[mangledName];
             auto klass = classDecl.type;
-            Runtime::GC::PointerList pointerList;
+            GC::PointerList pointerList;
 
             std::vector<llvm::Type *> props;
             props.reserve(klassNode->getProps().size());
@@ -101,7 +101,7 @@ namespace X::Codegen {
                 }
             }
 
-            classDecl.meta = gc.addMeta(Runtime::GC::NodeType::CLASS, std::move(pointerList));
+            classDecl.meta = gc.addMeta(GC::NodeType::CLASS, std::move(pointerList));
         }
     }
 

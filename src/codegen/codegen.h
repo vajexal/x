@@ -22,6 +22,7 @@
 #include "compiler_runtime.h"
 #include "mangler.h"
 #include "runtime/runtime.h"
+#include "gc/gc.h"
 
 namespace X::Codegen {
     struct Loop {
@@ -59,7 +60,7 @@ namespace X::Codegen {
         ClassDecl *parent = nullptr;
         bool isAbstract = false;
         llvm::StructType *vtableType = nullptr;
-        Runtime::GC::Metadata *meta;
+        GC::Metadata *meta;
     };
 
     struct InterfaceDecl {
@@ -78,7 +79,7 @@ namespace X::Codegen {
         CompilerRuntime &compilerRuntime;
         Mangler mangler;
         Runtime::ArrayRuntime arrayRuntime;
-        Runtime::GC::GC &gc;
+        GC::GC &gc;
 
         std::deque<std::unordered_map<std::string, llvm::AllocaInst *>> varScopes;
         std::stack<Loop> loops;
@@ -89,12 +90,12 @@ namespace X::Codegen {
         std::map<std::string, InterfaceDecl> interfaces;
         std::set<std::string> symbols;
 
-        std::map<std::string, Runtime::GC::Metadata *> gcMetaCache;
+        std::map<std::string, GC::Metadata *> gcMetaCache;
 
     public:
         static inline const std::string MAIN_FN_NAME = "main";
 
-        Codegen(llvm::LLVMContext &context, llvm::IRBuilder<> &builder, llvm::Module &module, CompilerRuntime &compilerRuntime, Runtime::GC::GC &gc) :
+        Codegen(llvm::LLVMContext &context, llvm::IRBuilder<> &builder, llvm::Module &module, CompilerRuntime &compilerRuntime, GC::GC &gc) :
                 context(context), builder(builder), module(module), compilerRuntime(compilerRuntime), arrayRuntime(Runtime::ArrayRuntime(context, module)),
                 gc(gc) {}
 
@@ -152,8 +153,8 @@ namespace X::Codegen {
         const ClassDecl &getClassDecl(const std::string &mangledName) const;
         const InterfaceDecl *findInterfaceDecl(const std::string &mangledName) const;
         std::string getClassName(llvm::Value *obj) const;
-        Runtime::GC::Metadata *getTypeGCMeta(llvm::Type *type);
-        Runtime::GC::Metadata *genTypeGCMeta(llvm::Type *type);
+        GC::Metadata *getTypeGCMeta(llvm::Type *type);
+        GC::Metadata *genTypeGCMeta(llvm::Type *type);
         llvm::Value *getValueGCMeta(llvm::Value *value);
         bool isObject(llvm::Value *value) const;
         bool isClassType(llvm::Type *type) const;
@@ -199,8 +200,6 @@ namespace X::Codegen {
 
         // gc helpers
         llvm::Value *gcAlloc(llvm::Value *size);
-        void gcPushStackFrame();
-        void gcPopStackFrame();
         void gcAddRoot(llvm::Value *root);
     };
 

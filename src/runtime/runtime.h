@@ -13,7 +13,6 @@
 #include "runtime/string.h"
 #include "runtime/array.h"
 #include "runtime/range.h"
-#include "runtime/gc/gc.h"
 #include "mangler.h"
 
 namespace X::Runtime {

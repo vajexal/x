@@ -57,6 +57,7 @@ namespace X::Codegen {
             auto fnType = genFnType(args, returnType, thisType);
             fn = llvm::Function::Create(fnType, llvm::Function::ExternalLinkage, name, module);
         }
+        fn->setGC("x");
         if (thisType) {
             fn->getArg(0)->setName(THIS_KEYWORD);
         }
@@ -75,7 +76,6 @@ namespace X::Codegen {
             that = fn->getArg(0);
         }
 
-        gcPushStackFrame();
         varScopes.emplace_back();
         auto &vars = varScopes.back();
 
@@ -91,7 +91,6 @@ namespace X::Codegen {
 
         body->gen(*this);
         if (!body->isLastNodeTerminate()) {
-            gcPopStackFrame();
             builder.CreateRetVoid();
         }
 

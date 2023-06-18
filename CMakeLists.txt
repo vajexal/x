@@ -44,8 +44,10 @@ set(X_SOURCES lexer.cpp
         src/runtime/array.cpp
         src/runtime/range.cpp
         src/runtime/casts.cpp
-        src/runtime/gc/gc.cpp
         src/compiler.cpp
+        src/gc/gc.cpp
+        src/gc/strategy.cpp
+        src/gc/pass.cpp
         src/pipes/parse_code.cpp
         src/pipes/print_ast.cpp
         src/pipes/check_interfaces.cpp

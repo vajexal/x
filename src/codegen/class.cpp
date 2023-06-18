@@ -196,7 +196,7 @@ namespace X::Codegen {
         return std::move(mangler.unmangleClass(type->getStructName().str()));
     }
 
-    Runtime::GC::Metadata *Codegen::getTypeGCMeta(llvm::Type *type) {
+    GC::Metadata *Codegen::getTypeGCMeta(llvm::Type *type) {
         type = deref(type);
         if (!type->isStructTy()) {
             return nullptr;
@@ -216,19 +216,19 @@ namespace X::Codegen {
         return meta;
     }
 
-    Runtime::GC::Metadata *Codegen::genTypeGCMeta(llvm::Type *type) {
+    GC::Metadata *Codegen::genTypeGCMeta(llvm::Type *type) {
         if (Runtime::String::isStringType(type) || Runtime::Range::isRangeType(type)) {
-            return gc.addMeta(Runtime::GC::NodeType::CLASS, {});
+            return gc.addMeta(GC::NodeType::CLASS, {});
         } else if (Runtime::Array::isArrayType(type)) {
-            Runtime::GC::PointerList pointerList;
+            GC::PointerList pointerList;
             auto containedType = arrayRuntime.getContainedType(llvm::cast<llvm::StructType>(type));
             auto containedMeta = getTypeGCMeta(containedType);
             if (containedMeta) {
                 pointerList.emplace_back(0, containedMeta);
             }
-            return gc.addMeta(Runtime::GC::NodeType::ARRAY, std::move(pointerList));
+            return gc.addMeta(GC::NodeType::ARRAY, std::move(pointerList));
         } else if (isInterfaceType(type)) {
-            return gc.addMeta(Runtime::GC::NodeType::INTERFACE, {});
+            return gc.addMeta(GC::NodeType::INTERFACE, {});
         } else if (isClassType(type)) {
             auto &classDecl = getClassDecl(type->getStructName().str());
             return classDecl.meta;

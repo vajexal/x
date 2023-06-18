@@ -16,7 +16,7 @@ namespace X {
         if (typeSize.isScalable()) {
             throw std::runtime_error("can't calc obj size");
         }
-        auto size = typeSize.getFixedSize();
+        auto size = typeSize.getFixedValue();
         return llvm::ConstantInt::get(llvm::Type::getInt64Ty(module.getContext()), size);
     }
 }
