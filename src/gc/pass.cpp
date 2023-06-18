@@ -1,5 +1,7 @@
 #include "pass.h"
 
+#include <vector>
+
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -20,28 +22,35 @@ namespace X::GC {
             return false;
         }
 
+        std::vector<llvm::IntrinsicInst *> roots;
+
+        // collect roots
+        for (auto &BB: F) {
+            for (auto &instruction: BB) {
+                if (auto intrinsic = llvm::dyn_cast<llvm::IntrinsicInst>(&instruction)) {
+                    if (intrinsic->getIntrinsicID() == llvm::Intrinsic::gcroot) {
+                        roots.push_back(intrinsic);
+                    }
+                }
+            }
+        }
+
+        if (roots.empty()) {
+            return false;
+        }
+
         // push stack frame
         llvm::IRBuilder<> builder(&F.getEntryBlock(), F.getEntryBlock().begin());
         builder.SetInsertPointPastAllocas(&F);
         builder.CreateCall(gcPushStackFrameFn, {gcVar});
 
+        // replace gcroot intrinsic
+        for (auto root: roots) {
+            llvm::ReplaceInstWithInst(root, llvm::CallInst::Create(gcAddRootFn, {gcVar, root->getArgOperand(0), root->getArgOperand(1)}));
+        }
+
+        // pop stack frame
         for (auto &BB: F) {
-            // replace gcroot intrinsic
-            for (auto it = BB.begin(); it != BB.end();) {
-                auto &instruction = *it;
-                it++;
-
-                if (auto intrinsic = llvm::dyn_cast<llvm::IntrinsicInst>(&instruction)) {
-                    if (intrinsic->getIntrinsicID() == llvm::Intrinsic::gcroot) {
-                        llvm::ReplaceInstWithInst(
-                                intrinsic,
-                                llvm::CallInst::Create(gcAddRootFn, {gcVar, intrinsic->getArgOperand(0), intrinsic->getArgOperand(1)})
-                        );
-                    }
-                }
-            }
-
-            // pop stack frame
             if (auto terminator = BB.getTerminator()) {
                 if (llvm::isa<llvm::ReturnInst>(terminator)) {
                     llvm::CallInst::Create(gcPopStackFrameFn, {gcVar}, "", terminator);
