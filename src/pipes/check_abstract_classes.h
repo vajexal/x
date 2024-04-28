@@ -1,6 +1,6 @@
 #pragma once
 
-#include <map>
+#include <unordered_map>
 
 #include "pipeline.h"
 #include "ast.h"
@@ -8,7 +8,7 @@
 namespace X::Pipes {
     class CheckAbstractClasses : public Pipe {
         // class name -> {method name -> abstract method decl}
-        std::map<std::string, std::map<std::string, MethodDeclNode *>> classAbstractMethods;
+        std::unordered_map<std::string, std::unordered_map<std::string, MethodDeclNode *>> classAbstractMethods;
 
     public:
         TopStatementListNode *handle(TopStatementListNode *node) override;

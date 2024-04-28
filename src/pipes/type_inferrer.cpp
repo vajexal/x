@@ -15,6 +15,9 @@ namespace X::Pipes {
 
         infer(node);
 
+        compilerRuntime.fnTypes = std::move(fnTypes);
+        compilerRuntime.classMethodTypes = std::move(classMethodTypes);
+
         return node;
     }
 
@@ -25,7 +28,7 @@ namespace X::Pipes {
                                                                      {"concat", {{{Type::scalar(Type::TypeID::STRING)}, Type::scalar(Type::TypeID::STRING)}}},
                                                                      {"length", {{{}, Type::scalar(Type::TypeID::INT)}}},
                                                                      {"isEmpty", {{{}, Type::scalar(Type::TypeID::BOOL)}}},
-                                                                     {"trim", {{{}, Type::scalar(Type::TypeID::BOOL)}}},
+                                                                     {"trim", {{{}, Type::scalar(Type::TypeID::STRING)}}},
                                                                      {"toLower", {{{}, Type::scalar(Type::TypeID::STRING)}}},
                                                                      {"toUpper", {{{}, Type::scalar(Type::TypeID::STRING)}}},
                                                                      {"index", {{{Type::scalar(Type::TypeID::STRING)}, Type::scalar(Type::TypeID::INT)}}},
@@ -44,8 +47,11 @@ namespace X::Pipes {
 
     void TypeInferrer::declClasses(TopStatementListNode *node) {
         for (auto klass: node->getClasses()) {
+            classes.insert(klass->getName());
+        }
+
+        for (auto klass: node->getClasses()) {
             auto &name = klass->getName();
-            classes.insert(name);
 
             classProps[name] = {};
 
@@ -55,7 +61,7 @@ namespace X::Pipes {
 
             for (auto prop: klass->getProps()) {
                 auto &type = prop->getType();
-                checkIfLvalueTypeIsValid(type);
+                checkLvalueTypeIsValid(type);
                 classProps[name][prop->getName()] = {type, prop->getIsStatic()};
             }
         }
@@ -81,7 +87,7 @@ namespace X::Pipes {
                 }
 
                 auto &retType = getMethodReturnType(fnDecl, name);
-                checkIfTypeIsValid(retType);
+                checkTypeIsValid(retType);
                 classMethods[fnDecl->getName()] = {{args, retType}, methodDecl->getIsStatic()};
             }
 
@@ -95,7 +101,7 @@ namespace X::Pipes {
                 }
 
                 auto &retType = getMethodReturnType(fnDef, name);
-                checkIfTypeIsValid(retType);
+                checkTypeIsValid(retType);
                 classMethods[methodName] = {{args, retType}, methodDef->getIsStatic()};
             }
 
@@ -115,7 +121,7 @@ namespace X::Pipes {
             }
 
             auto &retType = fnDef->getReturnType();
-            checkIfTypeIsValid(retType);
+            checkTypeIsValid(retType);
             fnTypes[fnDef->getName()] = {args, retType};
         }
     }
@@ -133,13 +139,24 @@ namespace X::Pipes {
     }
 
     Type TypeInferrer::infer(ScalarNode *node) {
+        // check all elements have the same type
+        if (node->getType().is(Type::TypeID::ARRAY)) {
+            auto &exprList = std::get<ExprList>(node->getValue());
+            if (!exprList.empty()) {
+                auto firstExprType = exprList[0]->infer(*this);
+                if (!std::ranges::all_of(exprList.begin() + 1, exprList.end(), [&](auto expr) { return expr->infer(*this) == firstExprType; })) {
+                    throw TypeInferrerException("all array elements must be the same type");
+                }
+            }
+        }
+
         return node->getType();
     }
 
     Type TypeInferrer::infer(UnaryNode *node) {
         auto exprType = node->getExpr()->infer(*this);
 
-        switch (node->getType()) {
+        switch (node->getOpType()) {
             case OpType::PRE_INC:
             case OpType::PRE_DEC:
             case OpType::POST_INC:
@@ -164,7 +181,7 @@ namespace X::Pipes {
         auto lhs = node->getLhs()->infer(*this);
         auto rhs = node->getRhs()->infer(*this);
 
-        switch (node->getType()) {
+        switch (node->getOpType()) {
             case OpType::OR:
             case OpType::AND:
                 if (lhs.isOneOf(Type::TypeID::VOID, Type::TypeID::CLASS) || rhs.isOneOf(Type::TypeID::VOID, Type::TypeID::CLASS)) {
@@ -185,12 +202,12 @@ namespace X::Pipes {
                 return Type::scalar(Type::TypeID::BOOL);
             case OpType::PLUS:
             case OpType::MINUS:
-                if (lhs.getTypeID() == Type::TypeID::STRING && rhs.getTypeID() == Type::TypeID::STRING) {
+                if (lhs.is(Type::TypeID::STRING) && rhs.is(Type::TypeID::STRING)) {
                     return Type::scalar(Type::TypeID::STRING);
                 }
 
                 if (lhs.isOneOf(Type::TypeID::INT, Type::TypeID::FLOAT) && rhs.isOneOf(Type::TypeID::INT, Type::TypeID::FLOAT)) {
-                    if (lhs.getTypeID() == Type::TypeID::FLOAT || rhs.getTypeID() == Type::TypeID::FLOAT) {
+                    if (lhs.is(Type::TypeID::FLOAT) || rhs.is(Type::TypeID::FLOAT)) {
                         return Type::scalar(Type::TypeID::FLOAT);
                     }
 
@@ -201,7 +218,7 @@ namespace X::Pipes {
             case OpType::MUL:
             case OpType::MOD:
                 if (lhs.isOneOf(Type::TypeID::INT, Type::TypeID::FLOAT) && rhs.isOneOf(Type::TypeID::INT, Type::TypeID::FLOAT)) {
-                    if (lhs.getTypeID() == Type::TypeID::FLOAT || rhs.getTypeID() == Type::TypeID::FLOAT) {
+                    if (lhs.is(Type::TypeID::FLOAT) || rhs.is(Type::TypeID::FLOAT)) {
                         return Type::scalar(Type::TypeID::FLOAT);
                     }
 
@@ -233,7 +250,7 @@ namespace X::Pipes {
     Type TypeInferrer::infer(DeclNode *node) {
         auto &type = node->getType();
 
-        if (type.getTypeID() == Type::TypeID::AUTO) {
+        if (type.is(Type::TypeID::AUTO)) {
             // infer expr type and change decl type accordingly
             if (!node->getExpr()) {
                 throw InvalidTypeException();
@@ -241,7 +258,7 @@ namespace X::Pipes {
 
             auto exprType = node->getExpr()->infer(*this);
 
-            checkIfLvalueTypeIsValid(exprType);
+            checkLvalueTypeIsValid(exprType);
 
             node->setType(exprType);
             varScopes.back()[node->getName()] = exprType;
@@ -249,7 +266,7 @@ namespace X::Pipes {
             return Type::voidTy();
         }
 
-        checkIfLvalueTypeIsValid(type);
+        checkLvalueTypeIsValid(type);
 
         if (node->getExpr()) {
             auto exprType = node->getExpr()->infer(*this);
@@ -313,8 +330,8 @@ namespace X::Pipes {
         auto exprType = node->getExpr()->infer(*this);
 
         // for expression must be array or range
-        if (exprType.getTypeID() != Type::TypeID::ARRAY &&
-            !(exprType.getTypeID() == Type::TypeID::CLASS && exprType.getClassName() == Runtime::Range::CLASS_NAME)) {
+        if (!exprType.is(Type::TypeID::ARRAY) &&
+            !(exprType.is(Type::TypeID::CLASS) && exprType.getClassName() == Runtime::Range::CLASS_NAME)) {
             throw TypeInferrerException("for expression must be array or range");
         }
 
@@ -324,7 +341,7 @@ namespace X::Pipes {
         if (node->hasIdx()) {
             vars[node->getIdx()] = Type::scalar(Type::TypeID::INT);
         }
-        const auto &varType = exprType.getTypeID() == Type::TypeID::ARRAY ? *exprType.getSubtype() : Type::scalar(Type::TypeID::INT);
+        const auto &varType = exprType.is(Type::TypeID::ARRAY) ? *exprType.getSubtype() : Type::scalar(Type::TypeID::INT);
         vars[node->getVal()] = varType;
 
         node->getBody()->infer(*this);
@@ -339,13 +356,13 @@ namespace X::Pipes {
         auto stopType = node->getStop()->infer(*this);
         auto stepType = node->getStep() ? node->getStep()->infer(*this) : Type::scalar(Type::TypeID::INT);
 
-        if (startType.getTypeID() != Type::TypeID::INT) {
+        if (!startType.is(Type::TypeID::INT)) {
             throw TypeInferrerException("range start argument must be int");
         }
-        if (stopType.getTypeID() != Type::TypeID::INT) {
+        if (!stopType.is(Type::TypeID::INT)) {
             throw TypeInferrerException("range stop argument must be int");
         }
-        if (stepType.getTypeID() != Type::TypeID::INT) {
+        if (!stepType.is(Type::TypeID::INT)) {
             throw TypeInferrerException("range step argument must be int");
         }
 
@@ -363,7 +380,7 @@ namespace X::Pipes {
     Type TypeInferrer::infer(ArgNode *node) {
         auto &type = node->getType();
 
-        checkIfLvalueTypeIsValid(type);
+        checkArgTypeIsValid(type);
 
         return type;
     }
@@ -377,7 +394,7 @@ namespace X::Pipes {
         }
 
         auto &retType = node->getReturnType();
-        checkIfTypeIsValid(retType);
+        checkTypeIsValid(retType);
         fnTypes[node->getName()] = {args, retType};
 
         return Type::voidTy();
@@ -412,7 +429,7 @@ namespace X::Pipes {
 
         auto retType = node->getVal()->infer(*this);
 
-        if (retType.getTypeID() == Type::TypeID::VOID) {
+        if (retType.is(Type::TypeID::VOID)) {
             throw InvalidTypeException();
         }
 
@@ -477,7 +494,7 @@ namespace X::Pipes {
 
     Type TypeInferrer::infer(FetchPropNode *node) {
         auto objType = node->getObj()->infer(*this);
-        if (objType.getTypeID() != Type::TypeID::CLASS) {
+        if (!objType.is(Type::TypeID::CLASS)) {
             throw InvalidTypeException();
         }
 
@@ -505,7 +522,7 @@ namespace X::Pipes {
 
     Type TypeInferrer::infer(AssignPropNode *node) {
         auto objType = node->getObj()->infer(*this);
-        if (objType.getTypeID() != Type::TypeID::CLASS) {
+        if (!objType.is(Type::TypeID::CLASS)) {
             throw InvalidTypeException();
         }
 
@@ -551,7 +568,7 @@ namespace X::Pipes {
         }
 
         auto &retType = getMethodReturnType(node->getFnDecl(), self.value());
-        checkIfTypeIsValid(retType);
+        checkTypeIsValid(retType);
         classMethodTypes[self.value()][node->getFnDecl()->getName()] = {{args, retType}, node->getIsStatic()};
 
         return Type::voidTy();
@@ -569,12 +586,12 @@ namespace X::Pipes {
 
     Type TypeInferrer::infer(FetchArrNode *node) {
         auto arrType = node->getArr()->infer(*this);
-        if (arrType.getTypeID() != Type::TypeID::ARRAY) {
+        if (!arrType.is(Type::TypeID::ARRAY)) {
             throw InvalidTypeException();
         }
 
         auto idxType = node->getIdx()->infer(*this);
-        if (idxType.getTypeID() != Type::TypeID::INT) {
+        if (!idxType.is(Type::TypeID::INT)) {
             throw InvalidTypeException();
         }
 
@@ -583,12 +600,12 @@ namespace X::Pipes {
 
     Type TypeInferrer::infer(AssignArrNode *node) {
         auto arrType = node->getArr()->infer(*this);
-        if (arrType.getTypeID() != Type::TypeID::ARRAY) {
+        if (!arrType.is(Type::TypeID::ARRAY)) {
             throw InvalidTypeException();
         }
 
         auto idxType = node->getIdx()->infer(*this);
-        if (idxType.getTypeID() != Type::TypeID::INT) {
+        if (!idxType.is(Type::TypeID::INT)) {
             throw InvalidTypeException();
         }
 
@@ -602,7 +619,7 @@ namespace X::Pipes {
 
     Type TypeInferrer::infer(AppendArrNode *node) {
         auto arrType = node->getArr()->infer(*this);
-        if (arrType.getTypeID() != Type::TypeID::ARRAY) {
+        if (!arrType.is(Type::TypeID::ARRAY)) {
             throw InvalidTypeException();
         }
 
@@ -614,8 +631,8 @@ namespace X::Pipes {
         return Type::voidTy();
     }
 
-    void TypeInferrer::checkIfTypeIsValid(const Type &type) const {
-        if (type.getTypeID() == Type::TypeID::ARRAY && type.getSubtype()->getTypeID() == Type::TypeID::VOID) {
+    void TypeInferrer::checkTypeIsValid(const Type &type) const {
+        if (type.is(Type::TypeID::ARRAY) && type.getSubtype()->is(Type::TypeID::VOID)) {
             throw InvalidTypeException();
         }
 
@@ -624,12 +641,24 @@ namespace X::Pipes {
         }
     }
 
-    void TypeInferrer::checkIfLvalueTypeIsValid(const Type &type) const {
-        if (type.getTypeID() == Type::TypeID::VOID) {
+    void TypeInferrer::checkLvalueTypeIsValid(const Type &type) const {
+        if (type.is(Type::TypeID::VOID)) {
             throw InvalidTypeException();
         }
 
-        checkIfTypeIsValid(type);
+        if (type.is(Type::TypeID::CLASS) && !classes.contains(type.getClassName())) {
+            throw InvalidTypeException();
+        }
+
+        checkTypeIsValid(type);
+    }
+
+    void TypeInferrer::checkArgTypeIsValid(const Type &type) const {
+        if (type.is(Type::TypeID::VOID)) {
+            throw InvalidTypeException();
+        }
+
+        checkTypeIsValid(type);
     }
 
     void TypeInferrer::checkFnCall(const FnType &fnType, const ExprList &args) {
@@ -646,18 +675,16 @@ namespace X::Pipes {
     }
 
     const Type &TypeInferrer::getMethodReturnType(FnDeclNode *fnDecl, const std::string &className) const {
-        if (fnDecl->getReturnType().getTypeID() == Type::TypeID::SELF) {
+        if (fnDecl->getReturnType().is(Type::TypeID::SELF)) {
             fnDecl->setReturnType(Type::klass(className));
-            return fnDecl->getReturnType();
         }
 
         return fnDecl->getReturnType();
     }
 
     const Type &TypeInferrer::getMethodReturnType(FnDefNode *fnDef, const std::string &className) const {
-        if (fnDef->getReturnType().getTypeID() == Type::TypeID::SELF) {
+        if (fnDef->getReturnType().is(Type::TypeID::SELF)) {
             fnDef->setReturnType(Type::klass(className));
-            return fnDef->getReturnType();
         }
 
         return fnDef->getReturnType();
@@ -690,7 +717,7 @@ namespace X::Pipes {
         }
 
         if (self) {
-            auto methods = classMethodTypes.at(self.value());
+            const auto &methods = classMethodTypes.at(self.value());
             auto methodIt = methods.find(fnName);
             if (methodIt != methods.cend() && (that || methodIt->second.isStatic)) {
                 return methodIt->second;
@@ -701,7 +728,7 @@ namespace X::Pipes {
     }
 
     const MethodType &TypeInferrer::getMethodType(const std::string &className, const std::string &methodName, bool isStatic) const {
-        auto methodTypesIt = classMethodTypes.find(className);
+        const auto &methodTypesIt = classMethodTypes.find(className);
         if (methodTypesIt == classMethodTypes.cend()) {
             throw TypeInferrerException(fmt::format("class {} not found", className));
         }
@@ -750,11 +777,11 @@ namespace X::Pipes {
             return true;
         }
 
-        if (type.getTypeID() == Type::TypeID::INT && expectedType.getTypeID() == Type::TypeID::FLOAT) {
+        if (type.is(Type::TypeID::INT) && expectedType.is(Type::TypeID::FLOAT)) {
             return true;
         }
 
-        if (type.getTypeID() == Type::TypeID::CLASS && expectedType.getTypeID() == Type::TypeID::CLASS && instanceof(type, expectedType)) {
+        if (type.is(Type::TypeID::CLASS) && expectedType.is(Type::TypeID::CLASS) && instanceof(type, expectedType)) {
             return true;
         }
 

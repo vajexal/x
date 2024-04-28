@@ -3,8 +3,6 @@
 #include "utils.h"
 
 namespace X::Runtime {
-    // todo gc
-
     String *String_new(uint64_t len) {
         auto res = new String;
         res->len = len;
@@ -128,11 +126,6 @@ namespace X::Runtime {
         auto res = String_new(length);
         std::memcpy(res->str, that->str + offset, length);
         return res;
-    }
-
-    bool String::isStringType(llvm::Type *type) {
-        type = deref(type);
-        return type->isStructTy() && type->getStructName() == Runtime::String::CLASS_NAME;
     }
 
     String *createEmptyString() {

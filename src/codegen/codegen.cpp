@@ -43,51 +43,38 @@ namespace X::Codegen {
     llvm::Type *Codegen::mapType(const Type &type) {
         switch (type.getTypeID()) {
             case Type::TypeID::INT:
-                return llvm::Type::getInt64Ty(context);
+                return builder.getInt64Ty();
             case Type::TypeID::FLOAT:
-                return llvm::Type::getDoubleTy(context);
+                return builder.getDoubleTy();
             case Type::TypeID::BOOL:
-                return llvm::Type::getInt1Ty(context);
+                return builder.getInt1Ty();
             case Type::TypeID::STRING:
-                return llvm::StructType::getTypeByName(context, Runtime::String::CLASS_NAME)->getPointerTo();
-            case Type::TypeID::ARRAY:
-                return getArrayForType(type.getSubtype())->getPointerTo();
+                return builder.getPtrTy();
+            case Type::TypeID::ARRAY: {
+                auto _ = getArrayForType(type); // need to generate array type
+                return builder.getPtrTy();
+            }
             case Type::TypeID::VOID:
-                return llvm::Type::getVoidTy(context);
+                return builder.getVoidTy();
             case Type::TypeID::CLASS: {
-                auto &className = type.getClassName();
-                auto &classDecl = getClassDecl(mangler.mangleClass(className));
-                return classDecl.type->getPointerTo();
+                return builder.getPtrTy();
             }
             default:
                 throw InvalidTypeException();
         }
     }
 
-    llvm::Type *Codegen::mapArgType(const Type &type) {
-        if (type.getTypeID() == Type::TypeID::CLASS) {
-            auto interfaceDecl = findInterfaceDecl(mangler.mangleInterface(type.getClassName()));
-            if (interfaceDecl) {
-                return interfaceDecl->type->getPointerTo();
-            }
-        }
-
-        return mapType(type);
-    }
-
     llvm::Constant *Codegen::getDefaultValue(const Type &type) {
         switch (type.getTypeID()) {
             case Type::TypeID::INT:
-                return llvm::ConstantInt::getSigned(llvm::Type::getInt64Ty(context), 0);
+                return builder.getInt64(0);
             case Type::TypeID::FLOAT:
-                return llvm::ConstantFP::get(llvm::Type::getDoubleTy(context), 0);
+                return llvm::ConstantFP::get(builder.getDoubleTy(), 0);
             case Type::TypeID::BOOL:
-                return llvm::ConstantInt::get(llvm::Type::getInt1Ty(context), 0);
+                return builder.getFalse();
             case Type::TypeID::STRING:
-                // todo optimize
-                return llvm::ConstantPointerNull::get(llvm::StructType::getTypeByName(context, Runtime::String::CLASS_NAME)->getPointerTo());
             case Type::TypeID::ARRAY:
-                return llvm::ConstantPointerNull::get(getArrayForType(type.getSubtype())->getPointerTo());
+                return llvm::ConstantPointerNull::get(builder.getPtrTy());
             default:
                 throw InvalidTypeException();
         }
@@ -96,17 +83,17 @@ namespace X::Codegen {
     llvm::Value *Codegen::createDefaultValue(const Type &type) {
         switch (type.getTypeID()) {
             case Type::TypeID::INT:
-                return llvm::ConstantInt::getSigned(llvm::Type::getInt64Ty(context), 0);
+                return builder.getInt64(0);
             case Type::TypeID::FLOAT:
-                return llvm::ConstantFP::get(llvm::Type::getDoubleTy(context), 0);
+                return llvm::ConstantFP::get(builder.getDoubleTy(), 0);
             case Type::TypeID::BOOL:
-                return llvm::ConstantInt::get(llvm::Type::getInt1Ty(context), 0);
+                return builder.getFalse();
             case Type::TypeID::STRING:
-                return builder.CreateCall(module.getFunction(mangler.mangleInternalFunction("createEmptyString")));
+                return builder.CreateCall(module.getFunction(Mangler::mangleInternalFunction("createEmptyString")));
             case Type::TypeID::ARRAY: {
-                auto arrType = getArrayForType(type.getSubtype());
+                auto arrType = getArrayForType(type);
                 auto arr = createAlloca(arrType);
-                auto len = llvm::ConstantInt::getSigned(llvm::Type::getInt64Ty(context), 0);
+                auto len = builder.getInt64(0);
                 builder.CreateCall(getInternalConstructor(arrType->getName().str()), {arr, len});
                 return arr;
             }
@@ -115,18 +102,18 @@ namespace X::Codegen {
         }
     }
 
-    std::pair<llvm::Type *, llvm::Value *> Codegen::getVar(std::string &name) const {
+    std::pair<Type, llvm::Value *> Codegen::getVar(std::string &name) {
         // most nested scope will be last, so search in reverse order
         for (auto &vars: std::ranges::reverse_view(varScopes)) {
             auto var = vars.find(name);
             if (var != vars.cend()) {
-                return {var->second->getAllocatedType(), var->second};
+                return {var->second.type, var->second.value};
             }
         }
 
         if (that) {
             try {
-                return getProp(that, name);
+                return getProp(that->value, that->type, name);
             } catch (const PropNotFoundException &e) {}
         }
 
@@ -148,169 +135,167 @@ namespace X::Codegen {
     // allocates object on heap
     llvm::Value *Codegen::newObj(llvm::StructType *type) {
         auto allocSize = getTypeSize(module, type);
-        auto objPtr = gcAlloc(allocSize);
-        return builder.CreateBitCast(objPtr, type->getPointerTo());
+        return gcAlloc(allocSize);
     }
 
-    std::pair<llvm::Value *, llvm::Value *> Codegen::upcast(llvm::Value *a, llvm::Value *b) const {
-        if (a->getType()->isDoubleTy() && b->getType()->isIntegerTy(INTEGER_BIT_WIDTH)) {
-            return {a, builder.CreateSIToFP(b, llvm::Type::getDoubleTy(context))};
+    std::tuple<llvm::Value *, Type, llvm::Value *, Type> Codegen::upcast(llvm::Value *a, Type aType, llvm::Value *b, Type bType) const {
+        if (aType.is(Type::TypeID::FLOAT) && bType.is(Type::TypeID::INT)) {
+            return {a, aType, builder.CreateSIToFP(b, builder.getDoubleTy()), Type::scalar(Type::TypeID::FLOAT)};
         }
 
-        if (a->getType()->isIntegerTy(INTEGER_BIT_WIDTH) && b->getType()->isDoubleTy()) {
-            return {builder.CreateSIToFP(a, llvm::Type::getDoubleTy(context)), b};
+        if (aType.is(Type::TypeID::INT) && bType.is(Type::TypeID::FLOAT)) {
+            return {builder.CreateSIToFP(a, builder.getDoubleTy()), Type::scalar(Type::TypeID::FLOAT), b, bType};
         }
 
-        return {a, b};
+        return {a, aType, b, bType};
     }
 
-    std::pair<llvm::Value *, llvm::Value *> Codegen::forceUpcast(llvm::Value *a, llvm::Value *b) const {
-        if (a->getType()->isIntegerTy(INTEGER_BIT_WIDTH)) {
-            a = builder.CreateSIToFP(a, llvm::Type::getDoubleTy(context));
+    std::tuple<llvm::Value *, Type, llvm::Value *, Type> Codegen::forceUpcast(llvm::Value *a, Type aType, llvm::Value *b, Type bType) const {
+        if (aType.is(Type::TypeID::INT)) {
+            a = builder.CreateSIToFP(a, builder.getDoubleTy());
+            aType = Type::scalar(Type::TypeID::FLOAT);
         }
 
-        if (b->getType()->isIntegerTy(INTEGER_BIT_WIDTH)) {
-            b = builder.CreateSIToFP(b, llvm::Type::getDoubleTy(context));
+        if (bType.is(Type::TypeID::INT)) {
+            b = builder.CreateSIToFP(b, builder.getDoubleTy());
+            bType = Type::scalar(Type::TypeID::FLOAT);
         }
 
-        return {a, b};
+        return {a, aType, b, bType};
     }
 
-    llvm::Value *Codegen::downcastToBool(llvm::Value *value) const {
-        if (value->getType()->isIntegerTy(1)) {
-            return value;
-        }
-
-        switch (value->getType()->getTypeID()) {
-            case llvm::Type::TypeID::IntegerTyID:
-                return builder.CreateICmpNE(value, llvm::ConstantInt::getSigned(llvm::Type::getInt64Ty(context), 0));
-            case llvm::Type::TypeID::DoubleTyID:
-                return builder.CreateFCmpONE(value, llvm::ConstantFP::get(llvm::Type::getDoubleTy(context), 0));
+    llvm::Value *Codegen::downcastToBool(llvm::Value *value, const Type &type) const {
+        switch (type.getTypeID()) {
+            case Type::TypeID::INT:
+                return builder.CreateICmpNE(value, builder.getInt64(0));
+            case Type::TypeID::FLOAT:
+                return builder.CreateFCmpONE(value, llvm::ConstantFP::get(builder.getDoubleTy(), 0));
+            case Type::TypeID::BOOL:
+                return value;
+            case Type::TypeID::STRING: {
+                const auto &stringIsEmptyFnName = Mangler::mangleInternalMethod(Runtime::String::CLASS_NAME, "isEmpty");
+                auto stringIsEmptyFn = module.getFunction(stringIsEmptyFnName);
+                auto val = builder.CreateCall(stringIsEmptyFn, {value});
+                return negate(val);
+            }
+            case Type::TypeID::ARRAY: {
+                const auto &arrayClassName = Runtime::Array::getClassName(type);
+                const auto &arrayIsEmptyFnName = Mangler::mangleInternalMethod(arrayClassName, "isEmpty");
+                auto arrayIsEmptyFn = module.getFunction(arrayIsEmptyFnName);
+                auto val = builder.CreateCall(arrayIsEmptyFn, {value});
+                return negate(val);
+            }
             default:
-                if (Runtime::String::isStringType(value->getType())) {
-                    const auto &stringIsEmptyFnName = mangler.mangleInternalMethod(Runtime::String::CLASS_NAME, "isEmpty");
-                    auto stringIsEmptyFn = module.getFunction(stringIsEmptyFnName);
-                    auto val = builder.CreateCall(stringIsEmptyFn, {value});
-                    return negate(val);
-                } else if (Runtime::Array::isArrayType(value->getType())) {
-                    auto arrType = deref(value->getType());
-                    const auto &arrayIsEmptyFnName = mangler.mangleInternalMethod(arrType->getStructName().str(), "isEmpty");
-                    auto arrayIsEmptyFn = module.getFunction(arrayIsEmptyFnName);
-                    auto val = builder.CreateCall(arrayIsEmptyFn, {value});
-                    return negate(val);
-                }
                 throw InvalidTypeException();
         }
     }
 
-    llvm::Value *Codegen::castToString(llvm::Value *value) const {
-        auto type = value->getType();
-        switch (type->getTypeID()) {
-            case llvm::Type::TypeID::IntegerTyID: {
-                if (type->isIntegerTy(1)) {
-                    auto castBoolToStringFn = module.getFunction(mangler.mangleInternalFunction("castBoolToString"));
-                    return builder.CreateCall(castBoolToStringFn, {value});
-                }
-
-                auto castIntToStringFn = module.getFunction(mangler.mangleInternalFunction("castIntToString"));
+    llvm::Value *Codegen::castToString(llvm::Value *value, const Type &type) const {
+        switch (type.getTypeID()) {
+            case Type::TypeID::INT: {
+                auto castIntToStringFn = module.getFunction(Mangler::mangleInternalFunction("castIntToString"));
                 return builder.CreateCall(castIntToStringFn, {value});
             }
-            case llvm::Type::TypeID::DoubleTyID: {
-                auto castFloatToStringFn = module.getFunction(mangler.mangleInternalFunction("castFloatToString"));
+            case Type::TypeID::FLOAT: {
+                auto castFloatToStringFn = module.getFunction(Mangler::mangleInternalFunction("castFloatToString"));
                 return builder.CreateCall(castFloatToStringFn, {value});
             }
+            case Type::TypeID::BOOL: {
+                auto castBoolToStringFn = module.getFunction(Mangler::mangleInternalFunction("castBoolToString"));
+                return builder.CreateCall(castBoolToStringFn, {value});
+            }
+            case Type::TypeID::STRING:
+                return value;
+            default:
+                throw CodegenException("can't cast to string");
         }
-
-        return value;
     }
 
-    bool Codegen::instanceof(llvm::StructType *instanceType, llvm::StructType *type) const {
-        const auto &expectedTypeName = type->getName().str();
-        auto &currentClassDecl = getClassDecl(instanceType->getStructName().str());
-        auto expectedInterfaceDecl = findInterfaceDecl(expectedTypeName);
+    bool Codegen::instanceof(const Type &instanceType, const Type &type) const {
+        auto &currentClassDecl = getClassDecl(instanceType.getClassName());
+        auto expectedInterfaceDecl = findInterfaceDecl(type.getClassName());
         if (expectedInterfaceDecl) {
             return compilerRuntime.implementedInterfaces[currentClassDecl.name].contains(expectedInterfaceDecl->name);
         }
 
-        auto &expectedClassDecl = getClassDecl(expectedTypeName);
+        auto &expectedClassDecl = getClassDecl(type.getClassName());
         return compilerRuntime.extendedClasses[currentClassDecl.name].contains(expectedClassDecl.name);
     }
 
-    llvm::Value *Codegen::castTo(llvm::Value *value, llvm::Type *expectedType) {
-        if (value->getType() == expectedType) {
+    llvm::Value *Codegen::castTo(llvm::Value *value, const Type &type, const Type &expectedType) {
+        if (type == expectedType) {
             return value;
         }
 
-        if (expectedType->isDoubleTy() && value->getType()->isIntegerTy(INTEGER_BIT_WIDTH)) {
-            return builder.CreateSIToFP(value, expectedType);
+        if (expectedType.is(Type::TypeID::FLOAT) && type.is(Type::TypeID::INT)) {
+            return builder.CreateSIToFP(value, builder.getDoubleTy());
         }
 
-        auto type = deref(value->getType());
-        auto expectedClassType = deref(expectedType);
-        if (type->isStructTy() && expectedClassType->isStructTy() &&
-            instanceof(llvm::cast<llvm::StructType>(type), llvm::cast<llvm::StructType>(expectedClassType))) {
-            auto interfaceDecl = findInterfaceDecl(expectedClassType->getStructName().str());
+        if (type.is(Type::TypeID::CLASS) && expectedType.is(Type::TypeID::CLASS) && instanceof(type, expectedType)) {
+            auto interfaceDecl = findInterfaceDecl(expectedType.getClassName());
             return interfaceDecl ?
-                   instantiateInterface(value, *interfaceDecl) :
-                   builder.CreateBitCast(value, expectedType);
+                   instantiateInterface(value, type, *interfaceDecl) :
+                   value;
         }
 
         return value;
     }
 
-    llvm::Value *Codegen::instantiateInterface(llvm::Value *value, const InterfaceDecl &interfaceDecl) {
-        auto interface = newObj(interfaceDecl.type);
+    llvm::Value *Codegen::instantiateInterface(llvm::Value *value, const Type &type, const InterfaceDecl &interfaceDecl) {
+        auto interface = newObj(interfaceDecl.llvmType);
 
-        initInterfaceVtable(value, interface);
+        initInterfaceVtable(value, type, interface, interfaceDecl);
 
         // set obj ptr
-        auto objPtr = builder.CreateStructGEP(interfaceDecl.type, interface, 1);
-        auto valueVoidPtr = builder.CreateBitCast(value, builder.getInt8PtrTy());
-        builder.CreateStore(valueVoidPtr, objPtr);
+        auto objPtr = builder.CreateStructGEP(interfaceDecl.llvmType, interface, 1);
+        builder.CreateStore(value, objPtr);
 
         // set gc meta
-        auto meta = getValueGCMeta(value);
-        auto metaPtr = builder.CreateStructGEP(interfaceDecl.type, interface, 2);
+        auto meta = getGCMetaValue(type);
+        auto metaPtr = builder.CreateStructGEP(interfaceDecl.llvmType, interface, 2);
         builder.CreateStore(meta, metaPtr);
 
         return interface;
     }
 
     llvm::Value *Codegen::compareStrings(llvm::Value *first, llvm::Value *second) const {
-        auto compareStringsFn = module.getFunction(mangler.mangleInternalFunction("compareStrings"));
+        auto compareStringsFn = module.getFunction(Mangler::mangleInternalFunction("compareStrings"));
         return builder.CreateCall(compareStringsFn, {first, second});
     }
 
     llvm::Value *Codegen::negate(llvm::Value *value) const {
-        return builder.CreateXor(value, llvm::ConstantInt::getTrue(context));
+        return builder.CreateXor(value, builder.getTrue());
     }
 
-    llvm::StructType *Codegen::getArrayForType(const Type *type) {
-        if (type->getTypeID() == Type::TypeID::ARRAY) {
-            throw CodegenException("multidimensional arrays are forbidden");
+    llvm::StructType *Codegen::getArrayForType(const Type &arrType) {
+        if (!arrType.is(Type::TypeID::ARRAY)) {
+            throw InvalidTypeException();
         }
 
-        const auto &arrayClassName = Runtime::Array::getClassName(type);
-        // todo cache
+        auto &subtype = *arrType.getSubtype();
+
+        if (subtype.is(Type::TypeID::ARRAY)) {
+            throw CodegenException("multidimensional arrays are not supported");
+        }
+
+        const auto &arrayClassName = Runtime::Array::getClassName(arrType);
         auto arrayType = llvm::StructType::getTypeByName(context, arrayClassName);
         if (!arrayType) {
-            // gen array type
-            auto subtype = mapType(*type);
-            return arrayRuntime.add(subtype);
+            // gen array subtype
+            return arrayRuntime.add(arrType, mapType(subtype));
         }
         return arrayType;
     }
 
-    void Codegen::fillArray(llvm::Value *arr, const std::vector<llvm::Value *> &values) {
-        auto arrType = deref(arr->getType());
-        auto arrSetFn = module.getFunction(mangler.mangleInternalMethod(arrType->getStructName().str(), "set[]"));
+    void Codegen::fillArray(llvm::Value *arr, const Type &type, const std::vector<llvm::Value *> &values) {
+        const auto &arrayClassName = Runtime::Array::getClassName(type);
+        auto arrSetFn = module.getFunction(Mangler::mangleInternalMethod(arrayClassName, "set[]"));
         if (!arrSetFn) {
             throw InvalidArrayAccessException();
         }
 
         for (auto i = 0; i < values.size(); i++) {
-            auto index = llvm::ConstantInt::getSigned(llvm::Type::getInt64Ty(context), i);
-            builder.CreateCall(arrSetFn, {arr, index, values[i]});
+            builder.CreateCall(arrSetFn, {arr, builder.getInt64(i), values[i]});
         }
     }
 

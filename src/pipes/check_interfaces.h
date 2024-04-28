@@ -3,16 +3,17 @@
 #include "pipeline.h"
 #include "compiler_runtime.h"
 
-#include <map>
+#include <unordered_map>
+#include <unordered_set>
 
 namespace X::Pipes {
     class CheckInterfaces : public Pipe {
         CompilerRuntime &compilerRuntime;
 
         // class name -> all methods (including parents) {method name -> method def}
-        std::map<std::string, std::map<std::string, MethodDefNode *>> classMethods;
+        std::unordered_map<std::string, std::unordered_map<std::string, MethodDefNode *>> classMethods;
 
-        std::set<std::string> abstractClasses;
+        std::unordered_set<std::string> abstractClasses;
     public:
         CheckInterfaces(CompilerRuntime &compilerRuntime) : compilerRuntime(compilerRuntime) {}
 

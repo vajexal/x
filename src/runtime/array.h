@@ -1,6 +1,5 @@
 #pragma once
 
-#include <map>
 #include <string>
 
 #include "llvm/IR/LLVMContext.h"
@@ -15,23 +14,18 @@ namespace X::Runtime {
     class ArrayRuntime {
         llvm::LLVMContext &context;
         llvm::Module &module;
-        Mangler mangler;
-
-        // array type name -> contained llvm type
-        std::map<std::string, llvm::Type *> containedTypes;
 
     public:
         ArrayRuntime(llvm::LLVMContext &context, llvm::Module &module) : context(context), module(module) {}
 
-        llvm::StructType *add(llvm::Type *type);
-        llvm::Type *getContainedType(llvm::StructType *arrayType) const;
+        llvm::StructType *add(const Type &type, llvm::Type *llvmType);
 
     private:
         void addConstructor(llvm::StructType *arrayType, llvm::Type *elemType);
         void addGetter(llvm::StructType *arrayType, llvm::Type *elemType);
         void addSetter(llvm::StructType *arrayType, llvm::Type *elemType);
-        void addLength(llvm::StructType *arrayType, llvm::Type *elemType);
-        void addIsEmpty(llvm::StructType *arrayType, llvm::Type *elemType);
+        void addLength(llvm::StructType *arrayType);
+        void addIsEmpty(llvm::StructType *arrayType);
         void addAppend(llvm::StructType *arrayType, llvm::Type *elemType);
     };
 
@@ -39,10 +33,7 @@ namespace X::Runtime {
         static inline const std::string CLASS_NAME = "Array";
         static inline const int MIN_CAP = 8;
 
-        static std::string getClassName(const Type *type);
-        static std::string getClassName(llvm::Type *type);
-
-        static bool isArrayType(llvm::Type *type);
+        static std::string getClassName(const Type &type);
     };
 
     class InvalidArrayTypeException : public std::exception {

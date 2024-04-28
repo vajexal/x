@@ -1,23 +1,31 @@
 #pragma once
 
-#include <vector>
-#include <map>
+#include <unordered_map>
 #include <string>
-#include <set>
+#include <unordered_set>
+
+#include "type.h"
 
 namespace X {
     class MethodDeclNode;
 
     struct CompilerRuntime {
-        std::map<std::string, std::set<std::string>> virtualMethods;
+        // class name -> {method name}
+        std::unordered_map<std::string, std::unordered_set<std::string>> virtualMethods;
 
         // interface name -> {method name -> method decl}
-        std::map<std::string, std::map<std::string, MethodDeclNode *>> interfaceMethods;
+        std::unordered_map<std::string, std::unordered_map<std::string, MethodDeclNode *>> interfaceMethods;
 
         // class or interface name -> implemented (or extended) interfaces
-        std::map<std::string, std::set<std::string>> implementedInterfaces;
+        std::unordered_map<std::string, std::unordered_set<std::string>> implementedInterfaces;
 
         // class name -> all extended classes
-        std::map<std::string, std::set<std::string>> extendedClasses;
+        std::unordered_map<std::string, std::unordered_set<std::string>> extendedClasses;
+
+        // fn name -> fn type
+        std::unordered_map<std::string, FnType> fnTypes;
+
+        // class name -> {method name -> return type}
+        std::unordered_map<std::string, std::unordered_map<std::string, MethodType>> classMethodTypes;
     };
 }

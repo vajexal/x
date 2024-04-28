@@ -3,14 +3,6 @@
 #include "ast.h"
 
 namespace X {
-    llvm::Type *deref(llvm::Type *type) {
-        while (type->isPointerTy()) {
-            type = type->getPointerElementType();
-        }
-
-        return type;
-    }
-
     llvm::ConstantInt *getTypeSize(llvm::Module &module, llvm::Type *type) {
         auto typeSize = module.getDataLayout().getTypeAllocSize(type);
         if (typeSize.isScalable()) {

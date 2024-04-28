@@ -11,8 +11,6 @@ namespace X::Runtime {
         int64_t start;
         int64_t stop;
         int64_t step;
-
-        static bool isRangeType(llvm::Type *type);
     };
 
     int64_t Range_length(Range *that);

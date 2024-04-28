@@ -1,7 +1,10 @@
 #include "runtime.h"
 
 #include <iostream>
+#include <unordered_map>
 
+#include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
+#include "llvm/ExecutionEngine/Orc/Shared/ExecutorSymbolDef.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
 
@@ -44,69 +47,68 @@ namespace X::Runtime {
         (*gc)->addRoot(root, meta);
     }
 
+    void gc_run(GC::GC **gc) {
+        (*gc)->run();
+    }
+
     void Runtime::addDeclarations(llvm::LLVMContext &context, llvm::IRBuilder<> &builder, llvm::Module &module) {
-        auto stringType = llvm::StructType::create(
-                context, {llvm::Type::getInt8PtrTy(context), llvm::Type::getInt64Ty(context)}, String::CLASS_NAME);
-
-        auto rangeType = llvm::StructType::create(
-                context, {llvm::Type::getInt64Ty(context), llvm::Type::getInt64Ty(context), llvm::Type::getInt64Ty(context)}, Range::CLASS_NAME);
-
-        auto gcType = llvm::Type::getInt8PtrTy(context)->getPointerTo();
+        llvm::StructType::create(context, {builder.getPtrTy(), builder.getInt64Ty()}, String::CLASS_NAME);
+        llvm::StructType::create(context, {builder.getInt64Ty(), builder.getInt64Ty(), builder.getInt64Ty()}, Range::CLASS_NAME);
 
         // function name, return type, param types
         std::vector<std::tuple<std::string, llvm::Type *, llvm::ArrayRef<llvm::Type *>>> funcs{
-                {mangler.mangleInternalFunction("die"), llvm::Type::getVoidTy(context), {llvm::Type::getInt8PtrTy(context)}},
-                {"exit", llvm::Type::getVoidTy(context), {llvm::Type::getInt64Ty(context)}},
-                {"println", llvm::Type::getVoidTy(context), {stringType->getPointerTo()}},
+                {Mangler::mangleInternalFunction("die"), builder.getVoidTy(), {builder.getPtrTy()}},
+                {"exit", builder.getVoidTy(), {builder.getInt64Ty()}},
+                {"println", builder.getVoidTy(), {builder.getPtrTy()}},
 
                 // string
 
-                {mangler.mangleInternalFunction("castBoolToString"), stringType->getPointerTo(), {llvm::Type::getInt1Ty(context)}},
-                {mangler.mangleInternalFunction("castIntToString"), stringType->getPointerTo(), {llvm::Type::getInt64Ty(context)}},
-                {mangler.mangleInternalFunction("castFloatToString"), stringType->getPointerTo(), {llvm::Type::getDoubleTy(context)}},
-                {mangler.mangleInternalFunction("compareStrings"), llvm::Type::getInt1Ty(context), {stringType->getPointerTo(), stringType->getPointerTo()}},
-                {mangler.mangleInternalMethod(String::CLASS_NAME, CONSTRUCTOR_FN_NAME),
-                 llvm::Type::getVoidTy(context), {stringType->getPointerTo(), llvm::Type::getInt8PtrTy(context)}},
-                {mangler.mangleInternalMethod(String::CLASS_NAME, "concat"),
-                 stringType->getPointerTo(), {stringType->getPointerTo(), stringType->getPointerTo()}},
-                {mangler.mangleInternalMethod(String::CLASS_NAME, "length"),
-                 llvm::Type::getInt64Ty(context), {stringType->getPointerTo()}},
-                {mangler.mangleInternalMethod(String::CLASS_NAME, "isEmpty"),
-                 llvm::Type::getInt1Ty(context), {stringType->getPointerTo()}},
-                {mangler.mangleInternalMethod(String::CLASS_NAME, "trim"),
-                 stringType->getPointerTo(), {stringType->getPointerTo()}},
-                {mangler.mangleInternalMethod(String::CLASS_NAME, "toLower"),
-                 stringType->getPointerTo(), {stringType->getPointerTo()}},
-                {mangler.mangleInternalMethod(String::CLASS_NAME, "toUpper"),
-                 stringType->getPointerTo(), {stringType->getPointerTo()}},
-                {mangler.mangleInternalMethod(String::CLASS_NAME, "index"),
-                 llvm::Type::getInt64Ty(context), {stringType->getPointerTo(), stringType->getPointerTo()}},
-                {mangler.mangleInternalMethod(String::CLASS_NAME, "contains"),
-                 llvm::Type::getInt1Ty(context), {stringType->getPointerTo(), stringType->getPointerTo()}},
-                {mangler.mangleInternalMethod(String::CLASS_NAME, "startsWith"),
-                 llvm::Type::getInt1Ty(context), {stringType->getPointerTo(), stringType->getPointerTo()}},
-                {mangler.mangleInternalMethod(String::CLASS_NAME, "endsWith"),
-                 llvm::Type::getInt1Ty(context), {stringType->getPointerTo(), stringType->getPointerTo()}},
-                {mangler.mangleInternalMethod(String::CLASS_NAME, "substring"),
-                 stringType->getPointerTo(), {stringType->getPointerTo(), llvm::Type::getInt64Ty(context), llvm::Type::getInt64Ty(context)}},
-                {mangler.mangleInternalFunction("createEmptyString"), stringType->getPointerTo(), {}},
+                {Mangler::mangleInternalFunction("castBoolToString"), builder.getPtrTy(), {builder.getInt1Ty()}},
+                {Mangler::mangleInternalFunction("castIntToString"), builder.getPtrTy(), {builder.getInt64Ty()}},
+                {Mangler::mangleInternalFunction("castFloatToString"), builder.getPtrTy(), {builder.getDoubleTy()}},
+                {Mangler::mangleInternalFunction("compareStrings"), builder.getInt1Ty(), {builder.getPtrTy(), builder.getPtrTy()}},
+                {Mangler::mangleInternalMethod(String::CLASS_NAME, CONSTRUCTOR_FN_NAME),
+                 builder.getVoidTy(), {builder.getPtrTy(), builder.getPtrTy()}},
+                {Mangler::mangleInternalMethod(String::CLASS_NAME, "concat"),
+                 builder.getPtrTy(), {builder.getPtrTy(), builder.getPtrTy()}},
+                {Mangler::mangleInternalMethod(String::CLASS_NAME, "length"),
+                 builder.getInt64Ty(), {builder.getPtrTy()}},
+                {Mangler::mangleInternalMethod(String::CLASS_NAME, "isEmpty"),
+                 builder.getInt1Ty(), {builder.getPtrTy()}},
+                {Mangler::mangleInternalMethod(String::CLASS_NAME, "trim"),
+                 builder.getPtrTy(), {builder.getPtrTy()}},
+                {Mangler::mangleInternalMethod(String::CLASS_NAME, "toLower"),
+                 builder.getPtrTy(), {builder.getPtrTy()}},
+                {Mangler::mangleInternalMethod(String::CLASS_NAME, "toUpper"),
+                 builder.getPtrTy(), {builder.getPtrTy()}},
+                {Mangler::mangleInternalMethod(String::CLASS_NAME, "index"),
+                 builder.getInt64Ty(), {builder.getPtrTy(), builder.getPtrTy()}},
+                {Mangler::mangleInternalMethod(String::CLASS_NAME, "contains"),
+                 builder.getInt1Ty(), {builder.getPtrTy(), builder.getPtrTy()}},
+                {Mangler::mangleInternalMethod(String::CLASS_NAME, "startsWith"),
+                 builder.getInt1Ty(), {builder.getPtrTy(), builder.getPtrTy()}},
+                {Mangler::mangleInternalMethod(String::CLASS_NAME, "endsWith"),
+                 builder.getInt1Ty(), {builder.getPtrTy(), builder.getPtrTy()}},
+                {Mangler::mangleInternalMethod(String::CLASS_NAME, "substring"),
+                 builder.getPtrTy(), {builder.getPtrTy(), builder.getInt64Ty(), builder.getInt64Ty()}},
+                {Mangler::mangleInternalFunction("createEmptyString"), builder.getPtrTy(), {}},
 
                 // range
-                {mangler.mangleInternalMethod(Range::CLASS_NAME, "create"),
-                 rangeType->getPointerTo(), {llvm::Type::getInt64Ty(context), llvm::Type::getInt64Ty(context), llvm::Type::getInt64Ty(context)}},
-                {mangler.mangleInternalMethod(Range::CLASS_NAME, "length"),
-                 llvm::Type::getInt64Ty(context), {rangeType->getPointerTo()}},
-                {mangler.mangleInternalMethod(Range::CLASS_NAME, "get[]"),
-                 llvm::Type::getInt64Ty(context), {rangeType->getPointerTo(), llvm::Type::getInt64Ty(context)}},
+                {Mangler::mangleInternalMethod(Range::CLASS_NAME, "create"),
+                 builder.getPtrTy(), {builder.getInt64Ty(), builder.getInt64Ty(), builder.getInt64Ty()}},
+                {Mangler::mangleInternalMethod(Range::CLASS_NAME, "length"),
+                 builder.getInt64Ty(), {builder.getPtrTy()}},
+                {Mangler::mangleInternalMethod(Range::CLASS_NAME, "get[]"),
+                 builder.getInt64Ty(), {builder.getPtrTy(), builder.getInt64Ty()}},
 
                 // gc
-                {mangler.mangleInternalFunction("gcAlloc"), llvm::Type::getInt8PtrTy(context), {gcType, llvm::Type::getInt64Ty(context)}},
-                {mangler.mangleInternalFunction("gcRealloc"), llvm::Type::getInt8PtrTy(context),
-                 {gcType, llvm::Type::getInt8PtrTy(context), llvm::Type::getInt64Ty(context)}},
-                {mangler.mangleInternalFunction("gcPushStackFrame"), llvm::Type::getVoidTy(context), {gcType}},
-                {mangler.mangleInternalFunction("gcPopStackFrame"), llvm::Type::getVoidTy(context), {gcType}},
-                {mangler.mangleInternalFunction("gcAddRoot"), llvm::Type::getInt8PtrTy(context),
-                 {gcType, llvm::Type::getInt8PtrTy(context)->getPointerTo(), llvm::Type::getInt8PtrTy(context)}},
+                {Mangler::mangleInternalFunction("gcAlloc"), builder.getPtrTy(), {builder.getPtrTy(), builder.getInt64Ty()}},
+                {Mangler::mangleInternalFunction("gcRealloc"), builder.getPtrTy(),
+                 {builder.getPtrTy(), builder.getPtrTy(), builder.getInt64Ty()}},
+                {Mangler::mangleInternalFunction("gcPushStackFrame"), builder.getVoidTy(), {builder.getPtrTy()}},
+                {Mangler::mangleInternalFunction("gcPopStackFrame"), builder.getVoidTy(), {builder.getPtrTy()}},
+                {Mangler::mangleInternalFunction("gcAddRoot"), builder.getPtrTy(),
+                 {builder.getPtrTy(), builder.getPtrTy()->getPointerTo(), builder.getPtrTy()}},
         };
 
         for (auto &[fnName, retType, paramTypes]: funcs) {
@@ -115,56 +117,54 @@ namespace X::Runtime {
         }
 
         auto gc = llvm::cast<llvm::GlobalVariable>(
-                module.getOrInsertGlobal(mangler.mangleInternalSymbol("gc"), llvm::Type::getInt8PtrTy(context)));
-        gc->setInitializer(llvm::ConstantPointerNull::get(llvm::Type::getInt8PtrTy(context)));
+                module.getOrInsertGlobal(Mangler::mangleInternalSymbol("gc"), builder.getPtrTy()));
+        gc->setInitializer(llvm::ConstantPointerNull::get(builder.getPtrTy()));
     }
 
-    void Runtime::addDefinitions(llvm::orc::JITDylib &JD, llvm::orc::MangleAndInterner &llvmMangle) {
-        JD.addGenerator(std::make_unique<RuntimeBuiltinGenerator>(llvmMangle));
-    }
-
-    RuntimeBuiltinGenerator::RuntimeBuiltinGenerator(llvm::orc::MangleAndInterner &llvmMangle) {
+    void Runtime::addDefinitions(llvm::orc::JITDylib &JD, llvm::orc::MangleAndInterner &llvmMangler) {
         static std::vector<std::tuple<std::string, void *>> funcs{
-                {mangler.mangleInternalFunction("die"), reinterpret_cast<void *>(die)},
+                {Mangler::mangleInternalFunction("die"), reinterpret_cast<void *>(die)},
                 {"exit", reinterpret_cast<void *>(std::exit)},
                 {"println", reinterpret_cast<void *>(println)},
 
                 // string
-                {mangler.mangleInternalFunction("castBoolToString"), reinterpret_cast<void *>(castBoolToString)},
-                {mangler.mangleInternalFunction("castIntToString"), reinterpret_cast<void *>(castIntToString)},
-                {mangler.mangleInternalFunction("castFloatToString"), reinterpret_cast<void *>(castFloatToString)},
-                {mangler.mangleInternalFunction("compareStrings"), reinterpret_cast<void *>(compareStrings)},
-                {mangler.mangleInternalMethod(String::CLASS_NAME, CONSTRUCTOR_FN_NAME), reinterpret_cast<void *>(String_construct)},
-                {mangler.mangleInternalMethod(String::CLASS_NAME, "concat"), reinterpret_cast<void *>(String_concat)},
-                {mangler.mangleInternalMethod(String::CLASS_NAME, "length"), reinterpret_cast<void *>(String_length)},
-                {mangler.mangleInternalMethod(String::CLASS_NAME, "isEmpty"), reinterpret_cast<void *>(String_isEmpty)},
-                {mangler.mangleInternalMethod(String::CLASS_NAME, "trim"), reinterpret_cast<void *>(String_trim)},
-                {mangler.mangleInternalMethod(String::CLASS_NAME, "toLower"), reinterpret_cast<void *>(String_toLower)},
-                {mangler.mangleInternalMethod(String::CLASS_NAME, "toUpper"), reinterpret_cast<void *>(String_toUpper)},
-                {mangler.mangleInternalMethod(String::CLASS_NAME, "index"), reinterpret_cast<void *>(String_index)},
-                {mangler.mangleInternalMethod(String::CLASS_NAME, "contains"), reinterpret_cast<void *>(String_contains)},
-                {mangler.mangleInternalMethod(String::CLASS_NAME, "startsWith"), reinterpret_cast<void *>(String_startsWith)},
-                {mangler.mangleInternalMethod(String::CLASS_NAME, "endsWith"), reinterpret_cast<void *>(String_endsWith)},
-                {mangler.mangleInternalMethod(String::CLASS_NAME, "substring"), reinterpret_cast<void *>(String_substring)},
-                {mangler.mangleInternalFunction("createEmptyString"), reinterpret_cast<void *>(createEmptyString)},
+                {Mangler::mangleInternalFunction("castBoolToString"), reinterpret_cast<void *>(castBoolToString)},
+                {Mangler::mangleInternalFunction("castIntToString"), reinterpret_cast<void *>(castIntToString)},
+                {Mangler::mangleInternalFunction("castFloatToString"), reinterpret_cast<void *>(castFloatToString)},
+                {Mangler::mangleInternalFunction("compareStrings"), reinterpret_cast<void *>(compareStrings)},
+                {Mangler::mangleInternalMethod(String::CLASS_NAME, CONSTRUCTOR_FN_NAME), reinterpret_cast<void *>(String_construct)},
+                {Mangler::mangleInternalMethod(String::CLASS_NAME, "concat"), reinterpret_cast<void *>(String_concat)},
+                {Mangler::mangleInternalMethod(String::CLASS_NAME, "length"), reinterpret_cast<void *>(String_length)},
+                {Mangler::mangleInternalMethod(String::CLASS_NAME, "isEmpty"), reinterpret_cast<void *>(String_isEmpty)},
+                {Mangler::mangleInternalMethod(String::CLASS_NAME, "trim"), reinterpret_cast<void *>(String_trim)},
+                {Mangler::mangleInternalMethod(String::CLASS_NAME, "toLower"), reinterpret_cast<void *>(String_toLower)},
+                {Mangler::mangleInternalMethod(String::CLASS_NAME, "toUpper"), reinterpret_cast<void *>(String_toUpper)},
+                {Mangler::mangleInternalMethod(String::CLASS_NAME, "index"), reinterpret_cast<void *>(String_index)},
+                {Mangler::mangleInternalMethod(String::CLASS_NAME, "contains"), reinterpret_cast<void *>(String_contains)},
+                {Mangler::mangleInternalMethod(String::CLASS_NAME, "startsWith"), reinterpret_cast<void *>(String_startsWith)},
+                {Mangler::mangleInternalMethod(String::CLASS_NAME, "endsWith"), reinterpret_cast<void *>(String_endsWith)},
+                {Mangler::mangleInternalMethod(String::CLASS_NAME, "substring"), reinterpret_cast<void *>(String_substring)},
+                {Mangler::mangleInternalFunction("createEmptyString"), reinterpret_cast<void *>(createEmptyString)},
 
                 // range
-                {mangler.mangleInternalMethod(Range::CLASS_NAME, "length"), reinterpret_cast<void *>(Range_length)},
-                {mangler.mangleInternalMethod(Range::CLASS_NAME, "get[]"), reinterpret_cast<void *>(Range_get)},
+                {Mangler::mangleInternalMethod(Range::CLASS_NAME, "length"), reinterpret_cast<void *>(Range_length)},
+                {Mangler::mangleInternalMethod(Range::CLASS_NAME, "get[]"), reinterpret_cast<void *>(Range_get)},
 
                 // gc
-                {mangler.mangleInternalFunction("gcAlloc"), reinterpret_cast<void *>(gc_alloc)},
-                {mangler.mangleInternalFunction("gcRealloc"), reinterpret_cast<void *>(gc_realloc)},
-                {mangler.mangleInternalFunction("gcPushStackFrame"), reinterpret_cast<void *>(gc_pushStackFrame)},
-                {mangler.mangleInternalFunction("gcPopStackFrame"), reinterpret_cast<void *>(gc_popStackFrame)},
-                {mangler.mangleInternalFunction("gcAddRoot"), reinterpret_cast<void *>(gc_addRoot)},
+                {Mangler::mangleInternalFunction("gcAlloc"), reinterpret_cast<void *>(gc_alloc)},
+                {Mangler::mangleInternalFunction("gcRealloc"), reinterpret_cast<void *>(gc_realloc)},
+                {Mangler::mangleInternalFunction("gcPushStackFrame"), reinterpret_cast<void *>(gc_pushStackFrame)},
+                {Mangler::mangleInternalFunction("gcPopStackFrame"), reinterpret_cast<void *>(gc_popStackFrame)},
+                {Mangler::mangleInternalFunction("gcAddRoot"), reinterpret_cast<void *>(gc_addRoot)},
         };
 
-        builtinFuncs.init(funcs.size());
+        llvm::StringMap<void *> builtinFuncs;
 
-        for (auto &[fnName, fnPtr]: funcs) {
-            builtinFuncs[llvmMangle(fnName)] = llvm::JITEvaluatedSymbol(llvm::pointerToJITTargetAddress(fnPtr), llvm::JITSymbolFlags());
+        for (auto &[name, ptr]: funcs) {
+            builtinFuncs[*llvmMangler(name)] = ptr;
         }
+
+        JD.addGenerator(std::make_unique<RuntimeBuiltinGenerator>(std::move(builtinFuncs)));
     }
 
     llvm::Error RuntimeBuiltinGenerator::tryToGenerate(llvm::orc::LookupState &LS, llvm::orc::LookupKind K, llvm::orc::JITDylib &JD,
@@ -172,9 +172,9 @@ namespace X::Runtime {
         llvm::orc::SymbolMap symbols;
 
         for (auto &[name, flags]: LookupSet) {
-            auto it = builtinFuncs.find(name);
+            auto it = builtinFuncs.find(*name);
             if (it != builtinFuncs.end()) {
-                symbols.insert(*it);
+                symbols.try_emplace(name, llvm::orc::ExecutorSymbolDef(llvm::orc::ExecutorAddr::fromPtr(it->second), llvm::JITSymbolFlags()));
             }
         }
 

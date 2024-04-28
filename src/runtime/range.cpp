@@ -5,11 +5,6 @@
 #include "utils.h"
 
 namespace X::Runtime {
-    bool Range::isRangeType(llvm::Type *type) {
-        type = deref(type);
-        return type->isStructTy() && type->getStructName() == Runtime::Range::CLASS_NAME;
-    }
-
     int64_t Range_length(Range *that) {
         auto dist = that->stop - that->start;
         if ((dist > 0 && that->step < 0) || (dist < 0 && that->step > 0)) {

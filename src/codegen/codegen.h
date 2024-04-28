@@ -1,11 +1,12 @@
 #pragma once
 
-#include <map>
+#include <unordered_map>
 #include <unordered_map>
 #include <stack>
+#include <utility>
 #include <vector>
 #include <tuple>
-#include <set>
+#include <unordered_set>
 #include <deque>
 #include <fmt/core.h>
 
@@ -25,6 +26,11 @@
 #include "gc/gc.h"
 
 namespace X::Codegen {
+    struct Value {
+        llvm::Value *value;
+        Type type;
+    };
+
     struct Loop {
         llvm::BasicBlock *start;
         llvm::BasicBlock *end;
@@ -33,30 +39,33 @@ namespace X::Codegen {
     };
 
     struct Prop {
-        llvm::Type *type;
+        Type type;
         uint64_t pos;
         AccessModifier accessModifier;
 
-        Prop(llvm::Type *type, uint64_t pos, AccessModifier accessModifier) : type(type), pos(pos), accessModifier(accessModifier) {}
+        Prop(Type type, uint64_t pos, AccessModifier accessModifier) : type(std::move(type)), pos(pos), accessModifier(accessModifier) {}
     };
 
     struct StaticProp {
         llvm::GlobalVariable *var;
+        Type type;
         AccessModifier accessModifier;
     };
 
     struct Method {
         AccessModifier accessModifier;
+        llvm::FunctionType *type;
         bool isVirtual;
         uint64_t vtablePos;
     };
 
     struct ClassDecl {
         std::string name;
-        llvm::StructType *type;
-        std::map<std::string, Prop> props;
-        std::map<std::string, StaticProp> staticProps;
-        std::map<std::string, Method> methods;
+        Type type;
+        llvm::StructType *llvmType;
+        std::unordered_map<std::string, Prop> props;
+        std::unordered_map<std::string, StaticProp> staticProps;
+        std::unordered_map<std::string, Method> methods;
         ClassDecl *parent = nullptr;
         bool isAbstract = false;
         llvm::StructType *vtableType = nullptr;
@@ -65,32 +74,31 @@ namespace X::Codegen {
 
     struct InterfaceDecl {
         std::string name;
-        llvm::StructType *type;
-        std::map<std::string, Method> methods;
+        Type type;
+        llvm::StructType *llvmType;
+        std::unordered_map<std::string, Method> methods;
         llvm::StructType *vtableType = nullptr;
     };
 
     class Codegen {
-        static const int INTEGER_BIT_WIDTH = 64;
-
         llvm::LLVMContext &context;
         llvm::IRBuilder<> &builder;
         llvm::Module &module;
         CompilerRuntime &compilerRuntime;
-        Mangler mangler;
         Runtime::ArrayRuntime arrayRuntime;
         GC::GC &gc;
 
-        std::deque<std::unordered_map<std::string, llvm::AllocaInst *>> varScopes;
+        std::deque<std::unordered_map<std::string, Value>> varScopes;
         std::stack<Loop> loops;
 
-        llvm::Value *that = nullptr;
+        Type currentFnRetType;
+        std::optional<Value> that;
         ClassDecl *self = nullptr; // current class in static context
-        std::map<std::string, ClassDecl> classes;
-        std::map<std::string, InterfaceDecl> interfaces;
-        std::set<std::string> symbols;
+        std::unordered_map<std::string, ClassDecl> classes;
+        std::unordered_map<std::string, InterfaceDecl> interfaces;
+        std::unordered_set<std::string> symbols;
 
-        std::map<std::string, GC::Metadata *> gcMetaCache;
+        std::unordered_map<std::string, GC::Metadata *> gcMetaCache;
 
     public:
         static inline const std::string MAIN_FN_NAME = "main";
@@ -143,64 +151,62 @@ namespace X::Codegen {
         void declFuncs(TopStatementListNode *node);
 
         llvm::Type *mapType(const Type &type);
-        llvm::Type *mapArgType(const Type &type);
         llvm::Constant *getDefaultValue(const Type &type);
         /// differs from getDefaultValue because getDefaultValue returns constant and createDefaultValue can emit instructions
         llvm::Value *createDefaultValue(const Type &type);
-        std::pair<llvm::Type *, llvm::Value *> getVar(std::string &name) const;
-        std::pair<llvm::Type *, llvm::Value *> getProp(llvm::Value *obj, const std::string &name) const;
-        std::pair<llvm::Type *, llvm::Value *> getStaticProp(const std::string &className, const std::string &propName) const;
-        const ClassDecl &getClassDecl(const std::string &mangledName) const;
-        const InterfaceDecl *findInterfaceDecl(const std::string &mangledName) const;
-        std::string getClassName(llvm::Value *obj) const;
-        GC::Metadata *getTypeGCMeta(llvm::Type *type);
-        GC::Metadata *genTypeGCMeta(llvm::Type *type);
-        llvm::Value *getValueGCMeta(llvm::Value *value);
-        bool isObject(llvm::Value *value) const;
-        bool isClassType(llvm::Type *type) const;
-        bool isInterfaceType(llvm::Type *type) const;
+        std::pair<Type, llvm::Value *> getVar(std::string &name);
+        std::pair<const Type &, llvm::Value *> getProp(llvm::Value *obj, const Type &objType, const std::string &name);
+        std::pair<const Type &, llvm::Value *> getStaticProp(const std::string &className, const std::string &propName) const;
+        const ClassDecl &getClassDecl(const std::string &name) const;
+        const InterfaceDecl *findInterfaceDecl(const std::string &name) const;
+        std::string getClassName(const Type &type) const;
+        GC::Metadata *getTypeGCMeta(const Type &type);
+        GC::Metadata *genTypeGCMeta(const Type &type);
+        static std::string getTypeGCMetaKey(const Type &type);
+        llvm::Value *getGCMetaValue(const Type &type);
+        bool isObject(const Type &type) const;
+        bool isInterfaceType(const Type &type) const;
         llvm::AllocaInst *createAlloca(llvm::Type *type, const std::string &name = "") const;
         // get constructor of internal class (String, Array, ...)
         llvm::Function *getInternalConstructor(const std::string &mangledClassName) const;
         void checkConstructor(MethodDefNode *node, const std::string &className) const;
-        llvm::Value *callMethod(llvm::Value *obj, const std::string &methodName, const std::vector<ExprNode *> &args);
-        llvm::Value *callStaticMethod(const std::string &className, const std::string &methodName, const std::vector<ExprNode *> &args);
+        llvm::Value *callMethod(llvm::Value *obj, const Type &objType, const std::string &methodName, const ExprList &args);
+        llvm::Value *callStaticMethod(const std::string &className, const std::string &methodName, const ExprList &args);
         llvm::Value *newObj(llvm::StructType *type);
-        llvm::StructType *genVtable(ClassNode *classNode, llvm::StructType *klass, ClassDecl &classDecl);
-        llvm::StructType *genVtable(InterfaceNode *classNode, llvm::StructType *interfaceType, InterfaceDecl &interfaceDecl);
-        void initVtable(llvm::Value *obj);
-        void initInterfaceVtable(llvm::Value *obj, llvm::Value *interface);
+        llvm::StructType *genVtable(ClassNode *classNode, ClassDecl &classDecl);
+        llvm::StructType *genVtable(InterfaceNode *classNode, InterfaceDecl &interfaceDecl);
+        void initVtable(llvm::Value *obj, const ClassDecl &classDecl);
+        void initInterfaceVtable(llvm::Value *obj, const Type &objType, llvm::Value *interface, const InterfaceDecl &interfaceDecl);
 
-        std::pair<llvm::Value *, llvm::Value *> upcast(llvm::Value *a, llvm::Value *b) const;
-        std::pair<llvm::Value *, llvm::Value *> forceUpcast(llvm::Value *a, llvm::Value *b) const;
-        llvm::Value *downcastToBool(llvm::Value *value) const;
-        llvm::Value *castToString(llvm::Value *value) const;
-        bool instanceof(llvm::StructType *instanceType, llvm::StructType *type) const;
-        llvm::Value *castTo(llvm::Value *value, llvm::Type *expectedType);
-        llvm::Value *instantiateInterface(llvm::Value *value, const InterfaceDecl &interfaceDecl);
+        std::tuple<llvm::Value *, Type, llvm::Value *, Type> upcast(llvm::Value *a, Type aType, llvm::Value *b, Type bType) const;
+        std::tuple<llvm::Value *, Type, llvm::Value *, Type> forceUpcast(llvm::Value *a, Type aType, llvm::Value *b, Type bType) const;
+        llvm::Value *downcastToBool(llvm::Value *value, const Type &type) const;
+        llvm::Value *castToString(llvm::Value *value, const Type &type) const;
+        bool instanceof(const Type &instanceType, const Type &type) const;
+        llvm::Value *castTo(llvm::Value *value, const Type &type, const Type &expectedType);
+        llvm::Value *instantiateInterface(llvm::Value *value, const Type &type, const InterfaceDecl &interfaceDecl);
 
         llvm::Value *genLogicalAnd(BinaryNode *node);
         llvm::Value *genLogicalOr(BinaryNode *node);
 
         void genFn(const std::string &name, const std::vector<ArgNode *> &args, const Type &returnType, StatementListNode *body,
-                   llvm::StructType *thisType = nullptr);
-        llvm::FunctionType *genFnType(const std::vector<ArgNode *> &args, const Type &returnType, llvm::StructType *thisType = nullptr);
+                   const Type *thisType = nullptr);
+        llvm::FunctionType *genFnType(const std::vector<ArgNode *> &args, const Type &returnType, const Type *thisType = nullptr);
         void checkMainFn(FnDefNode *node) const;
-        std::tuple<llvm::Value *, llvm::FunctionType *, llvm::Type *> findMethod(
-                llvm::StructType *type, const std::string &methodName, llvm::Value *obj = nullptr) const;
-        // find method in class only looking for generated funcs (ignoring internal classes, virtual funcs, access modifiers etc.)
-        llvm::Function *simpleFindMethod(llvm::StructType *type, const std::string &methodName) const;
+        std::tuple<llvm::FunctionCallee, FnType *> findMethod(llvm::Value *obj, const Type &objType, const std::string &methodName);
+        // find class method only by looking for generated funcs (ignoring internal classes, virtual funcs, access modifiers etc.)
+        llvm::Function *simpleFindMethod(const ClassDecl &classDecl, const std::string &methodName) const;
         llvm::Value *compareStrings(llvm::Value *first, llvm::Value *second) const;
         llvm::Value *negate(llvm::Value *value) const;
 
-        llvm::StructType *getArrayForType(const Type *type);
-        void fillArray(llvm::Value *arr, const std::vector<llvm::Value *> &values);
+        llvm::StructType *getArrayForType(const Type &subtype);
+        void fillArray(llvm::Value *arr, const Type &type, const std::vector<llvm::Value *> &values);
 
         void addSymbol(const std::string &symbol);
 
         // gc helpers
         llvm::Value *gcAlloc(llvm::Value *size);
-        void gcAddRoot(llvm::Value *root);
+        void gcAddRoot(llvm::Value *root, const Type &type);
     };
 
     class CodegenException : public std::exception {

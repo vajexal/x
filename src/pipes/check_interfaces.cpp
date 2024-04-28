@@ -71,7 +71,7 @@ namespace X::Pipes {
         classMethods[name] = node->getMethods();
         auto &klassMethods = classMethods[name];
         auto &classImplementedInterfaces = compilerRuntime.implementedInterfaces[name];
-        std::set<std::string> interfacesToImplement(node->getInterfaces().cbegin(), node->getInterfaces().cend());
+        std::unordered_set<std::string> interfacesToImplement(node->getInterfaces().cbegin(), node->getInterfaces().cend());
 
         if (node->hasParent()) {
             auto &parentName = node->getParent();

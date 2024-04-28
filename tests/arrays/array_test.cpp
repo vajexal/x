@@ -32,3 +32,15 @@ fn main() void {
 )code";
     checkProgram(code, "123");
 }
+
+TEST_F(ArrayTest, allElementsHaveSameType) {
+    try {
+        compiler.compile(R"code(
+fn main() void {
+    auto a = []int{1, "foo", false}
+}
+)code");
+    } catch (const std::exception &e) {
+        ASSERT_STREQ(e.what(), "all array elements must be the same type");
+    }
+}

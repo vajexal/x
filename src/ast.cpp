@@ -6,142 +6,6 @@
 #include "utils.h"
 
 namespace X {
-    Type::Type(const Type &type) : id(type.id) {
-        if (type.className) {
-            className = type.className.value();
-        }
-
-        if (type.subtype) {
-            subtype = new Type(*type.subtype);
-        }
-    }
-
-    Type::Type(Type &&type) : id(type.id), className(std::move(type.className)), subtype(type.subtype) {
-        type.id = TypeID::VOID;
-        type.className = std::nullopt;
-        type.subtype = nullptr;
-    }
-
-    Type &Type::operator=(const Type &type) {
-        id = type.id;
-
-        if (type.className) {
-            className = type.className.value();
-        }
-
-        if (type.subtype) {
-            subtype = new Type(*type.subtype);
-        }
-
-        return *this;
-    }
-
-    Type::~Type() {
-        delete subtype;
-    }
-
-    Type Type::scalar(Type::TypeID typeID) {
-        if (typeID == TypeID::CLASS || typeID == TypeID::ARRAY || typeID == TypeID::AUTO || typeID == TypeID::SELF) {
-            throw std::invalid_argument("invalid type for scalar");
-        }
-
-        Type type;
-        type.id = typeID;
-
-        return std::move(type);
-    }
-
-    Type Type::klass(std::string className) {
-        Type type;
-        type.id = TypeID::CLASS;
-        type.className = std::move(className);
-
-        return std::move(type);
-    }
-
-    Type Type::array(Type &&subtype) {
-        Type type;
-        type.id = TypeID::ARRAY;
-        type.subtype = new Type(std::move(subtype));;
-
-        return std::move(type);
-    }
-
-    Type Type::voidTy() {
-        Type type;
-        type.id = TypeID::VOID;
-
-        return std::move(type);
-    }
-
-    Type Type::autoTy() {
-        Type type;
-        type.id = TypeID::AUTO;
-
-        return std::move(type);
-    }
-
-    Type Type::selfTy() {
-        Type type;
-        type.id = TypeID::SELF;
-
-        return std::move(type);
-    }
-
-    std::ostream &operator<<(std::ostream &out, OpType type) {
-        switch (type) {
-            case OpType::PRE_INC: return out << "++ ";
-            case OpType::PRE_DEC: return out << "-- ";
-            case OpType::POST_INC: return out << " ++";
-            case OpType::POST_DEC: return out << " --";
-            case OpType::OR: return out << "||";
-            case OpType::AND: return out << "&&";
-            case OpType::PLUS: return out << "+";
-            case OpType::MINUS: return out << "-";
-            case OpType::MUL: return out << "*";
-            case OpType::DIV: return out << "/";
-            case OpType::NOT: return out << "!";
-            case OpType::POW: return out << "**";
-            case OpType::MOD: return out << "%";
-            case OpType::EQUAL: return out << "==";
-            case OpType::NOT_EQUAL: return out << "!=";
-            case OpType::SMALLER: return out << "<";
-            case OpType::SMALLER_OR_EQUAL: return out << "<=";
-            case OpType::GREATER: return out << ">";
-            case OpType::GREATER_OR_EQUAL: return out << ">=";
-        }
-
-        return out;
-    }
-
-    std::ostream &operator<<(std::ostream &out, const Type &type) {
-        switch (type.getTypeID()) {
-            case Type::TypeID::INT: return out << "int";
-            case Type::TypeID::FLOAT: return out << "float";
-            case Type::TypeID::BOOL: return out << "bool";
-            case Type::TypeID::STRING: return out << "string";
-            case Type::TypeID::ARRAY: return out << *type.getSubtype() << "[]";
-            case Type::TypeID::VOID: return out << "void";
-            case Type::TypeID::CLASS: return out << "class " << type.getClassName();
-            case Type::TypeID::AUTO: return out << "auto";
-            case Type::TypeID::SELF: return out << "self";
-        }
-
-        return out;
-    }
-
-    bool Type::operator==(const Type &other) const {
-        if (id == Type::TypeID::ARRAY && other.id == Type::TypeID::ARRAY) {
-            return *subtype == *other.subtype;
-        }
-
-        return id == other.id && className == other.className;
-    }
-
-    bool Type::operator!=(const Type &other) const {
-        return !(*this == other);
-    }
-
     std::ostream &operator<<(std::ostream &out, AccessModifier accessModifier) {
         switch (accessModifier) {
             case AccessModifier::PUBLIC: return out << "public";
@@ -372,39 +236,75 @@ namespace X {
     llvm::Value *AssignArrNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
     llvm::Value *AppendArrNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
 
-    Type ScalarNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
+    Type ScalarNode::infer(Pipes::TypeInferrer &typeInferrer) {
+        setType(typeInferrer.infer(this));
+        return getType();
+    }
     Type StatementListNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
-    Type UnaryNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
-    Type BinaryNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
+    Type UnaryNode::infer(Pipes::TypeInferrer &typeInferrer) {
+        setType(typeInferrer.infer(this));
+        return getType();
+    }
+    Type BinaryNode::infer(Pipes::TypeInferrer &typeInferrer) {
+        setType(typeInferrer.infer(this));
+        return getType();
+    }
     Type DeclNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
     Type AssignNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
-    Type VarNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
+    Type VarNode::infer(Pipes::TypeInferrer &typeInferrer) {
+        setType(typeInferrer.infer(this));
+        return getType();
+    }
     Type IfNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
     Type WhileNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
     Type ForNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
-    Type RangeNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
+    Type RangeNode::infer(Pipes::TypeInferrer &typeInferrer) {
+        setType(typeInferrer.infer(this));
+        return getType();
+    }
     Type BreakNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
     Type ContinueNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
     Type ArgNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
     Type FnDeclNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
     Type FnDefNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
-    Type FnCallNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
+    Type FnCallNode::infer(Pipes::TypeInferrer &typeInferrer) {
+        setType(typeInferrer.infer(this));
+        return getType();
+    }
     Type ReturnNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
     Type PrintlnNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
     Type CommentNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
     Type ClassNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
     Type PropDeclNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
     Type MethodDefNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
-    Type FetchPropNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
-    Type FetchStaticPropNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
-    Type MethodCallNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
-    Type StaticMethodCallNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
+    Type FetchPropNode::infer(Pipes::TypeInferrer &typeInferrer) {
+        setType(typeInferrer.infer(this));
+        return getType();
+    }
+    Type FetchStaticPropNode::infer(Pipes::TypeInferrer &typeInferrer) {
+        setType(typeInferrer.infer(this));
+        return getType();
+    }
+    Type MethodCallNode::infer(Pipes::TypeInferrer &typeInferrer) {
+        setType(typeInferrer.infer(this));
+        return getType();
+    }
+    Type StaticMethodCallNode::infer(Pipes::TypeInferrer &typeInferrer) {
+        setType(typeInferrer.infer(this));
+        return getType();
+    }
     Type AssignPropNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
     Type AssignStaticPropNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
-    Type NewNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
+    Type NewNode::infer(Pipes::TypeInferrer &typeInferrer) {
+        setType(typeInferrer.infer(this));
+        return getType();
+    }
     Type MethodDeclNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
     Type InterfaceNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
-    Type FetchArrNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
+    Type FetchArrNode::infer(Pipes::TypeInferrer &typeInferrer) {
+        setType(typeInferrer.infer(this));
+        return getType();
+    }
     Type AssignArrNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
     Type AppendArrNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
 }

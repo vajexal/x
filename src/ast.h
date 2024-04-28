@@ -4,7 +4,7 @@
 #include <utility>
 #include <vector>
 #include <deque>
-#include <map>
+#include <unordered_map>
 #include <variant>
 #include <optional>
 #include <string>
@@ -13,88 +13,13 @@
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
 
+#include "type.h"
+
 namespace X {
     class ExprNode;
 
     using ExprList = std::vector<ExprNode *>;
     using ScalarValue = std::variant<int64_t, double, bool, std::string, ExprList>;
-
-    enum class OpType {
-        PRE_INC,
-        PRE_DEC,
-        POST_INC,
-        POST_DEC,
-        OR,
-        AND,
-        PLUS,
-        MINUS,
-        MUL,
-        DIV,
-        NOT,
-        POW,
-        MOD,
-        EQUAL,
-        NOT_EQUAL,
-        SMALLER,
-        SMALLER_OR_EQUAL,
-        GREATER,
-        GREATER_OR_EQUAL
-    };
-
-    std::ostream &operator<<(std::ostream &out, OpType type);
-
-    class Type {
-    public:
-        enum class TypeID {
-            INT,
-            FLOAT,
-            BOOL,
-            STRING,
-            ARRAY,
-            VOID,
-            CLASS,
-            AUTO,
-            SELF
-        };
-
-    private:
-        TypeID id;
-        std::optional<std::string> className;
-        Type *subtype = nullptr;
-
-    public:
-        Type() : id(TypeID::VOID) {} // need empty constructor for bison variant
-        Type(const Type &type);
-        Type(Type &&type);
-        ~Type();
-
-        Type &operator=(const Type &type);
-
-        static Type scalar(TypeID typeID);
-        static Type klass(std::string className);
-        static Type array(Type &&subtype);
-        static Type voidTy();
-        static Type autoTy();
-        static Type selfTy();
-
-        TypeID getTypeID() const { return id; }
-        const std::string &getClassName() const { return className.value(); }
-        Type *getSubtype() const { return subtype; }
-
-        bool isOneOf(TypeID typeId) const {
-            return id == typeId;
-        }
-
-        template<typename... Args>
-        bool isOneOf(TypeID typeID, Args... ids) const {
-            return id == typeID || isOneOf(ids...);
-        }
-
-        bool operator==(const Type &other) const;
-        bool operator!=(const Type &other) const;
-    };
-
-    std::ostream &operator<<(std::ostream &out, const Type &type);
 
     enum class AccessModifier {
         PUBLIC,
@@ -187,8 +112,14 @@ namespace X {
     };
 
     class ExprNode : public Node {
+        Type type;
+
     public:
         ExprNode(NodeKind kind) : Node(kind) {}
+
+        // maybe need to rename to something like getExprType (to avoid collision with other nodes with getType method)
+        const Type &getType() const { return type; }
+        void setType(const Type &typ) { type = typ; }
     };
 
     class ScalarNode : public ExprNode {
@@ -198,7 +129,7 @@ namespace X {
     public:
         ScalarNode(Type type, ScalarValue value) : ExprNode(NodeKind::Scalar), type(std::move(type)), value(std::move(value)) {}
         ~ScalarNode() {
-            if (type.getTypeID() == Type::TypeID::ARRAY) {
+            if (type.is(Type::TypeID::ARRAY)) {
                 for (auto expr: std::get<ExprList>(value)) {
                     delete expr;
                 }
@@ -283,7 +214,7 @@ namespace X {
         llvm::Value *gen(Codegen::Codegen &codegen) override;
         Type infer(Pipes::TypeInferrer &typeInferrer) override;
 
-        OpType getType() const { return type; }
+        OpType getOpType() const { return type; }
         ExprNode *getExpr() const { return expr; }
 
         static bool classof(const Node *node) {
@@ -307,7 +238,7 @@ namespace X {
         llvm::Value *gen(Codegen::Codegen &codegen) override;
         Type infer(Pipes::TypeInferrer &typeInferrer) override;
 
-        OpType getType() const { return type; }
+        OpType getOpType() const { return type; }
         ExprNode *getLhs() const { return lhs; }
         ExprNode *getRhs() const { return rhs; }
 
@@ -779,8 +710,8 @@ namespace X {
         std::string name;
         StatementListNode *body;
         std::vector<PropDeclNode *> props;
-        std::map<std::string, MethodDefNode *> methods;
-        std::map<std::string, MethodDeclNode *> abstractMethods;
+        std::unordered_map<std::string, MethodDefNode *> methods;
+        std::unordered_map<std::string, MethodDeclNode *> abstractMethods;
         std::string parent;
         std::vector<std::string> interfaces;
         bool abstract;
@@ -798,8 +729,8 @@ namespace X {
         const std::string &getName() const { return name; }
         StatementListNode *getBody() { return body; }
         const std::vector<PropDeclNode *> &getProps() const { return props; }
-        const std::map<std::string, MethodDefNode *> &getMethods() const { return methods; }
-        const std::map<std::string, MethodDeclNode *> &getAbstractMethods() const { return abstractMethods; }
+        const std::unordered_map<std::string, MethodDefNode *> &getMethods() const { return methods; }
+        const std::unordered_map<std::string, MethodDeclNode *> &getAbstractMethods() const { return abstractMethods; }
         const std::string &getParent() const { return parent; }
         const std::vector<std::string> &getInterfaces() const { return interfaces; }
         bool isAbstract() const { return abstract; }
@@ -988,7 +919,7 @@ namespace X {
         std::string name;
         std::vector<std::string> parents;
         StatementListNode *body;
-        std::map<std::string, MethodDeclNode *> methods;
+        std::unordered_map<std::string, MethodDeclNode *> methods;
 
     public:
         InterfaceNode(std::string name, std::vector<std::string> parents, StatementListNode *body);
@@ -1003,7 +934,7 @@ namespace X {
         const std::string &getName() const { return name; }
         const std::vector<std::string> &getParents() const { return parents; }
         StatementListNode *getBody() const { return body; }
-        const std::map<std::string, MethodDeclNode *> &getMethods() const { return methods; }
+        const std::unordered_map<std::string, MethodDeclNode *> &getMethods() const { return methods; }
         bool hasParents() const { return !parents.empty(); }
 
         static bool classof(const Node *node) {

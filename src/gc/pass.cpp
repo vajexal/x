@@ -8,18 +8,15 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
 namespace X::GC {
-    bool XGCLowering::doInitialization(llvm::Module &M) {
-        gcPushStackFrameFn = M.getFunction(mangler.mangleInternalFunction("gcPushStackFrame"));
-        gcPopStackFrameFn = M.getFunction(mangler.mangleInternalFunction("gcPopStackFrame"));
-        gcAddRootFn = M.getFunction(mangler.mangleInternalFunction("gcAddRoot"));
-        gcVar = M.getGlobalVariable(mangler.mangleInternalSymbol("gc"));
+    llvm::PreservedAnalyses XGCLowering::run(llvm::Function &F, llvm::FunctionAnalysisManager &FAM) {
+        auto M = F.getParent();
+        auto gcPushStackFrameFn = M->getFunction(Mangler::mangleInternalFunction("gcPushStackFrame"));
+        auto gcPopStackFrameFn = M->getFunction(Mangler::mangleInternalFunction("gcPopStackFrame"));
+        auto gcAddRootFn = M->getFunction(Mangler::mangleInternalFunction("gcAddRoot"));
+        auto gcVar = M->getGlobalVariable(Mangler::mangleInternalSymbol("gc"));
 
-        return false;
-    }
-
-    bool XGCLowering::runOnFunction(llvm::Function &F) {
         if (!F.hasGC() || F.getGC() != "x") {
-            return false;
+            return llvm::PreservedAnalyses::all();
         }
 
         std::vector<llvm::IntrinsicInst *> roots;
@@ -36,7 +33,7 @@ namespace X::GC {
         }
 
         if (roots.empty()) {
-            return false;
+            return llvm::PreservedAnalyses::all();
         }
 
         // push stack frame
@@ -58,6 +55,8 @@ namespace X::GC {
             }
         }
 
-        return true;
+        llvm::PreservedAnalyses PA;
+        PA.preserve<llvm::DominatorTreeAnalysis>();
+        return PA;
     }
 }

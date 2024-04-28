@@ -8,9 +8,9 @@
 namespace X::Codegen {
     llvm::Value *Codegen::gen(ClassNode *node) {
         auto &name = node->getName();
-        const auto &mangledName = mangler.mangleClass(name);
+        const auto &mangledName = Mangler::mangleClass(name);
 
-        self = &classes[mangledName];
+        self = &classes[name];
 
         auto &abstractMethods = node->getAbstractMethods();
         for (auto &[methodName, method]: node->getMethods()) {
@@ -19,15 +19,10 @@ namespace X::Codegen {
             }
 
             auto fn = method->getFnDef();
-            auto isConstructor = methodName == CONSTRUCTOR_FN_NAME;
-            if (isConstructor) {
-                checkConstructor(method, name);
-            }
-            const auto &fnName = mangler.mangleMethod(mangledName, fn->getName());
-            genFn(fnName, fn->getArgs(), fn->getReturnType(), fn->getBody(), method->getIsStatic() ? nullptr : self->type);
+            currentFnRetType = method->getFnDef()->getReturnType();
+            const auto &fnName = Mangler::mangleMethod(mangledName, fn->getName());
+            genFn(fnName, fn->getArgs(), currentFnRetType, fn->getBody(), method->getIsStatic() ? nullptr : &self->type);
         }
-
-        self->methods[CONSTRUCTOR_FN_NAME] = {AccessModifier::PUBLIC, false};
 
         self = nullptr;
 
@@ -36,32 +31,25 @@ namespace X::Codegen {
 
     llvm::Value *Codegen::gen(FetchPropNode *node) {
         auto obj = node->getObj()->gen(*this);
-        if (!isObject(obj)) {
-            throw InvalidObjectAccessException();
-        }
         auto &propName = node->getName();
-        auto [type, ptr] = getProp(obj, propName);
-        return builder.CreateLoad(type, ptr, propName);
+        auto [type, ptr] = getProp(obj, node->getObj()->getType(), propName);
+        return builder.CreateLoad(mapType(type), ptr, propName);
     }
 
     llvm::Value *Codegen::gen(FetchStaticPropNode *node) {
         auto [type, ptr] = getStaticProp(node->getClassName(), node->getPropName());
-        return builder.CreateLoad(type, ptr, node->getPropName());
+        return builder.CreateLoad(mapType(type), ptr, node->getPropName());
     }
 
     llvm::Value *Codegen::gen(MethodCallNode *node) {
         auto obj = node->getObj()->gen(*this);
-        if (!isObject(obj)) {
-            throw InvalidObjectAccessException();
-        }
-
         auto &methodName = node->getName();
 
         if (methodName == CONSTRUCTOR_FN_NAME) {
-            throw MethodNotFoundException(getClassName(obj), methodName);
+            throw MethodNotFoundException(getClassName(node->getObj()->getType()), methodName);
         }
 
-        return callMethod(obj, methodName, node->getArgs());
+        return callMethod(obj, node->getObj()->getType(), methodName, node->getArgs());
     }
 
     llvm::Value *Codegen::gen(StaticMethodCallNode *node) {
@@ -69,15 +57,14 @@ namespace X::Codegen {
     }
 
     llvm::Value *Codegen::gen(AssignPropNode *node) {
-        auto obj = node->getObj()->gen(*this);
-        if (!isObject(obj)) {
+        if (!isObject(node->getObj()->getType())) {
             throw InvalidObjectAccessException();
         }
-
+        auto obj = node->getObj()->gen(*this);
         auto value = node->getExpr()->gen(*this);
-        auto [type, ptr] = getProp(obj, node->getName());
+        auto [type, ptr] = getProp(obj, node->getObj()->getType(), node->getName());
 
-        value = castTo(value, type);
+        value = castTo(value, node->getExpr()->getType(), type);
         builder.CreateStore(value, ptr);
 
         return nullptr;
@@ -87,54 +74,49 @@ namespace X::Codegen {
         auto value = node->getExpr()->gen(*this);
         auto [type, ptr] = getStaticProp(node->getClassName(), node->getPropName());
 
-        value = castTo(value, type);
+        value = castTo(value, node->getExpr()->getType(), type);
         builder.CreateStore(value, ptr);
 
         return nullptr;
     }
 
     llvm::Value *Codegen::gen(NewNode *node) {
-        const auto &mangledClassName = mangler.mangleClass(node->getName());
-        auto &classDecl = getClassDecl(mangledClassName);
+        auto &classDecl = getClassDecl(node->getName());
         if (classDecl.isAbstract) {
             throw CodegenException("cannot instantiate abstract class " + node->getName());
         }
 
-        auto obj = newObj(classDecl.type);
+        auto obj = newObj(classDecl.llvmType);
 
         try {
-            callMethod(obj, CONSTRUCTOR_FN_NAME, node->getArgs());
+            callMethod(obj, classDecl.type, CONSTRUCTOR_FN_NAME, node->getArgs());
         } catch (const MethodNotFoundException &e) {
             if (!node->getArgs().empty()) {
                 throw CodegenException("constructor args mismatch");
             }
         }
 
-        initVtable(obj);
+        initVtable(obj, classDecl);
 
         return obj;
     }
 
     llvm::Value *Codegen::gen(InterfaceNode *node) {
-        const auto &mangledName = mangler.mangleInterface(node->getName());
-        auto &interfaceDecl = interfaces[mangledName];
-        auto interface = interfaceDecl.type;
+        auto &interfaceDecl = interfaces[node->getName()];
 
-        auto vtableType = genVtable(node, interface, interfaceDecl);
-        interfaceDecl.vtableType = vtableType;
+        interfaceDecl.vtableType = genVtable(node, interfaceDecl);
         // {vtable, obj ptr, gc meta}
-        interface->setBody({vtableType->getPointerTo(), builder.getInt8PtrTy(), builder.getInt8PtrTy()});
+        interfaceDecl.llvmType->setBody({builder.getPtrTy(), builder.getInt8PtrTy(), builder.getInt8PtrTy()});
 
         return nullptr;
     }
 
-    std::pair<llvm::Type *, llvm::Value *> Codegen::getProp(llvm::Value *obj, const std::string &name) const {
-        auto type = deref(obj->getType());
-        if (!type->isStructTy()) {
+    std::pair<const Type &, llvm::Value *> Codegen::getProp(llvm::Value *obj, const Type &objType, const std::string &name) {
+        if (!objType.is(Type::TypeID::CLASS)) {
             throw InvalidObjectAccessException();
         }
 
-        auto &classDecl = getClassDecl(type->getStructName().str());
+        auto &classDecl = getClassDecl(objType.getClassName());
         auto currentClassDecl = &classDecl;
         while (currentClassDecl) {
             auto propIt = currentClassDecl->props.find(name);
@@ -144,8 +126,7 @@ namespace X::Codegen {
                     throw PropAccessException(currentClassDecl->name, name);
                 }
 
-                auto currentObj = currentClassDecl == &classDecl ? obj : builder.CreateBitCast(obj, currentClassDecl->type->getPointerTo());
-                auto ptr = builder.CreateStructGEP(currentClassDecl->type, currentObj, propIt->second.pos);
+                auto ptr = builder.CreateStructGEP(currentClassDecl->llvmType, obj, propIt->second.pos);
                 return {propIt->second.type, ptr};
             }
 
@@ -155,8 +136,8 @@ namespace X::Codegen {
         throw PropNotFoundException(classDecl.name, name);
     }
 
-    std::pair<llvm::Type *, llvm::Value *> Codegen::getStaticProp(const std::string &className, const std::string &propName) const {
-        auto &classDecl = className == SELF_KEYWORD && self ? *self : getClassDecl(mangler.mangleClass(className));
+    std::pair<const Type &, llvm::Value *> Codegen::getStaticProp(const std::string &className, const std::string &propName) const {
+        auto &classDecl = className == SELF_KEYWORD && self ? *self : getClassDecl(className);
         auto currentClassDecl = &classDecl;
         while (currentClassDecl) {
             auto propIt = currentClassDecl->staticProps.find(propName);
@@ -166,7 +147,7 @@ namespace X::Codegen {
                     throw PropAccessException(currentClassDecl->name, propName);
                 }
 
-                return {propIt->second.var->getType()->getPointerElementType(), propIt->second.var};
+                return {propIt->second.type, propIt->second.var};
             }
 
             currentClassDecl = currentClassDecl->parent;
@@ -175,34 +156,35 @@ namespace X::Codegen {
         throw PropNotFoundException(className, propName);
     }
 
-    const ClassDecl &Codegen::getClassDecl(const std::string &mangledName) const {
-        auto classDecl = classes.find(mangledName);
+    const ClassDecl &Codegen::getClassDecl(const std::string &name) const {
+        auto classDecl = classes.find(name);
         if (classDecl == classes.end()) {
-            throw ClassNotFoundException(mangler.unmangleClass(mangledName));
+            throw ClassNotFoundException(name);
         }
         return classDecl->second;
     }
 
-    const InterfaceDecl *Codegen::findInterfaceDecl(const std::string &mangledName) const {
-        auto interfaceIt = interfaces.find(mangledName);
+    const InterfaceDecl *Codegen::findInterfaceDecl(const std::string &name) const {
+        auto interfaceIt = interfaces.find(name);
         return interfaceIt != interfaces.cend() ? &interfaceIt->second : nullptr;
     }
 
-    std::string Codegen::getClassName(llvm::Value *obj) const {
-        auto type = deref(obj->getType());
-        if (!type->isStructTy()) {
-            throw InvalidTypeException();
+    std::string Codegen::getClassName(const Type &type) const {
+        switch (type.getTypeID()) {
+            case Type::TypeID::CLASS:
+                return type.getClassName();
+            case Type::TypeID::STRING:
+                return Runtime::String::CLASS_NAME;
+            case Type::TypeID::ARRAY:
+                return Runtime::Array::getClassName(type);
+            default:
+                throw InvalidTypeException();
         }
-        return std::move(mangler.unmangleClass(type->getStructName().str()));
     }
 
-    GC::Metadata *Codegen::getTypeGCMeta(llvm::Type *type) {
-        type = deref(type);
-        if (!type->isStructTy()) {
-            return nullptr;
-        }
+    GC::Metadata *Codegen::getTypeGCMeta(const Type &type) {
+        auto typeName = getTypeGCMetaKey(type);
 
-        const auto &typeName = type->getStructName().str();
         auto metaIt = gcMetaCache.find(typeName);
         if (metaIt != gcMetaCache.cend()) {
             return metaIt->second;
@@ -216,49 +198,67 @@ namespace X::Codegen {
         return meta;
     }
 
-    GC::Metadata *Codegen::genTypeGCMeta(llvm::Type *type) {
-        if (Runtime::String::isStringType(type) || Runtime::Range::isRangeType(type)) {
-            return gc.addMeta(GC::NodeType::CLASS, {});
-        } else if (Runtime::Array::isArrayType(type)) {
-            GC::PointerList pointerList;
-            auto containedType = arrayRuntime.getContainedType(llvm::cast<llvm::StructType>(type));
-            auto containedMeta = getTypeGCMeta(containedType);
-            if (containedMeta) {
-                pointerList.emplace_back(0, containedMeta);
+    GC::Metadata *Codegen::genTypeGCMeta(const Type &type) {
+        switch (type.getTypeID()) {
+            case Type::TypeID::STRING:
+                return gc.addMeta(GC::NodeType::CLASS, {});
+            case Type::TypeID::ARRAY: {
+                GC::PointerList pointerList;
+                auto containedMeta = getTypeGCMeta(*type.getSubtype());
+                if (containedMeta) {
+                    pointerList.emplace_back(0, containedMeta);
+                }
+                return gc.addMeta(GC::NodeType::ARRAY, std::move(pointerList));
             }
-            return gc.addMeta(GC::NodeType::ARRAY, std::move(pointerList));
-        } else if (isInterfaceType(type)) {
-            return gc.addMeta(GC::NodeType::INTERFACE, {});
-        } else if (isClassType(type)) {
-            auto &classDecl = getClassDecl(type->getStructName().str());
-            return classDecl.meta;
-        } else {
-            return nullptr;
+            case Type::TypeID::CLASS: {
+                if (type.getClassName() == Runtime::Range::CLASS_NAME) {
+                    return gc.addMeta(GC::NodeType::CLASS, {});
+                }
+
+                if (isInterfaceType(type)) {
+                    return gc.addMeta(GC::NodeType::INTERFACE, {});
+                }
+
+                auto &classDecl = getClassDecl(type.getClassName());
+                return classDecl.meta;
+            }
+            default:
+                return nullptr;
         }
     }
 
-    llvm::Value *Codegen::getValueGCMeta(llvm::Value *value) {
-        auto meta = getTypeGCMeta(value->getType());
+    std::string Codegen::getTypeGCMetaKey(const Type &type) {
+        switch (type.getTypeID()) {
+            case Type::TypeID::CLASS:
+                return type.getClassName();
+            case Type::TypeID::STRING:
+                return Runtime::String::CLASS_NAME;
+            case Type::TypeID::ARRAY:
+                return Runtime::Array::CLASS_NAME;
+            default:
+                return "";
+        }
+    }
+
+    llvm::Value *Codegen::getGCMetaValue(const Type &type) {
+        auto meta = getTypeGCMeta(type);
         return meta ? builder.CreateIntToPtr(builder.getInt64((uint64_t)meta), builder.getInt8PtrTy()) : nullptr;
     }
 
-    bool Codegen::isObject(llvm::Value *value) const {
-        auto type = deref(value->getType());
-        return type->isStructTy();
+    bool Codegen::isObject(const Type &type) const {
+        return type.isOneOf(Type::TypeID::CLASS, Type::TypeID::STRING, Type::TypeID::ARRAY);
     }
 
-    bool Codegen::isClassType(llvm::Type *type) const {
-        type = deref(type);
-        return type->isStructTy() && mangler.isMangledClass(type->getStructName().str());
+    bool Codegen::isInterfaceType(const Type &type) const {
+        if (!type.is(Type::TypeID::CLASS)) {
+            return false;
+        }
+
+        return interfaces.contains(type.getClassName());
     }
 
-    bool Codegen::isInterfaceType(llvm::Type *type) const {
-        type = deref(type);
-        return type->isStructTy() && mangler.isMangledInterface(type->getStructName().str());
-    }
-
-    llvm::StructType *Codegen::genVtable(ClassNode *classNode, llvm::StructType *klass, ClassDecl &classDecl) {
-        const auto &classMangledName = mangler.mangleClass(classNode->getName());
+    llvm::StructType *Codegen::genVtable(ClassNode *classNode, ClassDecl &classDecl) {
+        const auto &classMangledName = Mangler::mangleClass(classNode->getName());
         auto &classMethods = classNode->getMethods();
         const auto &virtualMethods = compilerRuntime.virtualMethods.at(classNode->getName());
         std::vector<llvm::Type *> vtableProps;
@@ -267,39 +267,36 @@ namespace X::Codegen {
 
         for (auto &methodName: virtualMethods) {
             auto methodDef = classMethods.at(methodName);
-            auto fnType = genFnType(methodDef->getFnDef()->getArgs(), methodDef->getFnDef()->getReturnType(), klass);
-            vtableProps.push_back(fnType->getPointerTo());
-            classDecl.methods[methodName] = {methodDef->getAccessModifier(), true, vtablePos++};
+            auto fnType = genFnType(methodDef->getFnDef()->getArgs(), methodDef->getFnDef()->getReturnType(), &classDecl.type);
+            vtableProps.push_back(builder.getPtrTy());
+            classDecl.methods[methodName] = {methodDef->getAccessModifier(), fnType, true, vtablePos++};
         }
 
         return llvm::StructType::create(context, vtableProps, "vtable." + classMangledName);
     }
 
-    llvm::StructType *Codegen::genVtable(InterfaceNode *node, llvm::StructType *interfaceType, InterfaceDecl &interfaceDecl) {
-        const auto &interfaceMangledName = mangler.mangleInterface(node->getName());
+    llvm::StructType *Codegen::genVtable(InterfaceNode *node, InterfaceDecl &interfaceDecl) {
+        const auto &interfaceMangledName = Mangler::mangleInterface(node->getName());
         auto &interfaceMethods = compilerRuntime.interfaceMethods.at(node->getName());
         std::vector<llvm::Type *> vtableProps;
         vtableProps.reserve(interfaceMethods.size());
         uint64_t vtablePos = 0;
 
         for (auto &[methodName, methodDecl]: interfaceMethods) {
-            auto fnType = genFnType(methodDecl->getFnDecl()->getArgs(), methodDecl->getFnDecl()->getReturnType(), interfaceType);
-            vtableProps.push_back(fnType->getPointerTo());
-            interfaceDecl.methods[methodName] = {methodDecl->getAccessModifier(), true, vtablePos++};
+            auto fnType = genFnType(methodDecl->getFnDecl()->getArgs(), methodDecl->getFnDecl()->getReturnType(), &interfaceDecl.type);
+            vtableProps.push_back(builder.getPtrTy());
+            interfaceDecl.methods[methodName] = {methodDecl->getAccessModifier(), fnType, true, vtablePos++};
         }
 
         return llvm::StructType::create(context, vtableProps, "vtable." + interfaceMangledName);
     }
 
-    void Codegen::initVtable(llvm::Value *obj) {
-        auto objType = llvm::cast<llvm::StructType>(deref(obj->getType()));
-        const auto &mangledClassName = objType->getStructName().str();
-        auto currentClassDecl = &getClassDecl(mangledClassName);
-        auto &className = currentClassDecl->name;
+    void Codegen::initVtable(llvm::Value *obj, const ClassDecl &classDecl) {
+        auto currentClassDecl = &classDecl;
 
         while (currentClassDecl) {
             if (currentClassDecl->vtableType) {
-                auto vtableName = fmt::format("{}.{}", currentClassDecl->vtableType->getName().str(), className);
+                auto vtableName = fmt::format("{}.{}", currentClassDecl->vtableType->getName().str(), classDecl.name);
                 auto vtable = llvm::cast<llvm::GlobalVariable>(module.getOrInsertGlobal(vtableName, currentClassDecl->vtableType));
 
                 if (!vtable->hasInitializer()) {
@@ -307,10 +304,10 @@ namespace X::Codegen {
 
                     for (const auto &it: currentClassDecl->methods) {
                         if (it.second.isVirtual) {
-                            auto fn = simpleFindMethod(objType, it.first);
+                            auto fn = simpleFindMethod(classDecl, it.first);
                             // just in case
                             if (!fn) {
-                                throw MethodNotFoundException(className, it.first);
+                                throw MethodNotFoundException(classDecl.name, it.first);
                             }
                             funcs.push_back(fn);
                         }
@@ -319,9 +316,8 @@ namespace X::Codegen {
                     vtable->setInitializer(llvm::ConstantStruct::get(currentClassDecl->vtableType, funcs));
                 }
 
-                auto currentObj = builder.CreateBitCast(obj, currentClassDecl->type->getPointerTo());
                 auto vtablePos = currentClassDecl->parent ? 1 : 0;
-                auto vtablePtr = builder.CreateStructGEP(currentClassDecl->type, currentObj, vtablePos);
+                auto vtablePtr = builder.CreateStructGEP(currentClassDecl->llvmType, obj, vtablePos);
                 builder.CreateStore(vtable, vtablePtr);
             }
 
@@ -329,12 +325,8 @@ namespace X::Codegen {
         }
     }
 
-    void Codegen::initInterfaceVtable(llvm::Value *obj, llvm::Value *interface) {
-        auto objType = llvm::cast<llvm::StructType>(deref(obj->getType()));
-        auto &classDecl = getClassDecl(objType->getName().str());
-        auto interfaceType = deref(interface->getType());
-        const auto &mangledInterfaceName = interfaceType->getStructName().str();
-        auto &interfaceDecl = interfaces.at(mangledInterfaceName);
+    void Codegen::initInterfaceVtable(llvm::Value *obj, const Type &objType, llvm::Value *interface, const InterfaceDecl &interfaceDecl) {
+        auto &classDecl = getClassDecl(objType.getClassName());
         auto vtableName = fmt::format("{}.{}", interfaceDecl.vtableType->getName().str(), classDecl.name);
         auto vtable = llvm::cast<llvm::GlobalVariable>(module.getOrInsertGlobal(vtableName, interfaceDecl.vtableType));
 
@@ -343,7 +335,7 @@ namespace X::Codegen {
             funcs.reserve(interfaceDecl.methods.size());
 
             for (const auto &it: interfaceDecl.methods) {
-                auto fn = simpleFindMethod(objType, it.first);
+                auto fn = simpleFindMethod(classDecl, it.first);
                 // just in case
                 if (!fn) {
                     throw MethodNotFoundException(classDecl.name, it.first);
@@ -354,44 +346,27 @@ namespace X::Codegen {
             vtable->setInitializer(llvm::ConstantStruct::get(interfaceDecl.vtableType, funcs));
         }
 
-        auto vtablePtr = builder.CreateStructGEP(interfaceType, interface, 0);
+        auto vtablePtr = builder.CreateStructGEP(interfaceDecl.llvmType, interface, 0);
         builder.CreateStore(vtable, vtablePtr);
     }
 
     llvm::Function *Codegen::getInternalConstructor(const std::string &mangledClassName) const {
-        return module.getFunction(mangler.mangleInternalMethod(mangledClassName, CONSTRUCTOR_FN_NAME));
+        return module.getFunction(Mangler::mangleInternalMethod(mangledClassName, CONSTRUCTOR_FN_NAME));
     }
 
-    void Codegen::checkConstructor(MethodDefNode *node, const std::string &className) const {
-        if (node->getIsStatic()) {
-            throw CodegenException(fmt::format("{}::{} cannot be static", className, CONSTRUCTOR_FN_NAME));
-        }
-        if (node->getAccessModifier() != AccessModifier::PUBLIC) {
-            throw CodegenException(fmt::format("{}::{} must be public", className, CONSTRUCTOR_FN_NAME));
-        }
-        if (node->getFnDef()->getReturnType().getTypeID() != Type::TypeID::VOID) {
-            throw CodegenException(fmt::format("{}::{} must return void", className, CONSTRUCTOR_FN_NAME));
-        }
-    }
-
-    llvm::Value *Codegen::callMethod(llvm::Value *obj, const std::string &methodName, const std::vector<ExprNode *> &args) {
-        auto type = deref(obj->getType());
-        if (!type->isStructTy()) {
-            throw CodegenException("invalid method call operand");
+    llvm::Value *Codegen::callMethod(llvm::Value *obj, const Type &objType, const std::string &methodName, const ExprList &args) {
+        auto [callee, fnType] = findMethod(obj, objType, methodName);
+        if (!callee.getCallee()) {
+            throw MethodNotFoundException(getClassName(objType), methodName);
         }
 
-        auto [fn, fnType, thisType] = findMethod(llvm::cast<llvm::StructType>(type), methodName, obj);
-        if (!fn) {
-            throw MethodNotFoundException(getClassName(obj), methodName);
-        }
-
-        auto interfaceDecl = findInterfaceDecl(type->getStructName().str());
-        if (interfaceDecl) {
-            auto objPtr = builder.CreateStructGEP(type, obj, 1);
-            obj = builder.CreateLoad(builder.getInt8PtrTy(), objPtr);
-            obj = builder.CreateBitCast(obj, thisType->getPointerTo());
-        } else if (thisType && thisType != type) {
-            obj = builder.CreateBitCast(obj, thisType->getPointerTo());
+        if (objType.is(Type::TypeID::CLASS)) {
+            auto interfaceDecl = findInterfaceDecl(objType.getClassName());
+            if (interfaceDecl) {
+                // get "this" from interface object
+                auto objPtr = builder.CreateStructGEP(interfaceDecl->llvmType, obj, 1);
+                obj = builder.CreateLoad(builder.getInt8PtrTy(), objPtr);
+            }
         }
 
         std::vector<llvm::Value *> llvmArgs;
@@ -399,17 +374,17 @@ namespace X::Codegen {
         llvmArgs.push_back(obj);
         for (auto i = 0; i < args.size(); i++) {
             auto val = args[i]->gen(*this);
-            val = castTo(val, fnType->getParamType(i + 1)); // skip "this"
+            val = castTo(val, args[i]->getType(), fnType->args[i]);
             llvmArgs.push_back(val);
         }
 
-        return builder.CreateCall(fnType, fn, llvmArgs);
+        return builder.CreateCall(callee, llvmArgs);
     }
 
-    llvm::Value *Codegen::callStaticMethod(const std::string &className, const std::string &methodName, const std::vector<ExprNode *> &args) {
-        auto &classDecl = className == SELF_KEYWORD && self ? *self : getClassDecl(mangler.mangleClass(className));
-        auto [fn, fnType, thisType] = findMethod(classDecl.type, methodName);
-        if (!fn) {
+    llvm::Value *Codegen::callStaticMethod(const std::string &className, const std::string &methodName, const ExprList &args) {
+        auto &classDecl = className == SELF_KEYWORD && self ? *self : getClassDecl(className);
+        auto [callee, fnType] = findMethod(nullptr, classDecl.type, methodName);
+        if (!callee.getCallee()) {
             throw MethodNotFoundException(className, methodName);
         }
 
@@ -417,38 +392,40 @@ namespace X::Codegen {
         llvmArgs.reserve(args.size());
         for (auto i = 0; i < args.size(); i++) {
             auto val = args[i]->gen(*this);
-            val = castTo(val, fnType->getParamType(i));
+            val = castTo(val, args[i]->getType(), fnType->args[i]);
             llvmArgs.push_back(val);
         }
 
-        return builder.CreateCall(fnType, fn, llvmArgs);
+        return builder.CreateCall(callee, llvmArgs);
     }
 
-    std::tuple<llvm::Value *, llvm::FunctionType *, llvm::Type *> Codegen::findMethod(
-            llvm::StructType *type, const std::string &methodName, llvm::Value *obj) const {
-        if (Runtime::String::isStringType(type) || Runtime::Array::isArrayType(type)) {
-            const auto &name = mangler.mangleInternalMethod(type->getName().str(), methodName);
+    std::tuple<llvm::FunctionCallee, FnType *> Codegen::findMethod(
+            llvm::Value *obj, const Type &objType, const std::string &methodName
+    ) {
+        if (objType.isOneOf(Type::TypeID::STRING, Type::TypeID::ARRAY)) {
+            const auto &name = Mangler::mangleInternalMethod(getClassName(objType), methodName);
             auto fn = module.getFunction(name);
-            return {fn, fn->getFunctionType(), nullptr};
+            auto &className = objType.is(Type::TypeID::STRING) ? Runtime::String::CLASS_NAME : Runtime::Array::CLASS_NAME;
+            return {llvm::FunctionCallee(fn->getFunctionType(), fn), &compilerRuntime.classMethodTypes.at(className).at(methodName)};
         }
 
-        auto interfaceDecl = findInterfaceDecl(type->getName().str());
+        auto interfaceDecl = findInterfaceDecl(objType.getClassName());
         if (interfaceDecl) {
             auto methodIt = interfaceDecl->methods.find(methodName);
             if (methodIt != interfaceDecl->methods.cend()) {
                 // get vtable
-                auto vtablePtr = builder.CreateStructGEP(type, obj, 0);
-                auto vtable = builder.CreateLoad(interfaceDecl->vtableType->getPointerTo(), vtablePtr);
+                auto vtablePtr = builder.CreateStructGEP(interfaceDecl->llvmType, obj, 0);
+                auto vtable = builder.CreateLoad(builder.getPtrTy(), vtablePtr);
                 // get method
                 auto methodPtr = builder.CreateStructGEP(interfaceDecl->vtableType, vtable, methodIt->second.vtablePos);
                 auto methodType = interfaceDecl->vtableType->getElementType(methodIt->second.vtablePos);
                 auto method = builder.CreateLoad(methodType, methodPtr);
 
-                return {method, llvm::cast<llvm::FunctionType>(methodType->getPointerElementType()), type};
+                return {llvm::FunctionCallee(methodIt->second.type, method), &compilerRuntime.classMethodTypes.at(interfaceDecl->name).at(methodName)};
             }
         }
 
-        auto &classDecl = getClassDecl(type->getName().str());
+        auto &classDecl = getClassDecl(objType.getClassName());
         auto currentClassDecl = &classDecl;
         while (currentClassDecl) {
             auto methodIt = currentClassDecl->methods.find(methodName);
@@ -460,35 +437,33 @@ namespace X::Codegen {
 
                 if (methodIt->second.isVirtual) {
                     // get vtable
-                    auto currentObj = builder.CreateBitCast(obj, currentClassDecl->type->getPointerTo());
                     auto vtablePos = currentClassDecl->parent ? 1 : 0;
-                    auto vtablePtr = builder.CreateStructGEP(currentClassDecl->type, currentObj, vtablePos);
-                    auto vtable = builder.CreateLoad(currentClassDecl->vtableType->getPointerTo(), vtablePtr);
+                    auto vtablePtr = builder.CreateStructGEP(currentClassDecl->llvmType, obj, vtablePos);
+                    auto vtable = builder.CreateLoad(builder.getPtrTy(), vtablePtr);
                     // get method
                     auto methodPtr = builder.CreateStructGEP(currentClassDecl->vtableType, vtable, methodIt->second.vtablePos);
                     auto methodType = currentClassDecl->vtableType->getElementType(methodIt->second.vtablePos);
                     auto method = builder.CreateLoad(methodType, methodPtr);
-
-                    return {method, llvm::cast<llvm::FunctionType>(methodType->getPointerElementType()), currentClassDecl->type};
+                    return {llvm::FunctionCallee(methodIt->second.type, method), &compilerRuntime.classMethodTypes.at(currentClassDecl->name).at(methodName)};
                 }
 
-                auto fn = module.getFunction(mangler.mangleMethod(currentClassDecl->type->getName().str(), methodName));
+                auto fn = module.getFunction(Mangler::mangleMethod(currentClassDecl->llvmType->getName().str(), methodName));
                 if (fn) {
-                    return {fn, fn->getFunctionType(), currentClassDecl->type};
+                    return {llvm::FunctionCallee(fn->getFunctionType(), fn), &compilerRuntime.classMethodTypes.at(currentClassDecl->name).at(methodName)};
                 }
             }
 
             currentClassDecl = currentClassDecl->parent;
         }
 
-        return {nullptr, nullptr, nullptr};
+        return {llvm::FunctionCallee(), nullptr};
     }
 
-    llvm::Function *Codegen::simpleFindMethod(llvm::StructType *type, const std::string &methodName) const {
-        auto currentClassDecl = &getClassDecl(type->getName().str());
+    llvm::Function *Codegen::simpleFindMethod(const ClassDecl &classDecl, const std::string &methodName) const {
+        auto currentClassDecl = &classDecl;
         while (currentClassDecl) {
-            const auto &className = currentClassDecl->type->getName().str();
-            auto fn = module.getFunction(mangler.mangleMethod(className, methodName));
+            const auto &className = currentClassDecl->llvmType->getName().str();
+            auto fn = module.getFunction(Mangler::mangleMethod(className, methodName));
             if (fn) {
                 return fn;
             }

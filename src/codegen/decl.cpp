@@ -7,31 +7,33 @@ namespace X::Codegen {
         for (auto interfaceNode: node->getInterfaces()) {
             auto &name = interfaceNode->getName();
             addSymbol(name);
-            const auto &mangledName = mangler.mangleInterface(name);
+            const auto &mangledName = Mangler::mangleInterface(name);
 
             auto interface = llvm::StructType::create(context, mangledName);
 
-            InterfaceDecl interfaceDecl;
-            interfaceDecl.name = name;
-            interfaceDecl.type = interface;
-            interfaces[mangledName] = std::move(interfaceDecl);
+            interfaces[name] = {
+                    .name = name,
+                    .type = Type::klass(name),
+                    .llvmType = interface,
+            };
         }
     }
 
     void Codegen::declClasses(TopStatementListNode *node) {
         for (auto klassNode: node->getClasses()) {
             auto &name = klassNode->getName();
-            addSymbol(name);
-            const auto &mangledName = mangler.mangleClass(name);
-            if (classes.contains(mangledName)) {
+            if (classes.contains(name)) {
                 throw ClassAlreadyExistsException(name);
             }
 
-            auto klass = llvm::StructType::create(context, mangledName);
+            addSymbol(name);
 
-            classes[mangledName] = {
+            auto klass = llvm::StructType::create(context, Mangler::mangleClass(name));
+
+            classes[name] = {
                     .name = name,
-                    .type = klass,
+                    .type = Type::klass(name),
+                    .llvmType = klass,
                     .isAbstract = klassNode->isAbstract(),
             };
         }
@@ -40,9 +42,9 @@ namespace X::Codegen {
     void Codegen::declProps(TopStatementListNode *node) {
         for (auto klassNode: node->getClasses()) {
             auto &name = klassNode->getName();
-            const auto &mangledName = mangler.mangleClass(name);
-            auto &classDecl = classes[mangledName];
-            auto klass = classDecl.type;
+            const auto &mangledName = Mangler::mangleClass(name);
+            auto &classDecl = classes[name];
+            auto klass = classDecl.llvmType;
             GC::PointerList pointerList;
 
             std::vector<llvm::Type *> props;
@@ -50,9 +52,8 @@ namespace X::Codegen {
             uint64_t propPos = 0;
 
             if (klassNode->hasParent()) {
-                const auto &mangledParentName = mangler.mangleClass(klassNode->getParent());
-                auto &parentClassDecl = getClassDecl(mangledParentName);
-                props.push_back(parentClassDecl.type);
+                auto &parentClassDecl = getClassDecl(klassNode->getParent());
+                props.push_back(parentClassDecl.llvmType);
                 propPos++;
                 classDecl.parent = const_cast<ClassDecl *>(&parentClassDecl);
                 pointerList = parentClassDecl.meta->pointerList;
@@ -60,8 +61,8 @@ namespace X::Codegen {
 
             auto it = compilerRuntime.virtualMethods.find(name);
             if (it != compilerRuntime.virtualMethods.cend() && !it->second.empty()) {
-                auto vtableType = genVtable(klassNode, klass, classDecl);
-                props.push_back(vtableType->getPointerTo());
+                auto vtableType = genVtable(klassNode, classDecl);
+                props.push_back(builder.getPtrTy());
                 propPos++;
                 classDecl.vtableType = vtableType;
             }
@@ -75,13 +76,13 @@ namespace X::Codegen {
                     if (classDecl.staticProps.contains(propName)) {
                         throw PropAlreadyDeclaredException(name, propName);
                     }
-                    const auto &mangledPropName = mangler.mangleStaticProp(mangledName, propName);
+                    const auto &mangledPropName = Mangler::mangleStaticProp(mangledName, propName);
                     auto global = llvm::cast<llvm::GlobalVariable>(module.getOrInsertGlobal(mangledPropName, type));
                     global->setInitializer(getDefaultValue(prop->getType()));
-                    classDecl.staticProps[propName] = {global, prop->getAccessModifier()};
+                    classDecl.staticProps[propName] = {global, prop->getType(), prop->getAccessModifier()};
                 } else {
                     props.push_back(type);
-                    auto [_, inserted] = classDecl.props.try_emplace(propName, type, propPos++, prop->getAccessModifier());
+                    auto [_, inserted] = classDecl.props.try_emplace(propName, prop->getType(), propPos++, prop->getAccessModifier());
                     if (!inserted) {
                         throw PropAlreadyDeclaredException(name, propName);
                     }
@@ -92,11 +93,10 @@ namespace X::Codegen {
 
             // build class pointer list
             auto structLayout = module.getDataLayout().getStructLayout(klass);
-            for (auto i = 0; i < klass->getNumElements(); i++) {
-                auto type = klass->getElementType(i);
-                if (type->isPointerTy()) {
-                    auto offset = structLayout->getElementOffset(i);
-                    auto meta = getTypeGCMeta(type);
+            for (auto &[_, prop]: classDecl.props) {
+                if (prop.type.isOneOf(Type::TypeID::CLASS, Type::TypeID::STRING, Type::TypeID::ARRAY)) {
+                    const auto &offset = structLayout->getElementOffset(prop.pos);
+                    auto meta = getTypeGCMeta(prop.type);
                     pointerList.emplace_back(offset, meta);
                 }
             }
@@ -107,19 +107,26 @@ namespace X::Codegen {
 
     void Codegen::declMethods(TopStatementListNode *node) {
         for (auto klass: node->getClasses()) {
-            const auto &mangledName = mangler.mangleClass(klass->getName());
-            auto classDecl = &classes[mangledName];
+            const auto &mangledName = Mangler::mangleClass(klass->getName());
+            auto classDecl = &classes[klass->getName()];
+
+            // default constructor
+            classDecl->methods[CONSTRUCTOR_FN_NAME] = {
+                    AccessModifier::PUBLIC,
+                    llvm::FunctionType::get(builder.getVoidTy(), {builder.getPtrTy()}, false),
+                    false
+            };
 
             for (auto &[methodName, methodDef]: klass->getMethods()) {
                 if (methodName == CONSTRUCTOR_FN_NAME) {
-                    continue;
+                    checkConstructor(methodDef, klass->getName());
                 }
 
                 auto fnDef = methodDef->getFnDef();
-                const auto &fnName = mangler.mangleMethod(mangledName, fnDef->getName());
-                auto fnType = genFnType(fnDef->getArgs(), fnDef->getReturnType(), methodDef->getIsStatic() ? nullptr : classDecl->type);
+                const auto &fnName = Mangler::mangleMethod(mangledName, fnDef->getName());
+                auto fnType = genFnType(fnDef->getArgs(), fnDef->getReturnType(), methodDef->getIsStatic() ? nullptr : &classDecl->type);
                 llvm::Function::Create(fnType, llvm::Function::ExternalLinkage, fnName, module);
-                classDecl->methods[methodName] = {methodDef->getAccessModifier(), false};
+                classDecl->methods[methodName] = {methodDef->getAccessModifier(), fnType, false};
             }
         }
     }
@@ -138,6 +145,18 @@ namespace X::Codegen {
 
             auto fnType = genFnType(fnDef->getArgs(), fnDef->getReturnType());
             llvm::Function::Create(fnType, llvm::Function::ExternalLinkage, name, module);
+        }
+    }
+
+    void Codegen::checkConstructor(MethodDefNode *node, const std::string &className) const {
+        if (node->getIsStatic()) {
+            throw CodegenException(fmt::format("{}::{} cannot be static", className, CONSTRUCTOR_FN_NAME));
+        }
+        if (node->getAccessModifier() != AccessModifier::PUBLIC) {
+            throw CodegenException(fmt::format("{}::{} must be public", className, CONSTRUCTOR_FN_NAME));
+        }
+        if (!node->getFnDef()->getReturnType().is(Type::TypeID::VOID)) {
+            throw CodegenException(fmt::format("{}::{} must return void", className, CONSTRUCTOR_FN_NAME));
         }
     }
 }

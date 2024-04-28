@@ -335,8 +335,8 @@ class Foo {}
 fn main() void {}
 )code");
         FAIL() << "expected SymbolAlreadyExistsException";
-    } catch (const Codegen::SymbolAlreadyExistsException &e) {
-        ASSERT_STREQ(e.what(), "symbol Foo already exists");
+    } catch (const Codegen::ClassAlreadyExistsException &e) {
+        ASSERT_STREQ(e.what(), "class Foo already exists");
     }
 }
 
@@ -466,7 +466,7 @@ fn main() void {
 )code");
         FAIL() << "expected exception";
     } catch (const std::exception &e) {
-        ASSERT_STREQ(e.what(), "class Foo not found");
+        ASSERT_STREQ(e.what(), "invalid type");
     }
 }
 

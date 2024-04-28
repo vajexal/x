@@ -1,26 +1,12 @@
 #pragma once
 
-#include "llvm/Pass.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
 
 #include "mangler.h"
 
 namespace X::GC {
-    class XGCLowering : public llvm::FunctionPass {
-        Mangler mangler;
-
-        llvm::Function *gcPushStackFrameFn;
-        llvm::Function *gcPopStackFrameFn;
-        llvm::Function *gcAddRootFn;
-        llvm::GlobalVariable *gcVar;
-
+    class XGCLowering : public llvm::PassInfoMixin<XGCLowering> {
     public:
-        static inline char ID = 0;
-
-        XGCLowering() : llvm::FunctionPass(ID) {}
-
-        bool doInitialization(llvm::Module &M) override;
-        bool runOnFunction(llvm::Function &F) override;
+        llvm::PreservedAnalyses run(llvm::Function &F, llvm::FunctionAnalysisManager &FAM);
     };
 }

@@ -2,7 +2,7 @@
 
 #include "pipeline.h"
 
-#include <map>
+#include <unordered_map>
 #include <string>
 
 #include "compiler_runtime.h"
@@ -10,7 +10,7 @@
 namespace X::Pipes {
     class CheckVirtualMethods : public Pipe {
         CompilerRuntime &compilerRuntime;
-        std::map<std::string, ClassNode *> classes;
+        std::unordered_map<std::string, ClassNode *> classes;
 
     public:
         CheckVirtualMethods(CompilerRuntime &compilerRuntime) : compilerRuntime(compilerRuntime) {}

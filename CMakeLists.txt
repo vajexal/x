@@ -31,6 +31,7 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR})
 set(X_SOURCES lexer.cpp
         parser.tab.cc
         src/ast.cpp
+        src/type.cpp
         src/utils.cpp
         src/codegen/codegen.cpp
         src/codegen/expr.cpp

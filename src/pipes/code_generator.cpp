@@ -6,8 +6,7 @@
 #include "llvm/IR/Verifier.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/Support/TargetSelect.h"
-#include "llvm/Transforms/IPO/PassManagerBuilder.h"
-#include "llvm/Transforms/IPO.h"
+#include "llvm/Passes/PassBuilder.h"
 
 #include "codegen/codegen.h"
 #include "runtime/runtime.h"
@@ -16,7 +15,6 @@
 namespace X::Pipes {
     TopStatementListNode *CodeGenerator::handle(TopStatementListNode *node) {
         auto context = std::make_unique<llvm::LLVMContext>();
-        context->setOpaquePointers(false); // todo migrate to opaque pointers
         llvm::IRBuilder<> builder(*context);
         auto module = std::make_unique<llvm::Module>(sourceName, *context);
         GC::GC gc;
@@ -46,7 +44,7 @@ namespace X::Pipes {
         runtime.addDefinitions(jitter->getMainJITDylib(), llvmMangle);
 
         // link gc
-        auto runtimeGCSymbol = throwOnError(jitter->lookup(mangler.mangleInternalSymbol("gc")));
+        auto runtimeGCSymbol = throwOnError(jitter->lookup(Mangler::mangleInternalSymbol("gc")));
         auto runtimeGCPtr = runtimeGCSymbol.toPtr<GC::GC **>();
         *runtimeGCPtr = &gc; // nolint
 
@@ -75,21 +73,33 @@ namespace X::Pipes {
         return std::move(*val);
     }
 
-    OptimizationTransform::OptimizationTransform() : PM(std::make_unique<llvm::legacy::PassManager>()) {
-        PM->add(new GC::XGCLowering());
-
-        llvm::PassManagerBuilder Builder;
-        Builder.OptLevel = OPT_LEVEL;
-        Builder.SizeLevel = SIZE_OPT_LEVEL;
-        Builder.populateModulePassManager(*PM);
-        Builder.Inliner = llvm::createFunctionInliningPass(OPT_LEVEL, SIZE_OPT_LEVEL, false);
-    }
+    OptimizationTransform::OptimizationTransform() {}
 
     llvm::Expected<llvm::orc::ThreadSafeModule> OptimizationTransform::operator()(
             llvm::orc::ThreadSafeModule TSM, llvm::orc::MaterializationResponsibility &R) {
-        TSM.withModuleDo([this](llvm::Module &module) {
-            PM->run(module);
+        llvm::LoopAnalysisManager LAM;
+        llvm::FunctionAnalysisManager FAM;
+        llvm::CGSCCAnalysisManager CGAM;
+        llvm::ModuleAnalysisManager MAM;
+
+        llvm::PassBuilder PB;
+
+        PB.registerModuleAnalyses(MAM);
+        PB.registerCGSCCAnalyses(CGAM);
+        PB.registerFunctionAnalyses(FAM);
+        PB.registerLoopAnalyses(LAM);
+        PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
+
+        PB.registerPipelineStartEPCallback([&](llvm::ModulePassManager &MPM, llvm::OptimizationLevel Level) {
+            MPM.addPass(llvm::createModuleToFunctionPassAdaptor(GC::XGCLowering()));
         });
+
+        llvm::ModulePassManager MPM = PB.buildPerModuleDefaultPipeline(llvm::OptimizationLevel::O2);
+
+        TSM.withModuleDo([&](llvm::Module &module) {
+            MPM.run(module, MAM);
+        });
+
         return std::move(TSM);
     }
 }

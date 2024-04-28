@@ -10,20 +10,17 @@ namespace X::Codegen {
             throw VarAlreadyExistsException(name);
         }
 
-        auto type = mapType(node->getType());
-        auto stackVar = createAlloca(type, name);
+        auto stackVar = createAlloca(mapType(node->getType()), name);
 
         auto value = node->getExpr() ?
-                     node->getExpr()->gen(*this) :
+                     castTo(node->getExpr()->gen(*this), node->getExpr()->getType(), node->getType()) :
                      createDefaultValue(node->getType());
-
-        value = castTo(value, type);
 
         builder.CreateStore(value, stackVar);
 
-        vars[name] = stackVar;
+        vars[name] = {stackVar, node->getType()};
 
-        gcAddRoot(stackVar);
+        gcAddRoot(stackVar, node->getType());
 
         return nullptr;
     }
@@ -33,7 +30,7 @@ namespace X::Codegen {
         auto [type, var] = getVar(name);
         auto value = node->getExpr()->gen(*this);
 
-        value = castTo(value, type);
+        value = castTo(value, node->getExpr()->getType(), type);
         builder.CreateStore(value, var);
 
         return nullptr;
@@ -44,7 +41,7 @@ namespace X::Codegen {
         if (!cond) {
             throw CodegenException("if cond is empty");
         }
-        cond = downcastToBool(cond);
+        cond = downcastToBool(cond, node->getCond()->getType());
 
         auto parentFunction = builder.GetInsertBlock()->getParent();
         auto thenBB = llvm::BasicBlock::Create(context, "then", parentFunction);
@@ -117,14 +114,13 @@ namespace X::Codegen {
     llvm::Value *Codegen::gen(ForNode *node) {
         llvm::AllocaInst *idxVar = nullptr;
         auto &valVarName = node->getVal();
-        auto isRange = llvm::isa<RangeNode>(node->getExpr());
         auto expr = node->getExpr()->gen(*this);
-        auto exprType = deref(expr->getType());
+        auto exprClassName = getClassName(node->getExpr()->getType());
 
         // add expr gc root
         auto exprAlloc = createAlloca(expr->getType());
         builder.CreateStore(expr, exprAlloc);
-        gcAddRoot(exprAlloc);
+        gcAddRoot(exprAlloc, node->getExpr()->getType());
 
         auto parentFunction = builder.GetInsertBlock()->getParent();
         auto loopInitBB = llvm::BasicBlock::Create(context, "loopInit", parentFunction);
@@ -143,30 +139,27 @@ namespace X::Codegen {
         builder.SetInsertPoint(loopInitBB);
 
         // init iter
-        auto iterType = llvm::Type::getInt64Ty(context);
+        auto iterType = builder.getInt64Ty();
         auto iterVar = createAlloca(iterType, "i");
-        auto iterStartValue = llvm::ConstantInt::getSigned(iterType, 0);
+        auto iterStartValue = builder.getInt64(0);
         builder.CreateStore(iterStartValue, iterVar);
 
         // init idx
         if (node->hasIdx()) {
             auto &idxVarName = node->getIdx();
             idxVar = createAlloca(iterType, idxVarName);
-            vars[idxVarName] = idxVar;
+            vars[idxVarName] = {idxVar, Type::scalar(Type::TypeID::INT)};
         }
 
         // init val
-        auto valVarType = isRange ?
-                          llvm::Type::getInt64Ty(context) :
-                          arrayRuntime.getContainedType(llvm::cast<llvm::StructType>(exprType));
-        if (!valVarType) {
-            throw InvalidTypeException();
-        }
-        auto valVar = createAlloca(valVarType, valVarName);
-        vars[valVarName] = valVar;
+        auto valVarType = node->getExpr()->getType().is(Type::TypeID::ARRAY) ?
+                          *node->getExpr()->getType().getSubtype() :
+                          Type::scalar(Type::TypeID::INT);
+        auto valVar = createAlloca(mapType(valVarType), valVarName);
+        vars[valVarName] = {valVar, valVarType};
 
         // init stop value
-        auto lengthFn = module.getFunction(mangler.mangleInternalMethod(exprType->getStructName().str(), "length"));
+        auto lengthFn = module.getFunction(Mangler::mangleInternalMethod(exprClassName, "length"));
         auto iterStopValue = builder.CreateCall(lengthFn, {expr});
 
         builder.CreateBr(loopCondBB);
@@ -189,7 +182,7 @@ namespace X::Codegen {
         }
 
         // set val
-        auto getFn = module.getFunction(mangler.mangleInternalMethod(exprType->getStructName().str(), "get[]"));
+        auto getFn = module.getFunction(Mangler::mangleInternalMethod(exprClassName, "get[]"));
         auto val = builder.CreateCall(getFn, {expr, iter});
         builder.CreateStore(val, valVar);
 
@@ -203,7 +196,7 @@ namespace X::Codegen {
         parentFunction->insert(parentFunction->end(), loopPostBB);
         builder.SetInsertPoint(loopPostBB);
 
-        iter = builder.CreateAdd(iter, llvm::ConstantInt::getSigned(iterType, 1));
+        iter = builder.CreateAdd(iter, builder.getInt64(1));
         builder.CreateStore(iter, iterVar);
         builder.CreateBr(loopCondBB);
 
@@ -220,11 +213,11 @@ namespace X::Codegen {
     llvm::Value *Codegen::gen(RangeNode *node) {
         auto start = node->getStart() ?
                      node->getStart()->gen(*this) :
-                     llvm::ConstantInt::getSigned(llvm::Type::getInt64Ty(context), 0);
+                     builder.getInt64(0);
         auto stop = node->getStop()->gen(*this);
         auto step = node->getStep() ?
                     node->getStep()->gen(*this) :
-                    llvm::ConstantInt::getSigned(llvm::Type::getInt64Ty(context), 1);
+                    builder.getInt64(1);
 
         auto parentFunction = builder.GetInsertBlock()->getParent();
         auto invalidStepBB = llvm::BasicBlock::Create(context, "invalid_step", parentFunction);
@@ -237,7 +230,7 @@ namespace X::Codegen {
         builder.SetInsertPoint(invalidStepBB);
 
         // print error and exit
-        auto dieFn = module.getFunction(mangler.mangleInternalFunction("die"));
+        auto dieFn = module.getFunction(Mangler::mangleInternalFunction("die"));
         auto message = builder.CreateGlobalStringPtr("step must not be zero");
         builder.CreateCall(dieFn, {message});
         builder.CreateUnreachable();
@@ -292,7 +285,7 @@ namespace X::Codegen {
             throw CodegenException("return value is empty");
         }
 
-        value = castTo(value, builder.getCurrentFunctionReturnType());
+        value = castTo(value, node->getVal()->getType(), currentFnRetType);
 
         builder.CreateRet(value);
         return nullptr;
@@ -304,9 +297,7 @@ namespace X::Codegen {
             throw CodegenException("println value is empty");
         }
 
-        if (!value->getType()->isStructTy()) {
-            value = castToString(value);
-        }
+        value = castToString(value, node->getVal()->getType());
 
         auto printlnFn = module.getFunction("println");
         builder.CreateCall(printlnFn, {value});
@@ -320,17 +311,12 @@ namespace X::Codegen {
 
     llvm::Value *Codegen::gen(AssignArrNode *node) {
         auto arr = node->getArr()->gen(*this);
-        auto arrType = deref(arr->getType());
-        if (!Runtime::Array::isArrayType(arrType)) {
-            throw InvalidArrayAccessException();
-        }
 
         auto idx = node->getIdx()->gen(*this);
         auto expr = node->getExpr()->gen(*this);
-        auto arrElemType = arrayRuntime.getContainedType(llvm::cast<llvm::StructType>(arrType));
-        expr = castTo(expr, arrElemType);
+        expr = castTo(expr, node->getExpr()->getType(), *node->getArr()->getType().getSubtype());
 
-        auto arrSetFn = module.getFunction(mangler.mangleInternalMethod(arrType->getStructName().str(), "set[]"));
+        auto arrSetFn = module.getFunction(Mangler::mangleInternalMethod(Runtime::Array::getClassName(node->getArr()->getType()), "set[]"));
         if (!arrSetFn) {
             throw InvalidArrayAccessException();
         }
@@ -341,16 +327,11 @@ namespace X::Codegen {
 
     llvm::Value *Codegen::gen(AppendArrNode *node) {
         auto arr = node->getArr()->gen(*this);
-        auto arrType = deref(arr->getType());
-        if (!Runtime::Array::isArrayType(arrType)) {
-            throw InvalidArrayAccessException();
-        }
 
         auto expr = node->getExpr()->gen(*this);
-        auto arrElemType = arrayRuntime.getContainedType(llvm::cast<llvm::StructType>(arrType));
-        expr = castTo(expr, arrElemType);
+        expr = castTo(expr, node->getExpr()->getType(), *node->getArr()->getType().getSubtype());
 
-        auto arrAppendFn = module.getFunction(mangler.mangleInternalMethod(arrType->getStructName().str(), "append[]"));
+        auto arrAppendFn = module.getFunction(Mangler::mangleInternalMethod(Runtime::Array::getClassName(node->getArr()->getType()), "append[]"));
         if (!arrAppendFn) {
             throw InvalidArrayAccessException();
         }

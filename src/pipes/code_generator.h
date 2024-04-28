@@ -1,7 +1,7 @@
 #pragma once
 
 #include "llvm/Support/Error.h"
-#include "llvm/IR/LegacyPassManager.h"
+#include "llvm/Passes/PassBuilder.h"
 #include "llvm/ExecutionEngine/Orc/ThreadSafeModule.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
 
@@ -12,7 +12,6 @@
 namespace X::Pipes {
     // todo rename
     class CodeGenerator : public Pipe {
-        Mangler mangler;
         CompilerRuntime &compilerRuntime;
         std::string sourceName;
 
@@ -29,11 +28,6 @@ namespace X::Pipes {
     };
 
     class OptimizationTransform {
-        static const int OPT_LEVEL = 2;
-        static const int SIZE_OPT_LEVEL = 0;
-
-        std::unique_ptr<llvm::legacy::PassManager> PM;
-
     public:
         OptimizationTransform();
 

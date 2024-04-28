@@ -10,6 +10,8 @@ namespace X::Codegen {
     }
 
     llvm::Value *Codegen::gen(FnDefNode *node) {
+        currentFnRetType = node->getReturnType();
+
         genFn(node->getName(), node->getArgs(), node->getReturnType(), node->getBody());
 
         return nullptr;
@@ -21,7 +23,7 @@ namespace X::Codegen {
 
         if (that) {
             try {
-                return callMethod(that, name, args);
+                return callMethod(that->value, that->type, name, args);
             } catch (const MethodNotFoundException &e) {}
         }
 
@@ -36,11 +38,13 @@ namespace X::Codegen {
             throw CodegenException("called function is not found: " + name);
         }
 
+        const auto &fnType = compilerRuntime.fnTypes.at(name);
+
         std::vector<llvm::Value *> llvmArgs;
         llvmArgs.reserve(args.size());
         for (auto i = 0; i < args.size(); i++) {
             auto val = args[i]->gen(*this);
-            val = castTo(val, fn->getArg(i)->getType());
+            val = castTo(val, args[i]->getType(), fnType.args[i]);
             llvmArgs.push_back(val);
         }
 
@@ -48,7 +52,7 @@ namespace X::Codegen {
     }
 
     void Codegen::genFn(const std::string &name, const std::vector<ArgNode *> &args, const Type &returnType, StatementListNode *body,
-                        llvm::StructType *thisType) {
+                        const Type *thisType) {
         size_t paramsOffset = thisType ? 1 : 0; // this is special
         // plain functions could be declared earlier
         // see declFuncs and declMethods
@@ -73,20 +77,22 @@ namespace X::Codegen {
         builder.SetInsertPoint(bb);
 
         if (thisType) {
-            that = fn->getArg(0);
+            that = Value{fn->getArg(0), *thisType};
         }
 
         varScopes.emplace_back();
         auto &vars = varScopes.back();
 
-        for (auto i = paramsOffset; i < fn->arg_size(); i++) {
-            auto arg = fn->getArg(i);
-            auto argName = arg->getName().str();
-            auto alloca = createAlloca(arg->getType(), argName);
-            builder.CreateStore(arg, alloca);
-            vars[argName] = alloca;
+        for (auto i = 0; i < args.size(); i++) {
+            auto llvmArg = fn->getArg(i + paramsOffset);
+            auto &argName = args[i]->getName();
+            auto &argType = args[i]->getType();
 
-            gcAddRoot(alloca);
+            auto alloca = createAlloca(llvmArg->getType(), argName);
+            builder.CreateStore(llvmArg, alloca);
+            vars[argName] = {alloca, argType};
+
+            gcAddRoot(alloca, argType);
         }
 
         body->gen(*this);
@@ -96,18 +102,18 @@ namespace X::Codegen {
 
         varScopes.clear();
 
-        that = nullptr;
+        that = std::nullopt;
     }
 
-    llvm::FunctionType *Codegen::genFnType(const std::vector<ArgNode *> &args, const Type &returnType, llvm::StructType *thisType) {
+    llvm::FunctionType *Codegen::genFnType(const std::vector<ArgNode *> &args, const Type &returnType, const Type *thisType) {
         size_t paramsOffset = thisType ? 1 : 0; // this is special
         std::vector<llvm::Type *> paramTypes;
         paramTypes.reserve(args.size() + paramsOffset);
         if (thisType) {
-            paramTypes.push_back(thisType->getPointerTo());
+            paramTypes.push_back(builder.getPtrTy());
         }
         for (auto arg: args) {
-            paramTypes.push_back(mapArgType(arg->getType()));
+            paramTypes.push_back(mapType(arg->getType()));
         }
 
         auto retType = mapType(returnType);
@@ -119,7 +125,7 @@ namespace X::Codegen {
             throw CodegenException("main must take no arguments");
         }
 
-        if (node->getReturnType().getTypeID() != Type::TypeID::VOID) {
+        if (!node->getReturnType().is(Type::TypeID::VOID)) {
             throw CodegenException("main must return void");
         }
     }

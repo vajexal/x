@@ -1,45 +1,31 @@
 #pragma once
 
 #include <vector>
-#include <map>
+#include <unordered_map>
 #include <unordered_map>
 #include <deque>
 #include <optional>
-#include <set>
+#include <unordered_set>
 
 #include "pipeline.h"
 #include "compiler_runtime.h"
 #include "ast.h"
 
 namespace X::Pipes {
-    struct FnType {
-        std::vector<Type> args;
-        Type retType;
-    };
-
-    struct PropType {
-        Type type;
-        bool isStatic;
-    };
-
-    struct MethodType : FnType {
-        bool isStatic;
-    };
-
     class TypeInferrer : public Pipe {
         CompilerRuntime &compilerRuntime;
 
         std::deque<std::unordered_map<std::string, Type>> varScopes;
-        std::map<std::string, FnType> fnTypes;
+        std::unordered_map<std::string, FnType> fnTypes;
         // name of the current class (empty string if not in class scope)
         std::optional<std::string> self;
         std::optional<std::string> that;
         Type currentFnRetType;
         // class name -> {prop name -> type}
-        std::map<std::string, std::map<std::string, PropType>> classProps;
+        std::unordered_map<std::string, std::unordered_map<std::string, PropType>> classProps;
         // class name -> {method name -> return type}
-        std::map<std::string, std::map<std::string, MethodType>> classMethodTypes;
-        std::set<std::string> classes;
+        std::unordered_map<std::string, std::unordered_map<std::string, MethodType>> classMethodTypes;
+        std::unordered_set<std::string> classes;
 
     public:
         explicit TypeInferrer(CompilerRuntime &compilerRuntime) : compilerRuntime(compilerRuntime) {}
@@ -89,8 +75,9 @@ namespace X::Pipes {
         void declMethods(TopStatementListNode *node);
         void declFuncs(TopStatementListNode *node);
 
-        void checkIfTypeIsValid(const Type &type) const;
-        void checkIfLvalueTypeIsValid(const Type &type) const;
+        void checkTypeIsValid(const Type &type) const;
+        void checkLvalueTypeIsValid(const Type &type) const;
+        void checkArgTypeIsValid(const Type &type) const;
         void checkFnCall(const FnType &fnType, const ExprList &args);
         const Type &getMethodReturnType(FnDeclNode *fnDecl, const std::string &className) const;
         const Type &getMethodReturnType(FnDefNode *fnDef, const std::string &className) const;

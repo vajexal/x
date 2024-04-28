@@ -10,8 +10,6 @@ namespace X::Runtime {
 
         char *str;
         uint64_t len;
-
-        static bool isStringType(llvm::Type *type);
     };
 
     String *String_new(uint64_t len = 0);

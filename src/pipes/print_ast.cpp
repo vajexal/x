@@ -47,13 +47,13 @@ namespace X::Pipes {
     }
 
     void PrintAst::printNode(UnaryNode *node, int level) {
-        std::cout << node->getType() << std::endl;
+        std::cout << node->getOpType() << std::endl;
 
         node->getExpr()->print(*this, level + 1);
     }
 
     void PrintAst::printNode(BinaryNode *node, int level) {
-        std::cout << node->getType() << std::endl;
+        std::cout << node->getOpType() << std::endl;
 
         node->getLhs()->print(*this, level + 1);
         node->getRhs()->print(*this, level + 1);

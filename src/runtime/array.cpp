@@ -4,39 +4,33 @@
 #include "utils.h"
 
 namespace X::Runtime {
-    llvm::StructType *ArrayRuntime::add(llvm::Type *type) {
-        const auto &arrayTypeName = Array::getClassName(type);
-        auto arrayType = llvm::StructType::create(
+    llvm::StructType *ArrayRuntime::add(const Type &arrType, llvm::Type *elemLlvmType) {
+        const auto &arrayTypeName = Array::getClassName(arrType);
+        auto arrLlvmType = llvm::StructType::create(
                 context,
-                {type->getPointerTo(), llvm::Type::getInt64Ty(context), llvm::Type::getInt64Ty(context)},
+                // data pointer, length, capacity
+                {llvm::PointerType::getUnqual(context), llvm::Type::getInt64Ty(context), llvm::Type::getInt64Ty(context)},
                 arrayTypeName
         );
 
-        addConstructor(arrayType, type);
-        addGetter(arrayType, type);
-        addSetter(arrayType, type);
-        addLength(arrayType, type);
-        addIsEmpty(arrayType, type);
-        addAppend(arrayType, type);
+        addConstructor(arrLlvmType, elemLlvmType);
+        addGetter(arrLlvmType, elemLlvmType);
+        addSetter(arrLlvmType, elemLlvmType);
+        addLength(arrLlvmType);
+        addIsEmpty(arrLlvmType);
+        addAppend(arrLlvmType, elemLlvmType);
 
-        containedTypes[arrayTypeName] = type;
-
-        return arrayType;
-    }
-
-    llvm::Type *ArrayRuntime::getContainedType(llvm::StructType *arrayType) const {
-        auto type = containedTypes.find(arrayType->getName().str());
-        return type != containedTypes.end() ? type->second : nullptr;
+        return arrLlvmType;
     }
 
     void ArrayRuntime::addConstructor(llvm::StructType *arrayType, llvm::Type *elemType) {
         auto fnType = llvm::FunctionType::get(
                 llvm::Type::getVoidTy(context),
-                {arrayType->getPointerTo(), llvm::Type::getInt64Ty(context)},
+                {llvm::PointerType::get(context, 0), llvm::Type::getInt64Ty(context)},
                 false
         );
         auto fn = llvm::Function::Create(fnType, llvm::Function::ExternalLinkage,
-                                         mangler.mangleInternalMethod(arrayType->getName().str(), CONSTRUCTOR_FN_NAME), module);
+                                         Mangler::mangleInternalMethod(arrayType->getName().str(), CONSTRUCTOR_FN_NAME), module);
 
         auto that = fn->getArg(0);
         auto len = fn->getArg(1);
@@ -48,13 +42,13 @@ namespace X::Runtime {
         llvm::IRBuilder<> builder(&fn->getEntryBlock(), fn->getEntryBlock().begin());
         builder.SetInsertPoint(bb);
 
-        auto capVar = builder.CreateAlloca(llvm::Type::getInt64Ty(context), nullptr, "cap");
+        auto capVar = builder.CreateAlloca(builder.getInt64Ty(), nullptr, "cap");
         builder.CreateStore(len, capVar);
 
         // validate len
         auto setLenBB = llvm::BasicBlock::Create(context, "set_len", fn);
         auto invalidLenBB = llvm::BasicBlock::Create(context, "invalid_len");
-        auto cond = builder.CreateICmpSLT(len, llvm::ConstantInt::get(llvm::Type::getInt64Ty(context), 0));
+        auto cond = builder.CreateICmpSLT(len, builder.getInt64(0));
         builder.CreateCondBr(cond, invalidLenBB, setLenBB);
 
         builder.SetInsertPoint(setLenBB);
@@ -66,7 +60,7 @@ namespace X::Runtime {
         // check cap
         auto setCapBB = llvm::BasicBlock::Create(context, "set_cap");
         auto growCapBB = llvm::BasicBlock::Create(context, "grow_cap");
-        auto minCap = llvm::ConstantInt::get(llvm::Type::getInt64Ty(context), Array::MIN_CAP);
+        auto minCap = builder.getInt64(Array::MIN_CAP);
         cond = builder.CreateICmpSLT(len, minCap);
         builder.CreateCondBr(cond, growCapBB, setCapBB);
 
@@ -79,18 +73,17 @@ namespace X::Runtime {
         // set cap
         fn->insert(fn->end(), setCapBB);
         builder.SetInsertPoint(setCapBB);
-        auto cap = builder.CreateLoad(llvm::Type::getInt64Ty(context), capVar, "cap");
+        auto cap = builder.CreateLoad(builder.getInt64Ty(), capVar, "cap");
         auto capPtr = builder.CreateStructGEP(arrayType, that, 2);
         builder.CreateStore(cap, capPtr);
 
         // alloc
 
-        auto allocFn = module.getFunction(mangler.mangleInternalFunction("gcAlloc"));
-        auto gcVar = module.getGlobalVariable(mangler.mangleInternalSymbol("gc"));
+        auto allocFn = module.getFunction(Mangler::mangleInternalFunction("gcAlloc"));
+        auto gcVar = module.getGlobalVariable(Mangler::mangleInternalSymbol("gc"));
         auto elemTypeSize = getTypeSize(module, elemType);
         auto allocSize = builder.CreateMul(cap, elemTypeSize);
-        auto arrVoidPtr = builder.CreateCall(allocFn, {gcVar, allocSize});
-        auto arr = builder.CreateBitCast(arrVoidPtr, elemType->getPointerTo());
+        auto arr = builder.CreateCall(allocFn, {gcVar, allocSize});
         auto arrPtr = builder.CreateStructGEP(arrayType, that, 0);
         builder.CreateStore(arr, arrPtr);
 
@@ -101,18 +94,18 @@ namespace X::Runtime {
         builder.SetInsertPoint(invalidLenBB);
 
         auto exitFn = module.getFunction("exit");
-        builder.CreateCall(exitFn, {llvm::ConstantInt::get(llvm::Type::getInt64Ty(context), 1)});
+        builder.CreateCall(exitFn, {builder.getInt64(1)});
         builder.CreateUnreachable();
     }
 
     void ArrayRuntime::addGetter(llvm::StructType *arrayType, llvm::Type *elemType) {
         auto fnType = llvm::FunctionType::get(
                 elemType,
-                {arrayType->getPointerTo(), llvm::Type::getInt64Ty(context)},
+                {llvm::PointerType::get(context, 0), llvm::Type::getInt64Ty(context)},
                 false
         );
         auto fn = llvm::Function::Create(fnType, llvm::Function::ExternalLinkage,
-                                         mangler.mangleInternalMethod(arrayType->getName().str(), "get[]"), module);
+                                         Mangler::mangleInternalMethod(arrayType->getName().str(), "get[]"), module);
 
         auto that = fn->getArg(0);
         auto index = fn->getArg(1);
@@ -127,14 +120,14 @@ namespace X::Runtime {
         // validate index
         auto continueCheckBB = llvm::BasicBlock::Create(context, "continue_check", fn);
         auto invalidIndexBB = llvm::BasicBlock::Create(context, "invalid_index");
-        auto cond = builder.CreateICmpSLT(index, llvm::ConstantInt::get(llvm::Type::getInt64Ty(context), 0));
+        auto cond = builder.CreateICmpSLT(index, builder.getInt64(0));
         builder.CreateCondBr(cond, invalidIndexBB, continueCheckBB);
 
         // continue index validation
         builder.SetInsertPoint(continueCheckBB);
         auto thenBB = llvm::BasicBlock::Create(context, "then");
         auto arrLenPtr = builder.CreateStructGEP(arrayType, that, 1);
-        auto arrLen = builder.CreateLoad(llvm::Type::getInt64Ty(context), arrLenPtr, "len");
+        auto arrLen = builder.CreateLoad(builder.getInt64Ty(), arrLenPtr, "len");
         cond = builder.CreateICmpSGE(index, arrLen);
         builder.CreateCondBr(cond, invalidIndexBB, thenBB);
 
@@ -143,7 +136,7 @@ namespace X::Runtime {
 
         // get elem
         auto arrPtr = builder.CreateStructGEP(arrayType, that, 0);
-        auto arr = builder.CreateLoad(elemType->getPointerTo(), arrPtr, "arr");
+        auto arr = builder.CreateLoad(builder.getPtrTy(), arrPtr, "arr");
         auto elemPtr = builder.CreateGEP(elemType, arr, index);
         auto val = builder.CreateLoad(elemType, elemPtr, "elem");
         builder.CreateRet(val);
@@ -153,18 +146,18 @@ namespace X::Runtime {
         builder.SetInsertPoint(invalidIndexBB);
 
         auto exitFn = module.getFunction("exit");
-        builder.CreateCall(exitFn, {llvm::ConstantInt::get(llvm::Type::getInt64Ty(context), 1)});
+        builder.CreateCall(exitFn, {builder.getInt64(1)});
         builder.CreateUnreachable();
     }
 
     void ArrayRuntime::addSetter(llvm::StructType *arrayType, llvm::Type *elemType) {
         auto fnType = llvm::FunctionType::get(
                 llvm::Type::getVoidTy(context),
-                {arrayType->getPointerTo(), llvm::Type::getInt64Ty(context), elemType},
+                {llvm::PointerType::get(context, 0), llvm::Type::getInt64Ty(context), elemType},
                 false
         );
         auto fn = llvm::Function::Create(fnType, llvm::Function::ExternalLinkage,
-                                         mangler.mangleInternalMethod(arrayType->getName().str(), "set[]"), module);
+                                         Mangler::mangleInternalMethod(arrayType->getName().str(), "set[]"), module);
 
         auto that = fn->getArg(0);
         auto index = fn->getArg(1);
@@ -181,14 +174,14 @@ namespace X::Runtime {
         // validate index
         auto continueCheckBB = llvm::BasicBlock::Create(context, "continue_check", fn);
         auto invalidIndexBB = llvm::BasicBlock::Create(context, "invalid_index");
-        auto cond = builder.CreateICmpSLT(index, llvm::ConstantInt::get(llvm::Type::getInt64Ty(context), 0));
+        auto cond = builder.CreateICmpSLT(index, builder.getInt64(0));
         builder.CreateCondBr(cond, invalidIndexBB, continueCheckBB);
 
         // continue index validation
         builder.SetInsertPoint(continueCheckBB);
         auto thenBB = llvm::BasicBlock::Create(context, "then");
         auto arrLenPtr = builder.CreateStructGEP(arrayType, that, 1);
-        auto arrLen = builder.CreateLoad(llvm::Type::getInt64Ty(context), arrLenPtr, "len");
+        auto arrLen = builder.CreateLoad(builder.getInt64Ty(), arrLenPtr, "len");
         cond = builder.CreateICmpSGE(index, arrLen);
         builder.CreateCondBr(cond, invalidIndexBB, thenBB);
 
@@ -197,7 +190,7 @@ namespace X::Runtime {
 
         // set elem
         auto arrPtr = builder.CreateStructGEP(arrayType, that, 0);
-        auto arr = builder.CreateLoad(elemType->getPointerTo(), arrPtr, "arr");
+        auto arr = builder.CreateLoad(builder.getPtrTy(), arrPtr, "arr");
         auto elemPtr = builder.CreateGEP(elemType, arr, index);
         builder.CreateStore(val, elemPtr);
 
@@ -208,14 +201,14 @@ namespace X::Runtime {
         builder.SetInsertPoint(invalidIndexBB);
 
         auto exitFn = module.getFunction("exit");
-        builder.CreateCall(exitFn, {llvm::ConstantInt::get(llvm::Type::getInt64Ty(context), 1)});
+        builder.CreateCall(exitFn, {builder.getInt64(1)});
         builder.CreateUnreachable();
     }
 
-    void ArrayRuntime::addLength(llvm::StructType *arrayType, llvm::Type *elemType) {
-        auto fnType = llvm::FunctionType::get(llvm::Type::getInt64Ty(context), {arrayType->getPointerTo()}, false);
+    void ArrayRuntime::addLength(llvm::StructType *arrayType) {
+        auto fnType = llvm::FunctionType::get(llvm::Type::getInt64Ty(context), {llvm::PointerType::get(context, 0)}, false);
         auto fn = llvm::Function::Create(fnType, llvm::Function::ExternalLinkage,
-                                         mangler.mangleInternalMethod(arrayType->getName().str(), "length"), module);
+                                         Mangler::mangleInternalMethod(arrayType->getName().str(), "length"), module);
 
         auto that = fn->getArg(0);
         that->setName(THIS_KEYWORD);
@@ -225,14 +218,14 @@ namespace X::Runtime {
         builder.SetInsertPoint(bb);
 
         auto arrLenPtr = builder.CreateStructGEP(arrayType, that, 1);
-        auto arrLen = builder.CreateLoad(llvm::Type::getInt64Ty(context), arrLenPtr, "len");
+        auto arrLen = builder.CreateLoad(builder.getInt64Ty(), arrLenPtr, "len");
         builder.CreateRet(arrLen);
     }
 
-    void ArrayRuntime::addIsEmpty(llvm::StructType *arrayType, llvm::Type *elemType) {
-        auto fnType = llvm::FunctionType::get(llvm::Type::getInt1Ty(context), {arrayType->getPointerTo()}, false);
+    void ArrayRuntime::addIsEmpty(llvm::StructType *arrayType) {
+        auto fnType = llvm::FunctionType::get(llvm::Type::getInt1Ty(context), {llvm::PointerType::get(context, 0)}, false);
         auto fn = llvm::Function::Create(fnType, llvm::Function::ExternalLinkage,
-                                         mangler.mangleInternalMethod(arrayType->getName().str(), "isEmpty"), module);
+                                         Mangler::mangleInternalMethod(arrayType->getName().str(), "isEmpty"), module);
 
         auto that = fn->getArg(0);
         that->setName(THIS_KEYWORD);
@@ -241,16 +234,16 @@ namespace X::Runtime {
         llvm::IRBuilder<> builder(&fn->getEntryBlock(), fn->getEntryBlock().begin());
         builder.SetInsertPoint(bb);
 
-        auto arrLengthFn = module.getFunction(mangler.mangleInternalMethod(arrayType->getName().str(), "length"));
+        auto arrLengthFn = module.getFunction(Mangler::mangleInternalMethod(arrayType->getName().str(), "length"));
         auto arrLen = builder.CreateCall(arrLengthFn, {that});
-        auto isEmpty = builder.CreateICmpEQ(arrLen, llvm::ConstantInt::get(llvm::Type::getInt64Ty(context), 0));
+        auto isEmpty = builder.CreateICmpEQ(arrLen, builder.getInt64(0));
         builder.CreateRet(isEmpty);
     }
 
     void ArrayRuntime::addAppend(llvm::StructType *arrayType, llvm::Type *elemType) {
-        auto fnType = llvm::FunctionType::get(llvm::Type::getVoidTy(context), {arrayType->getPointerTo(), elemType}, false);
+        auto fnType = llvm::FunctionType::get(llvm::Type::getVoidTy(context), {llvm::PointerType::get(context, 0), elemType}, false);
         auto fn = llvm::Function::Create(fnType, llvm::Function::ExternalLinkage,
-                                         mangler.mangleInternalMethod(arrayType->getName().str(), "append[]"), module);
+                                         Mangler::mangleInternalMethod(arrayType->getName().str(), "append[]"), module);
 
         auto that = fn->getArg(0);
         auto val = fn->getArg(1);
@@ -262,12 +255,12 @@ namespace X::Runtime {
         builder.SetInsertPoint(bb);
 
         auto arrPtr = builder.CreateStructGEP(arrayType, that, 0);
-        auto arr = builder.CreateLoad(elemType->getPointerTo(), arrPtr, "arr");
+        auto arr = builder.CreateLoad(builder.getPtrTy(), arrPtr, "arr");
         auto lenPtr = builder.CreateStructGEP(arrayType, that, 1);
-        auto len = builder.CreateLoad(llvm::Type::getInt64Ty(context), lenPtr, "len");
+        auto len = builder.CreateLoad(builder.getInt64Ty(), lenPtr, "len");
         auto capPtr = builder.CreateStructGEP(arrayType, that, 2);
-        auto cap = builder.CreateLoad(llvm::Type::getInt64Ty(context), capPtr, "cap");
-        auto newLen = builder.CreateAdd(len, llvm::ConstantInt::get(llvm::Type::getInt64Ty(context), 1));
+        auto cap = builder.CreateLoad(builder.getInt64Ty(), capPtr, "cap");
+        auto newLen = builder.CreateAdd(len, builder.getInt64(1));
 
         // grow
         auto growBB = llvm::BasicBlock::Create(context, "grow", fn);
@@ -279,13 +272,11 @@ namespace X::Runtime {
         auto newCap = builder.CreateShl(cap, 1);
         builder.CreateStore(newCap, capPtr);
 
-        auto reallocFn = module.getFunction(mangler.mangleInternalFunction("gcRealloc"));
-        auto gcVar = module.getGlobalVariable(mangler.mangleInternalSymbol("gc"));
-        auto arrVoidPtr = builder.CreateBitCast(arr, llvm::Type::getInt8PtrTy(context));
+        auto reallocFn = module.getFunction(Mangler::mangleInternalFunction("gcRealloc"));
+        auto gcVar = module.getGlobalVariable(Mangler::mangleInternalSymbol("gc"));
         auto elemTypeSize = getTypeSize(module, elemType);
         auto allocSize = builder.CreateMul(newCap, elemTypeSize);
-        auto newArrVoidPtr = builder.CreateCall(reallocFn, {gcVar, arrVoidPtr, allocSize});
-        auto newArr = builder.CreateBitCast(newArrVoidPtr, arr->getType());
+        auto newArr = builder.CreateCall(reallocFn, {gcVar, arr, allocSize});
         builder.CreateStore(newArr, arrPtr);
         builder.CreateBr(appendBB);
 
@@ -295,15 +286,19 @@ namespace X::Runtime {
 
         builder.CreateStore(newLen, lenPtr);
         arrPtr = builder.CreateStructGEP(arrayType, that, 0);
-        arr = builder.CreateLoad(elemType->getPointerTo(), arrPtr, "arr");
+        arr = builder.CreateLoad(builder.getPtrTy(), arrPtr, "arr");
         auto elemPtr = builder.CreateGEP(elemType, arr, len);
         builder.CreateStore(val, elemPtr);
 
         builder.CreateRetVoid();
     }
 
-    std::string Array::getClassName(const Type *type) {
-        switch (type->getTypeID()) {
+    std::string Array::getClassName(const Type &type) {
+        if (!type.is(Type::TypeID::ARRAY)) {
+            throw InvalidArrayTypeException();
+        }
+
+        switch (type.getSubtype()->getTypeID()) {
             case Type::TypeID::INT:
                 return CLASS_NAME + ".int";
             case Type::TypeID::FLOAT:
@@ -312,43 +307,10 @@ namespace X::Runtime {
                 return CLASS_NAME + ".bool";
             case Type::TypeID::STRING:
                 return CLASS_NAME + ".string";
-            case Type::TypeID::CLASS: {
-                // todo fix me later
-                Mangler mangler;
-                return CLASS_NAME + '.' + mangler.mangleClass(type->getClassName());
-            }
+            case Type::TypeID::CLASS:
+                return CLASS_NAME + ".pointer";
             default:
                 throw InvalidArrayTypeException();
         }
-    }
-
-    std::string Array::getClassName(llvm::Type *type) {
-        if (type->isIntegerTy(1)) {
-            return CLASS_NAME + ".bool";
-        }
-
-        if (type->isIntegerTy()) {
-            return CLASS_NAME + ".int";
-        }
-
-        if (type->isDoubleTy()) {
-            return CLASS_NAME + ".float";
-        }
-
-        if (String::isStringType(type)) {
-            return CLASS_NAME + ".string";
-        }
-
-        type = deref(type);
-        if (type->isStructTy()) {
-            return CLASS_NAME + '.' + type->getStructName().str();
-        }
-
-        throw InvalidArrayTypeException();
-    }
-
-    bool Array::isArrayType(llvm::Type *type) {
-        type = deref(type);
-        return type->isStructTy() && type->getStructName().startswith(Runtime::Array::CLASS_NAME);
     }
 }
