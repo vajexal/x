@@ -271,5 +271,57 @@ fn main() void {
 fn foo() self {
 }
 )code",
-                "invalid type")
+                "invalid type"),
+        // call non-static method as static
+        std::make_pair(
+                R"code(
+class Foo {
+    public fn a() void {}
+}
+
+fn main() void {
+    Foo::a()
+}
+)code",
+                "wrong method call Foo::a"),
+        // call static method as non-static
+        std::make_pair(
+                R"code(
+class Foo {
+    public static fn a() void {}
+}
+
+fn main() void {
+    Foo foo = new Foo()
+
+    foo.a()
+}
+)code",
+                "wrong method call Foo::a"),
+        // fetch non-static prop as static
+        std::make_pair(
+                R"code(
+class Foo {
+    public int a
+}
+
+fn main() void {
+    println(Foo::a)
+}
+)code",
+                "wrong prop access Foo::a"),
+        // fetch static prop as non-static
+        std::make_pair(
+                R"code(
+class Foo {
+    public static int a
+}
+
+fn main() void {
+    Foo foo = new Foo()
+
+    println(foo.a)
+}
+)code",
+                "wrong prop access Foo::a")
 ));

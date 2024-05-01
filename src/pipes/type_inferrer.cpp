@@ -734,9 +734,12 @@ namespace X::Pipes {
         }
 
         auto methodTypeIt = methodTypesIt->second.find(methodName);
-        // second condition is for case when we call non-static method from static context
-        if (methodTypeIt == methodTypesIt->second.cend() || (!methodTypeIt->second.isStatic && isStatic)) {
+        if (methodTypeIt == methodTypesIt->second.cend()) {
             throw TypeInferrerException(fmt::format("method {}::{} not found", className, methodName));
+        }
+
+        if (methodTypeIt->second.isStatic != isStatic) {
+            throw TypeInferrerException(fmt::format("wrong method call {}::{}", className, methodName));
         }
 
         return methodTypeIt->second;
@@ -751,9 +754,12 @@ namespace X::Pipes {
         }
 
         auto propTypeIt = classPropsIt->second.find(propName);
-        // second condition is for case when we get non-static prop from static context
-        if (propTypeIt == classPropsIt->second.cend() || (!propTypeIt->second.isStatic && isStatic)) {
+        if (propTypeIt == classPropsIt->second.cend()) {
             throw TypeInferrerException(fmt::format("prop {}::{} not found", klassName, propName));
+        }
+
+        if (propTypeIt->second.isStatic != isStatic) {
+            throw TypeInferrerException(fmt::format("wrong prop access {}::{}", klassName, propName));
         }
 
         return propTypeIt->second.type;
