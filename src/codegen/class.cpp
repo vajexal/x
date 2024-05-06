@@ -106,7 +106,7 @@ namespace X::Codegen {
 
         interfaceDecl.vtableType = genVtable(node, interfaceDecl);
         // {vtable, obj ptr, gc meta}
-        interfaceDecl.llvmType->setBody({builder.getPtrTy(), builder.getInt8PtrTy(), builder.getInt8PtrTy()});
+        interfaceDecl.llvmType->setBody({builder.getPtrTy(), builder.getPtrTy(), builder.getPtrTy()});
 
         return nullptr;
     }
@@ -242,7 +242,7 @@ namespace X::Codegen {
 
     llvm::Value *Codegen::getGCMetaValue(const Type &type) {
         auto meta = getTypeGCMeta(type);
-        return meta ? builder.CreateIntToPtr(builder.getInt64((uint64_t)meta), builder.getInt8PtrTy()) : nullptr;
+        return meta ? builder.CreateIntToPtr(builder.getInt64((uint64_t)meta), builder.getPtrTy()) : nullptr;
     }
 
     bool Codegen::isObject(const Type &type) const {
@@ -365,7 +365,7 @@ namespace X::Codegen {
             if (interfaceDecl) {
                 // get "this" from interface object
                 auto objPtr = builder.CreateStructGEP(interfaceDecl->llvmType, obj, 1);
-                obj = builder.CreateLoad(builder.getInt8PtrTy(), objPtr);
+                obj = builder.CreateLoad(builder.getPtrTy(), objPtr);
             }
         }
 
