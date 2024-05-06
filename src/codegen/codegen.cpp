@@ -12,6 +12,7 @@ namespace X::Codegen {
         // declare props here, so we can calc class size (for allocating objects)
         declProps(node);
         declFuncs(node);
+        declGlobals(node);
 
         gen(node);
     }
@@ -34,6 +35,10 @@ namespace X::Codegen {
 
     llvm::Value *Codegen::gen(TopStatementListNode *node) {
         for (auto child: node->getChildren()) {
+            if (llvm::isa<DeclNode>(child)) {
+                continue; // we already declared globals
+            }
+
             child->gen(*this);
         }
 
@@ -74,6 +79,7 @@ namespace X::Codegen {
                 return builder.getFalse();
             case Type::TypeID::STRING:
             case Type::TypeID::ARRAY:
+            case Type::TypeID::CLASS:
                 return llvm::ConstantPointerNull::get(builder.getPtrTy());
             default:
                 throw InvalidTypeException();
@@ -92,7 +98,7 @@ namespace X::Codegen {
                 return builder.CreateCall(module.getFunction(Mangler::mangleInternalFunction("createEmptyString")));
             case Type::TypeID::ARRAY: {
                 auto arrType = getArrayForType(type);
-                auto arr = createAlloca(arrType);
+                auto arr = newObj(arrType);
                 auto len = builder.getInt64(0);
                 builder.CreateCall(getInternalConstructor(arrType->getName().str()), {arr, len});
                 return arr;

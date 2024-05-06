@@ -154,6 +154,7 @@ top_statement:
 class_decl { $$ = $1; }
 | interface_decl { $$ = $1; }
 | fn_def { $$ = $1; }
+| var_decl { $$ = $1; }
 | COMMENT { $$ = new CommentNode(std::move($1)); }
 ;
 

@@ -49,6 +49,10 @@ namespace X::GC {
         stackFrames.back().push_back({root, meta});
     }
 
+    void GC::addGlobalRoot(void **root, Metadata *meta) {
+        globalRoots.push_back({root, meta});
+    }
+
     void GC::run() {
         mark();
         sweep();
@@ -60,6 +64,13 @@ namespace X::GC {
         }
 
         std::deque<std::pair<void *, Metadata *>> objects;
+
+        for (auto &root: globalRoots) {
+            if (*root.ptr) {
+                objects.emplace_back(*root.ptr, root.meta);
+            }
+        }
+
         for (auto &roots: stackFrames) {
             for (auto &root: roots) {
                 if (*root.ptr) {

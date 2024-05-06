@@ -100,7 +100,7 @@ namespace X::Codegen {
             builder.CreateRetVoid();
         }
 
-        varScopes.clear();
+        varScopes.pop_back();
 
         that = std::nullopt;
     }

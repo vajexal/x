@@ -102,6 +102,7 @@ namespace X::Codegen {
 
     public:
         static inline const std::string MAIN_FN_NAME = "main";
+        static inline const std::string INIT_FN_NAME = "init";
 
         Codegen(llvm::LLVMContext &context, llvm::IRBuilder<> &builder, llvm::Module &module, CompilerRuntime &compilerRuntime, GC::GC &gc) :
                 context(context), builder(builder), module(module), compilerRuntime(compilerRuntime), arrayRuntime(Runtime::ArrayRuntime(context, module)),
@@ -149,6 +150,7 @@ namespace X::Codegen {
         void declMethods(TopStatementListNode *node);
         void declProps(TopStatementListNode *node);
         void declFuncs(TopStatementListNode *node);
+        void declGlobals(TopStatementListNode *node);
 
         llvm::Type *mapType(const Type &type);
         llvm::Constant *getDefaultValue(const Type &type);
@@ -206,7 +208,8 @@ namespace X::Codegen {
 
         // gc helpers
         llvm::Value *gcAlloc(llvm::Value *size);
-        void gcAddRoot(llvm::Value *root, const Type &type);
+        void gcAddRoot(llvm::AllocaInst *root, const Type &type);
+        void gcAddGlobalRoot(llvm::Value *root, const Type &type);
     };
 
     class CodegenException : public std::exception {

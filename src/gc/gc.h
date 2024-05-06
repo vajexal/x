@@ -31,6 +31,7 @@ namespace X::GC {
 
         // {ptr -> is alive}
         std::unordered_map<void *, bool> allocs;
+        std::vector<Root> globalRoots;
         std::deque<std::vector<Root>> stackFrames;
 
     public:
@@ -49,6 +50,7 @@ namespace X::GC {
         void pushStackFrame();
         void popStackFrame();
         void addRoot(void **root, Metadata *meta);
+        void addGlobalRoot(void **root, Metadata *meta);
 
     private:
         void mark();

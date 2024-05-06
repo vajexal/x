@@ -128,6 +128,25 @@ namespace X {
         return false;
     }
 
+    void TopStatementListNode::add(Node *node) {
+        switch (node->getKind()) {
+            case NodeKind::Class:
+                classes.push_back(llvm::cast<ClassNode>(node));
+                break;
+            case NodeKind::Interface:
+                interfaces.push_back(llvm::cast<InterfaceNode>(node));
+                break;
+            case NodeKind::FnDef:
+                funcs.push_back(llvm::cast<FnDefNode>(node));
+                break;
+            case NodeKind::Decl:
+                globals.push_back(llvm::cast<DeclNode>(node));
+                break;
+        }
+
+        StatementListNode::add(node);
+    }
+
     ClassNode::ClassNode(std::string name, StatementListNode *body, std::string parent, std::vector<std::string> interfaces, bool abstract) :
             Node(NodeKind::Class), name(std::move(name)), body(body), parent(std::move(parent)), interfaces(std::move(interfaces)), abstract(abstract) {
         for (auto child: body->getChildren()) {

@@ -48,9 +48,16 @@ namespace X::Pipes {
         auto runtimeGCPtr = runtimeGCSymbol.toPtr<GC::GC **>();
         *runtimeGCPtr = &gc; // nolint
 
+        // run init
+        auto maybeInitFn = jitter->lookup(Mangler::mangleInternalFunction(Codegen::Codegen::INIT_FN_NAME));
+        if (maybeInitFn) {
+            auto *fn = (*maybeInitFn).toPtr<void()>();
+            fn();
+        }
+
+        // run main
         auto mainFn = throwOnError(jitter->lookup(Codegen::Codegen::MAIN_FN_NAME));
         auto *fn = mainFn.toPtr<void()>();
-
         fn();
 
         // we can't run gc in alloc for now because we don't have intermediate roots ("h(f(), g())"),

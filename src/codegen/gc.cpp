@@ -10,12 +10,22 @@ namespace X::Codegen {
         return builder.CreateCall(allocFn, {gcVar, size});
     }
 
-    void Codegen::gcAddRoot(llvm::Value *root, const Type &type) {
+    void Codegen::gcAddRoot(llvm::AllocaInst *root, const Type &type) {
         auto meta = getGCMetaValue(type);
         if (!meta) {
             return;
         }
 
         builder.CreateIntrinsic(llvm::Intrinsic::gcroot, {}, {root, meta});
+    }
+
+    void Codegen::gcAddGlobalRoot(llvm::Value *root, const Type &type) {
+        auto meta = getGCMetaValue(type);
+        if (!meta) {
+            return;
+        }
+
+        auto gcVar = module.getGlobalVariable(Mangler::mangleInternalSymbol("gc"));
+        builder.CreateCall(module.getFunction(Mangler::mangleInternalFunction("gcAddGlobalRoot")), {gcVar, root, meta});
     }
 }

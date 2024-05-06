@@ -74,6 +74,7 @@ namespace X::Pipes {
         void declClasses(TopStatementListNode *node);
         void declMethods(TopStatementListNode *node);
         void declFuncs(TopStatementListNode *node);
+        void declGlobals(TopStatementListNode *node);
 
         void checkTypeIsValid(const Type &type) const;
         void checkLvalueTypeIsValid(const Type &type) const;

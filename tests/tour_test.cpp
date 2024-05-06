@@ -81,6 +81,8 @@ fn types() void {
     []Foo arr = []Foo{new Foo(), new Foo()}
 }
 
+auto PI = 3.14 // globals
+
 fn flow() void {
     // will print "then"
     if true {

@@ -40,3 +40,20 @@ fn main() void {
         ASSERT_STREQ(e.what(), "var a already exists");
     }
 }
+
+TEST_F(StatementTest, globals) {
+    checkProgram(R"code(
+int x = 1
+
+fn foo() void {
+    x = 2
+}
+
+fn main() void {
+    println(x)
+    foo()
+    println(x)
+}
+)code", R"output(1
+2)output");
+}

@@ -176,28 +176,20 @@ namespace X {
     class FnDefNode;
     class ClassNode;
     class InterfaceNode;
+    class DeclNode;
 
     class TopStatementListNode : public StatementListNode {
         std::vector<ClassNode *> classes;
         std::vector<InterfaceNode *> interfaces;
         std::vector<FnDefNode *> funcs;
+        std::vector<DeclNode *> globals;
 
     public:
-        void add(Node *node) {
-            if (auto classNode = llvm::dyn_cast<ClassNode>(node)) {
-                classes.push_back(classNode);
-            } else if (auto interfaceNode = llvm::dyn_cast<InterfaceNode>(node)) {
-                interfaces.push_back(interfaceNode);
-            } else if (auto fnDefNode = llvm::dyn_cast<FnDefNode>(node)) {
-                funcs.push_back(fnDefNode);
-            }
-
-            StatementListNode::add(node);
-        }
-
+        void add(Node *node);
         const std::vector<ClassNode *> &getClasses() const { return classes; }
         const std::vector<InterfaceNode *> &getInterfaces() const { return interfaces; }
         const std::vector<FnDefNode *> &getFuncs() const { return funcs; }
+        const std::vector<DeclNode *> &getGlobals() const { return globals; }
     };
 
     class UnaryNode : public ExprNode {

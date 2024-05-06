@@ -148,6 +148,54 @@ namespace X::Codegen {
         }
     }
 
+    void Codegen::declGlobals(TopStatementListNode *node) {
+        auto &globals = node->getGlobals();
+
+        if (globals.empty()) {
+            return;
+        }
+
+        // create init function
+        auto initFn = llvm::Function::Create(
+                llvm::FunctionType::get(builder.getVoidTy(), {}, false),
+                llvm::Function::ExternalLinkage,
+                Mangler::mangleInternalFunction(INIT_FN_NAME),
+                module
+        );
+        builder.SetInsertPoint(llvm::BasicBlock::Create(context, "entry", initFn));
+
+        varScopes.emplace_back();
+        auto &vars = varScopes.back();
+
+        for (auto decl: globals) {
+            auto &name = decl->getName();
+            if (vars.contains(name)) {
+                throw VarAlreadyExistsException(name);
+            }
+
+            auto &type = decl->getType();
+            auto llvmType = mapType(type);
+            auto global = llvm::cast<llvm::GlobalVariable>(module.getOrInsertGlobal(name, llvmType));
+
+            auto value = decl->getExpr() ?
+                         decl->getExpr()->gen(*this) :
+                         createDefaultValue(type);
+
+            if (auto constValue = llvm::dyn_cast<llvm::Constant>(value)) {
+                global->setInitializer(constValue);
+            } else {
+                global->setInitializer(getDefaultValue(type));
+                builder.CreateStore(value, global);
+            }
+
+            vars[name] = {global, type};
+
+            gcAddGlobalRoot(global, type);
+        }
+
+        builder.CreateRetVoid();
+    }
+
     void Codegen::checkConstructor(MethodDefNode *node, const std::string &className) const {
         if (node->getIsStatic()) {
             throw CodegenException(fmt::format("{}::{} cannot be static", className, CONSTRUCTOR_FN_NAME));

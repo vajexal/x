@@ -12,6 +12,7 @@ namespace X::Pipes {
         declClasses(node);
         declMethods(node);
         declFuncs(node);
+        declGlobals(node);
 
         infer(node);
 
@@ -123,6 +124,18 @@ namespace X::Pipes {
             auto &retType = fnDef->getReturnType();
             checkTypeIsValid(retType);
             fnTypes[fnDef->getName()] = {args, retType};
+        }
+    }
+
+    void TypeInferrer::declGlobals(TopStatementListNode *node) {
+        auto &globals = node->getGlobals();
+
+        if (!globals.empty()) {
+            varScopes.emplace_back();
+        }
+
+        for (auto decl: globals) {
+            decl->infer(*this);
         }
     }
 
@@ -411,7 +424,7 @@ namespace X::Pipes {
 
         node->getBody()->infer(*this);
 
-        varScopes.clear();
+        varScopes.pop_back();
 
         return Type::voidTy();
     }
@@ -485,7 +498,7 @@ namespace X::Pipes {
 
         node->getFnDef()->getBody()->infer(*this);
 
-        varScopes.clear();
+        varScopes.pop_back();
 
         that.reset();
 
