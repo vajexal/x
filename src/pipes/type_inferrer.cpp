@@ -60,10 +60,14 @@ namespace X::Pipes {
                 classProps[name] = classProps[klass->getParent()];
             }
 
+            auto &props = classProps[name];
+
             for (auto prop: klass->getProps()) {
-                auto &type = prop->getType();
-                checkLvalueTypeIsValid(type);
-                classProps[name][prop->getName()] = {type, prop->getIsStatic()};
+                auto decl = prop->getDecl();
+
+                checkDecl(decl);
+
+                props[decl->getName()] = {decl->getType(), prop->getIsStatic()};
             }
         }
     }
@@ -261,35 +265,9 @@ namespace X::Pipes {
     }
 
     Type TypeInferrer::infer(DeclNode *node) {
-        auto &type = node->getType();
+        checkDecl(node);
 
-        if (type.is(Type::TypeID::AUTO)) {
-            // infer expr type and change decl type accordingly
-            if (!node->getExpr()) {
-                throw InvalidTypeException();
-            }
-
-            auto exprType = node->getExpr()->infer(*this);
-
-            checkLvalueTypeIsValid(exprType);
-
-            node->setType(exprType);
-            varScopes.back()[node->getName()] = exprType;
-
-            return Type::voidTy();
-        }
-
-        checkLvalueTypeIsValid(type);
-
-        if (node->getExpr()) {
-            auto exprType = node->getExpr()->infer(*this);
-
-            if (!canCastTo(exprType, type)) {
-                throw InvalidTypeException();
-            }
-        }
-
-        varScopes.back()[node->getName()] = type;
+        varScopes.back()[node->getName()] = node->getType();
 
         return Type::voidTy();
     }
@@ -672,6 +650,35 @@ namespace X::Pipes {
         }
 
         checkTypeIsValid(type);
+    }
+
+    void TypeInferrer::checkDecl(DeclNode *node) {
+        auto &type = node->getType();
+
+        if (type.is(Type::TypeID::AUTO)) {
+            // infer expr type and change decl type accordingly
+            if (!node->getExpr()) {
+                throw InvalidTypeException();
+            }
+
+            auto exprType = node->getExpr()->infer(*this);
+
+            checkLvalueTypeIsValid(exprType);
+
+            node->setType(exprType);
+
+            return;
+        }
+
+        checkLvalueTypeIsValid(type);
+
+        if (node->getExpr()) {
+            auto exprType = node->getExpr()->infer(*this);
+
+            if (!canCastTo(exprType, type)) {
+                throw InvalidTypeException();
+            }
+        }
     }
 
     void TypeInferrer::checkFnCall(const FnType &fnType, const ExprList &args) {

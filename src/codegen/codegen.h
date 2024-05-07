@@ -70,6 +70,7 @@ namespace X::Codegen {
         bool isAbstract = false;
         llvm::StructType *vtableType = nullptr;
         GC::Metadata *meta;
+        bool needInit = false;
     };
 
     struct InterfaceDecl {
@@ -151,6 +152,10 @@ namespace X::Codegen {
         void declProps(TopStatementListNode *node);
         void declFuncs(TopStatementListNode *node);
         void declGlobals(TopStatementListNode *node);
+
+        void genGlobal(DeclNode *node);
+        void genClassInit(ClassNode *node, const ClassDecl &classDecl);
+        void genStaticPropInit(PropDeclNode *prop, ClassNode *klass);
 
         llvm::Type *mapType(const Type &type);
         llvm::Constant *getDefaultValue(const Type &type);

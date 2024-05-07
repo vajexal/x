@@ -16,7 +16,7 @@ namespace X {
 
         (Pipeline{})
                 .pipe(Pipes::ParseCode(code))
-//                .pipe(new Pipes::PrintAst())
+//                .pipe(Pipes::PrintAst())
                 .pipe(Pipes::CheckInterfaces(compilerRuntime))
                 .pipe(Pipes::CheckAbstractClasses())
                 .pipe(Pipes::CheckVirtualMethods(compilerRuntime))

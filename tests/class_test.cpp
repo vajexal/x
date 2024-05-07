@@ -583,3 +583,53 @@ class Bar {
 }
 )code", "a");
 }
+
+TEST_F(ClassTest, staticWithInitializer) {
+    checkProgram(R"code(
+class Foo {
+    public static int a = 1
+}
+
+class Bar {
+    public static auto b = Foo::a + 2
+}
+
+fn main() void {
+    println(Bar::b)
+}
+)code", "3");
+}
+
+TEST_F(ClassTest, propWithInitializer) {
+    checkProgram(R"code(
+class Foo {
+    public int a = 1
+}
+
+class Bar extends Foo {
+    public int b = 2
+}
+
+fn main() void {
+    auto bar = new Bar()
+
+    println(bar.a + bar.b)
+}
+)code", "3");
+}
+
+TEST_F(ClassTest, parentWithInit) {
+    checkProgram(R"code(
+class Foo {
+    public int a = 1
+}
+
+class Bar extends Foo {}
+
+fn main() void {
+    auto bar = new Bar()
+
+    println(bar.a)
+}
+)code", "1");
+}

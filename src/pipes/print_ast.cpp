@@ -209,7 +209,7 @@ namespace X::Pipes {
             std::cout << "static ";
         }
 
-        std::cout << node->getType() << ' ' << node->getName() << std::endl;
+        node->getDecl()->print(*this, level);
     }
 
     void PrintAst::printNode(MethodDefNode *node, int level) {

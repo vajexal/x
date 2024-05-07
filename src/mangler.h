@@ -16,7 +16,11 @@ namespace X {
         }
 
         static std::string mangleMethod(const std::string &mangledClassName, const std::string &methodName) {
-            return mangledClassName + "_" + methodName;
+            return mangledClassName + '_' + methodName;
+        }
+
+        static std::string mangleHiddenMethod(const std::string &mangledClassName, const std::string &methodName) {
+            return mangledClassName + '.' + methodName;
         }
 
         static std::string mangleInternalMethod(const std::string &mangledClassName, const std::string &methodName) {
@@ -24,7 +28,7 @@ namespace X {
         }
 
         static std::string mangleStaticProp(const std::string &mangledClassName, const std::string &propName) {
-            return mangledClassName + "_" + propName;
+            return mangledClassName + '_' + propName;
         }
 
         static std::string mangleInternalFunction(const std::string &fnName) {

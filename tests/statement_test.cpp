@@ -57,3 +57,15 @@ fn main() void {
 )code", R"output(1
 2)output");
 }
+
+TEST_F(StatementTest, globals2) {
+    checkProgram(R"code(
+int foo = 1
+float bar = 2
+auto fooBar = foo + bar
+
+fn main() void {
+    println(fooBar)
+}
+)code", "3");
+}

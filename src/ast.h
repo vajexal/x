@@ -614,21 +614,19 @@ namespace X {
     };
 
     class PropDeclNode : public Node {
-        Type type;
-        std::string name;
+        DeclNode *decl;
         AccessModifier accessModifier;
         bool isStatic;
 
     public:
-        PropDeclNode(Type type, std::string name, AccessModifier accessModifier = AccessModifier::PUBLIC, bool isStatic = false) :
-                Node(NodeKind::PropDecl), type(std::move(type)), name(std::move(name)), accessModifier(accessModifier), isStatic(isStatic) {}
+        PropDeclNode(DeclNode *decl, AccessModifier accessModifier = AccessModifier::PUBLIC, bool isStatic = false) :
+                Node(NodeKind::PropDecl), decl(decl), accessModifier(accessModifier), isStatic(isStatic) {}
 
         void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
         Type infer(Pipes::TypeInferrer &typeInferrer) override;
 
-        const Type &getType() const { return type; }
-        const std::string &getName() const { return name; }
+        DeclNode *getDecl() const { return decl; }
         AccessModifier getAccessModifier() const { return accessModifier; }
         bool getIsStatic() const { return isStatic; }
 

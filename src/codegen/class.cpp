@@ -88,6 +88,13 @@ namespace X::Codegen {
 
         auto obj = newObj(classDecl.llvmType);
 
+        initVtable(obj, classDecl);
+
+        auto initFnName = Mangler::mangleHiddenMethod(Mangler::mangleClass(classDecl.name), INIT_FN_NAME);
+        if (auto initFn = module.getFunction(initFnName)) {
+            builder.CreateCall(initFn, {obj});
+        }
+
         try {
             callMethod(obj, classDecl.type, CONSTRUCTOR_FN_NAME, node->getArgs());
         } catch (const MethodNotFoundException &e) {
@@ -95,8 +102,6 @@ namespace X::Codegen {
                 throw CodegenException("constructor args mismatch");
             }
         }
-
-        initVtable(obj, classDecl);
 
         return obj;
     }
@@ -399,9 +404,7 @@ namespace X::Codegen {
         return builder.CreateCall(callee, llvmArgs);
     }
 
-    std::tuple<llvm::FunctionCallee, FnType *> Codegen::findMethod(
-            llvm::Value *obj, const Type &objType, const std::string &methodName
-    ) {
+    std::tuple<llvm::FunctionCallee, FnType *> Codegen::findMethod(llvm::Value *obj, const Type &objType, const std::string &methodName) {
         if (objType.isOneOf(Type::TypeID::STRING, Type::TypeID::ARRAY)) {
             const auto &name = Mangler::mangleInternalMethod(getClassName(objType), methodName);
             auto fn = module.getFunction(name);

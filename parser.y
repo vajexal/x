@@ -380,7 +380,7 @@ COMMENT { $$ = new CommentNode(std::move($1)); }
 ;
 
 prop_decl:
-access_modifier optional_static type IDENTIFIER { $$ = new PropDeclNode(std::move($3), std::move($4), $1, $2); }
+access_modifier optional_static var_decl { $$ = new PropDeclNode($3, $1, $2); }
 ;
 
 method_def:
