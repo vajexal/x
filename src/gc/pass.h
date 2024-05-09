@@ -2,8 +2,6 @@
 
 #include "llvm/IR/PassManager.h"
 
-#include "mangler.h"
-
 namespace X::GC {
     class XGCLowering : public llvm::PassInfoMixin<XGCLowering> {
     public:

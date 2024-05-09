@@ -7,6 +7,8 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
+#include "mangler.h"
+
 namespace X::GC {
     llvm::PreservedAnalyses XGCLowering::run(llvm::Function &F, llvm::FunctionAnalysisManager &FAM) {
         auto M = F.getParent();

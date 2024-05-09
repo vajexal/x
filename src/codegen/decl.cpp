@@ -166,7 +166,8 @@ namespace X::Codegen {
                 Mangler::mangleInternalFunction(INIT_FN_NAME),
                 module
         );
-        builder.SetInsertPoint(llvm::BasicBlock::Create(context, "entry", initFn));
+        auto bb = llvm::BasicBlock::Create(context, "entry", initFn);
+        builder.SetInsertPoint(bb);
 
         varScopes.emplace_back();
         auto &vars = varScopes.back();
@@ -183,6 +184,12 @@ namespace X::Codegen {
                     genStaticPropInit(prop, klass);
                 }
             }
+        }
+
+        if (bb->empty()) {
+            initFn->eraseFromParent();
+
+            return;
         }
 
         builder.CreateRetVoid();
