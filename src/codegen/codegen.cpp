@@ -95,7 +95,7 @@ namespace X::Codegen {
             case Type::TypeID::BOOL:
                 return builder.getFalse();
             case Type::TypeID::STRING:
-                return builder.CreateCall(module.getFunction(Mangler::mangleInternalFunction("createEmptyString")));
+                return builder.CreateCall(module.getFunction(mangler->mangleInternalFunction("createEmptyString")));
             case Type::TypeID::ARRAY: {
                 auto arrType = getArrayForType(type);
                 auto arr = newObj(arrType);
@@ -179,14 +179,14 @@ namespace X::Codegen {
             case Type::TypeID::BOOL:
                 return value;
             case Type::TypeID::STRING: {
-                const auto &stringIsEmptyFnName = Mangler::mangleInternalMethod(Runtime::String::CLASS_NAME, "isEmpty");
+                const auto &stringIsEmptyFnName = mangler->mangleInternalMethod(Runtime::String::CLASS_NAME, "isEmpty");
                 auto stringIsEmptyFn = module.getFunction(stringIsEmptyFnName);
                 auto val = builder.CreateCall(stringIsEmptyFn, {value});
                 return negate(val);
             }
             case Type::TypeID::ARRAY: {
                 const auto &arrayClassName = Runtime::ArrayRuntime::getClassName(type);
-                const auto &arrayIsEmptyFnName = Mangler::mangleInternalMethod(arrayClassName, "isEmpty");
+                const auto &arrayIsEmptyFnName = mangler->mangleInternalMethod(arrayClassName, "isEmpty");
                 auto arrayIsEmptyFn = module.getFunction(arrayIsEmptyFnName);
                 auto val = builder.CreateCall(arrayIsEmptyFn, {value});
                 return negate(val);
@@ -200,11 +200,11 @@ namespace X::Codegen {
         auto &currentClassDecl = getClassDecl(instanceType.getClassName());
         auto expectedInterfaceDecl = findInterfaceDecl(type.getClassName());
         if (expectedInterfaceDecl) {
-            return compilerRuntime.implementedInterfaces[currentClassDecl.name].contains(expectedInterfaceDecl->name);
+            return compilerRuntime->implementedInterfaces[currentClassDecl.name].contains(expectedInterfaceDecl->name);
         }
 
         auto &expectedClassDecl = getClassDecl(type.getClassName());
-        return compilerRuntime.extendedClasses[currentClassDecl.name].contains(expectedClassDecl.name);
+        return compilerRuntime->extendedClasses[currentClassDecl.name].contains(expectedClassDecl.name);
     }
 
     llvm::Value *Codegen::castTo(llvm::Value *value, const Type &type, const Type &expectedType) {
@@ -244,7 +244,7 @@ namespace X::Codegen {
     }
 
     llvm::Value *Codegen::compareStrings(llvm::Value *first, llvm::Value *second) const {
-        auto compareStringsFn = module.getFunction(Mangler::mangleInternalFunction("compareStrings"));
+        auto compareStringsFn = module.getFunction(mangler->mangleInternalFunction("compareStrings"));
         return builder.CreateCall(compareStringsFn, {first, second});
     }
 
@@ -267,14 +267,14 @@ namespace X::Codegen {
         auto arrayType = llvm::StructType::getTypeByName(context, arrayClassName);
         if (!arrayType) {
             // gen array subtype
-            return arrayRuntime.add(arrType, mapType(subtype));
+            return arrayRuntime->add(arrType, mapType(subtype));
         }
         return arrayType;
     }
 
     void Codegen::fillArray(llvm::Value *arr, const Type &type, const std::vector<llvm::Value *> &values) {
         const auto &arrayClassName = Runtime::ArrayRuntime::getClassName(type);
-        auto arrSetFn = module.getFunction(Mangler::mangleInternalMethod(arrayClassName, "set[]"));
+        auto arrSetFn = module.getFunction(mangler->mangleInternalMethod(arrayClassName, "set[]"));
         if (!arrSetFn) {
             throw InvalidArrayAccessException();
         }

@@ -25,8 +25,8 @@ namespace X::Pipes {
         auto &parent = node->getParent();
 
         // cache extended classes
-        auto &extendedClasses = compilerRuntime.extendedClasses[name];
-        auto &parentExtendedClasses = compilerRuntime.extendedClasses[parent];
+        auto &extendedClasses = compilerRuntime->extendedClasses[name];
+        auto &parentExtendedClasses = compilerRuntime->extendedClasses[parent];
         extendedClasses.insert(parentExtendedClasses.cbegin(), parentExtendedClasses.cend());
         extendedClasses.insert(parent);
 
@@ -48,7 +48,7 @@ namespace X::Pipes {
                                                                    name, methodName, currentClass->getName(), methodName));
                 }
 
-                compilerRuntime.virtualMethods[currentClass->getName()].insert(methodName);
+                compilerRuntime->virtualMethods[currentClass->getName()].insert(methodName);
             }
 
             if (!currentClass->hasParent()) {

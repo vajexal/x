@@ -142,6 +142,8 @@ namespace X {
             case NodeKind::Decl:
                 globals.push_back(llvm::cast<DeclNode>(node));
                 break;
+            default:
+                break;
         }
 
         StatementListNode::add(node);

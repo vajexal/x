@@ -12,7 +12,7 @@
 
 namespace X {
     int Compiler::compile(const std::string &code, const std::string &sourceName) {
-        CompilerRuntime compilerRuntime;
+        auto compilerRuntime = std::make_shared<CompilerRuntime>();
 
         (Pipeline{})
                 .pipe(Pipes::ParseCode(code))

@@ -13,7 +13,7 @@
 
 namespace X::Pipes {
     class TypeInferrer : public Pipe {
-        CompilerRuntime &compilerRuntime;
+        std::shared_ptr<CompilerRuntime> compilerRuntime;
 
         std::deque<std::unordered_map<std::string, Type>> varScopes;
         std::unordered_map<std::string, FnType> fnTypes;
@@ -28,7 +28,7 @@ namespace X::Pipes {
         std::unordered_set<std::string> classes;
 
     public:
-        explicit TypeInferrer(CompilerRuntime &compilerRuntime) : compilerRuntime(compilerRuntime) {}
+        explicit TypeInferrer(std::shared_ptr<CompilerRuntime> compilerRuntime) : compilerRuntime(std::move(compilerRuntime)) {}
 
         TopStatementListNode *handle(TopStatementListNode *node) override;
 

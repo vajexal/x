@@ -51,7 +51,7 @@ namespace X::Runtime {
                 false
         );
         auto fn = llvm::Function::Create(fnType, llvm::Function::ExternalLinkage,
-                                         Mangler::mangleInternalMethod(arrayType->getName().str(), CONSTRUCTOR_FN_NAME), module);
+                                         mangler->mangleInternalMethod(arrayType->getName().str(), CONSTRUCTOR_FN_NAME), module);
 
         auto that = fn->getArg(0);
         auto len = fn->getArg(1);
@@ -100,8 +100,8 @@ namespace X::Runtime {
 
         // alloc
 
-        auto allocFn = module.getFunction(Mangler::mangleInternalFunction("gcAlloc"));
-        auto gcVar = module.getGlobalVariable(Mangler::mangleInternalSymbol("gc"));
+        auto allocFn = module.getFunction(mangler->mangleInternalFunction("gcAlloc"));
+        auto gcVar = module.getGlobalVariable(mangler->mangleInternalSymbol("gc"));
         auto elemTypeSize = getTypeSize(module, elemType);
         auto allocSize = builder.CreateMul(cap, elemTypeSize);
         auto arr = builder.CreateCall(allocFn, {gcVar, allocSize});
@@ -126,7 +126,7 @@ namespace X::Runtime {
                 false
         );
         auto fn = llvm::Function::Create(fnType, llvm::Function::ExternalLinkage,
-                                         Mangler::mangleInternalMethod(arrayType->getName().str(), "get[]"), module);
+                                         mangler->mangleInternalMethod(arrayType->getName().str(), "get[]"), module);
 
         auto that = fn->getArg(0);
         auto index = fn->getArg(1);
@@ -178,7 +178,7 @@ namespace X::Runtime {
                 false
         );
         auto fn = llvm::Function::Create(fnType, llvm::Function::ExternalLinkage,
-                                         Mangler::mangleInternalMethod(arrayType->getName().str(), "set[]"), module);
+                                         mangler->mangleInternalMethod(arrayType->getName().str(), "set[]"), module);
 
         auto that = fn->getArg(0);
         auto index = fn->getArg(1);
@@ -229,7 +229,7 @@ namespace X::Runtime {
     void ArrayRuntime::addLength(llvm::StructType *arrayType) {
         auto fnType = llvm::FunctionType::get(llvm::Type::getInt64Ty(context), {llvm::PointerType::get(context, 0)}, false);
         auto fn = llvm::Function::Create(fnType, llvm::Function::ExternalLinkage,
-                                         Mangler::mangleInternalMethod(arrayType->getName().str(), "length"), module);
+                                         mangler->mangleInternalMethod(arrayType->getName().str(), "length"), module);
 
         auto that = fn->getArg(0);
         that->setName(THIS_KEYWORD);
@@ -246,7 +246,7 @@ namespace X::Runtime {
     void ArrayRuntime::addIsEmpty(llvm::StructType *arrayType) {
         auto fnType = llvm::FunctionType::get(llvm::Type::getInt1Ty(context), {llvm::PointerType::get(context, 0)}, false);
         auto fn = llvm::Function::Create(fnType, llvm::Function::ExternalLinkage,
-                                         Mangler::mangleInternalMethod(arrayType->getName().str(), "isEmpty"), module);
+                                         mangler->mangleInternalMethod(arrayType->getName().str(), "isEmpty"), module);
 
         auto that = fn->getArg(0);
         that->setName(THIS_KEYWORD);
@@ -255,7 +255,7 @@ namespace X::Runtime {
         llvm::IRBuilder<> builder(&fn->getEntryBlock(), fn->getEntryBlock().begin());
         builder.SetInsertPoint(bb);
 
-        auto arrLengthFn = module.getFunction(Mangler::mangleInternalMethod(arrayType->getName().str(), "length"));
+        auto arrLengthFn = module.getFunction(mangler->mangleInternalMethod(arrayType->getName().str(), "length"));
         auto arrLen = builder.CreateCall(arrLengthFn, {that});
         auto isEmpty = builder.CreateICmpEQ(arrLen, builder.getInt64(0));
         builder.CreateRet(isEmpty);
@@ -264,7 +264,7 @@ namespace X::Runtime {
     void ArrayRuntime::addAppend(llvm::StructType *arrayType, llvm::Type *elemType) {
         auto fnType = llvm::FunctionType::get(llvm::Type::getVoidTy(context), {llvm::PointerType::get(context, 0), elemType}, false);
         auto fn = llvm::Function::Create(fnType, llvm::Function::ExternalLinkage,
-                                         Mangler::mangleInternalMethod(arrayType->getName().str(), "append[]"), module);
+                                         mangler->mangleInternalMethod(arrayType->getName().str(), "append[]"), module);
 
         auto that = fn->getArg(0);
         auto val = fn->getArg(1);
@@ -293,8 +293,8 @@ namespace X::Runtime {
         auto newCap = builder.CreateShl(cap, 1);
         builder.CreateStore(newCap, capPtr);
 
-        auto reallocFn = module.getFunction(Mangler::mangleInternalFunction("gcRealloc"));
-        auto gcVar = module.getGlobalVariable(Mangler::mangleInternalSymbol("gc"));
+        auto reallocFn = module.getFunction(mangler->mangleInternalFunction("gcRealloc"));
+        auto gcVar = module.getGlobalVariable(mangler->mangleInternalSymbol("gc"));
         auto elemTypeSize = getTypeSize(module, elemType);
         auto allocSize = builder.CreateMul(newCap, elemTypeSize);
         auto newArr = builder.CreateCall(reallocFn, {gcVar, arr, allocSize});

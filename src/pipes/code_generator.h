@@ -12,11 +12,12 @@
 namespace X::Pipes {
     // todo rename
     class CodeGenerator : public Pipe {
-        CompilerRuntime &compilerRuntime;
+        std::shared_ptr<CompilerRuntime> compilerRuntime;
         std::string sourceName;
 
     public:
-        CodeGenerator(CompilerRuntime &compilerRuntime, std::string sourceName) : compilerRuntime(compilerRuntime), sourceName(std::move(sourceName)) {}
+        CodeGenerator(std::shared_ptr<CompilerRuntime> compilerRuntime, std::string sourceName) : compilerRuntime(std::move(compilerRuntime)),
+                                                                                                  sourceName(std::move(sourceName)) {}
 
         TopStatementListNode *handle(TopStatementListNode *node) override;
 
@@ -28,8 +29,10 @@ namespace X::Pipes {
     };
 
     class OptimizationTransform {
+        std::shared_ptr<Mangler> mangler;
+
     public:
-        OptimizationTransform();
+        OptimizationTransform(std::shared_ptr<Mangler> mangler) : mangler(std::move(mangler)) {}
 
         llvm::Expected<llvm::orc::ThreadSafeModule> operator()(llvm::orc::ThreadSafeModule TSM, llvm::orc::MaterializationResponsibility &R);
     };

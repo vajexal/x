@@ -159,7 +159,7 @@ namespace X::Codegen {
         vars[valVarName] = {valVar, valVarType};
 
         // init stop value
-        auto lengthFn = module.getFunction(Mangler::mangleInternalMethod(exprClassName, "length"));
+        auto lengthFn = module.getFunction(mangler->mangleInternalMethod(exprClassName, "length"));
         auto iterStopValue = builder.CreateCall(lengthFn, {expr});
 
         builder.CreateBr(loopCondBB);
@@ -182,7 +182,7 @@ namespace X::Codegen {
         }
 
         // set val
-        auto getFn = module.getFunction(Mangler::mangleInternalMethod(exprClassName, "get[]"));
+        auto getFn = module.getFunction(mangler->mangleInternalMethod(exprClassName, "get[]"));
         auto val = builder.CreateCall(getFn, {expr, iter});
         builder.CreateStore(val, valVar);
 
@@ -230,7 +230,7 @@ namespace X::Codegen {
         builder.SetInsertPoint(invalidStepBB);
 
         // print error and exit
-        auto dieFn = module.getFunction(Mangler::mangleInternalFunction("die"));
+        auto dieFn = module.getFunction(mangler->mangleInternalFunction("die"));
         auto message = builder.CreateGlobalStringPtr("step must not be zero");
         builder.CreateCall(dieFn, {message});
         builder.CreateUnreachable();
@@ -298,7 +298,7 @@ namespace X::Codegen {
         }
 
         auto &type = node->getVal()->getType();
-        auto printFn = module.getFunction(Mangler::mangleInternalFunction("print"));
+        auto printFn = module.getFunction(mangler->mangleInternalFunction("print"));
 
         if (type.is(Type::TypeID::ARRAY)) {
             builder.CreateCall(printFn, {
@@ -313,7 +313,7 @@ namespace X::Codegen {
             });
         }
 
-        builder.CreateCall(module.getFunction(Mangler::mangleInternalFunction("printNewline")));
+        builder.CreateCall(module.getFunction(mangler->mangleInternalFunction("printNewline")));
 
         return nullptr;
     }
@@ -329,7 +329,7 @@ namespace X::Codegen {
         auto expr = node->getExpr()->gen(*this);
         expr = castTo(expr, node->getExpr()->getType(), *node->getArr()->getType().getSubtype());
 
-        auto arrSetFn = module.getFunction(Mangler::mangleInternalMethod(Runtime::ArrayRuntime::getClassName(node->getArr()->getType()), "set[]"));
+        auto arrSetFn = module.getFunction(mangler->mangleInternalMethod(Runtime::ArrayRuntime::getClassName(node->getArr()->getType()), "set[]"));
         if (!arrSetFn) {
             throw InvalidArrayAccessException();
         }
@@ -344,7 +344,7 @@ namespace X::Codegen {
         auto expr = node->getExpr()->gen(*this);
         expr = castTo(expr, node->getExpr()->getType(), *node->getArr()->getType().getSubtype());
 
-        auto arrAppendFn = module.getFunction(Mangler::mangleInternalMethod(Runtime::ArrayRuntime::getClassName(node->getArr()->getType()), "append[]"));
+        auto arrAppendFn = module.getFunction(mangler->mangleInternalMethod(Runtime::ArrayRuntime::getClassName(node->getArr()->getType()), "append[]"));
         if (!arrAppendFn) {
             throw InvalidArrayAccessException();
         }

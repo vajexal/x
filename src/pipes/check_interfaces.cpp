@@ -20,26 +20,26 @@ namespace X::Pipes {
     void CheckInterfaces::addInterface(InterfaceNode *node) {
         auto &name = node->getName();
 
-        if (compilerRuntime.interfaceMethods.contains(name)) {
+        if (compilerRuntime->interfaceMethods.contains(name)) {
             throw CheckInterfacesException(fmt::format("interface {} already declared", name));
         }
 
         // remember interface name, so we will handle 2 empty interfaces with the same name (throw interface already declared exception)
-        compilerRuntime.interfaceMethods[name] = {};
+        compilerRuntime->interfaceMethods[name] = {};
 
         if (node->hasParents()) {
             for (auto &parent: node->getParents()) {
-                if (!compilerRuntime.interfaceMethods.contains(parent)) {
+                if (!compilerRuntime->interfaceMethods.contains(parent)) {
                     throw CheckInterfacesException(fmt::format("interface {} not found", parent));
                 }
 
-                for (auto &[methodName, methodDecl]: compilerRuntime.interfaceMethods[parent]) {
+                for (auto &[methodName, methodDecl]: compilerRuntime->interfaceMethods[parent]) {
                     addMethodToInterface(name, methodDecl);
                 }
 
                 // cache extended interfaces
-                auto &extendedInterfaces = compilerRuntime.implementedInterfaces[name];
-                auto &parentExtendedInterfaces = compilerRuntime.implementedInterfaces[parent];
+                auto &extendedInterfaces = compilerRuntime->implementedInterfaces[name];
+                auto &parentExtendedInterfaces = compilerRuntime->implementedInterfaces[parent];
                 extendedInterfaces.insert(parentExtendedInterfaces.cbegin(), parentExtendedInterfaces.cend());
                 extendedInterfaces.insert(parent);
             }
@@ -57,7 +57,7 @@ namespace X::Pipes {
             throw CheckInterfacesException(fmt::format("interface method {}::{} must be public", interfaceName, methodName));
         }
 
-        auto &methods = compilerRuntime.interfaceMethods[interfaceName];
+        auto &methods = compilerRuntime->interfaceMethods[interfaceName];
         auto [it, inserted] = methods.insert({methodName, node});
         if (!inserted) {
             if (*it->second != *node) {
@@ -70,14 +70,14 @@ namespace X::Pipes {
         auto &name = node->getName();
         classMethods[name] = node->getMethods();
         auto &klassMethods = classMethods[name];
-        auto &classImplementedInterfaces = compilerRuntime.implementedInterfaces[name];
+        auto &classImplementedInterfaces = compilerRuntime->implementedInterfaces[name];
         std::unordered_set<std::string> interfacesToImplement(node->getInterfaces().cbegin(), node->getInterfaces().cend());
 
         if (node->hasParent()) {
             auto &parentName = node->getParent();
             auto &parentClassMethods = classMethods[parentName];
             klassMethods.insert(parentClassMethods.cbegin(), parentClassMethods.cend());
-            auto &parentImplementedInterfaces = compilerRuntime.implementedInterfaces[parentName];
+            auto &parentImplementedInterfaces = compilerRuntime->implementedInterfaces[parentName];
             classImplementedInterfaces.insert(parentImplementedInterfaces.begin(), parentImplementedInterfaces.end());
 
             if (abstractClasses.contains(parentName)) {
@@ -90,8 +90,8 @@ namespace X::Pipes {
         }
 
         for (auto &interfaceName: interfacesToImplement) {
-            auto methods = compilerRuntime.interfaceMethods.find(interfaceName);
-            if (methods == compilerRuntime.interfaceMethods.end()) {
+            auto methods = compilerRuntime->interfaceMethods.find(interfaceName);
+            if (methods == compilerRuntime->interfaceMethods.end()) {
                 throw CheckInterfacesException(fmt::format("interface {} not found", interfaceName));
             }
 
@@ -112,7 +112,7 @@ namespace X::Pipes {
             }
 
             // cache implemented interfaces
-            auto &interfaceExtendedInterfaces = compilerRuntime.implementedInterfaces[interfaceName];
+            auto &interfaceExtendedInterfaces = compilerRuntime->implementedInterfaces[interfaceName];
             classImplementedInterfaces.insert(interfaceExtendedInterfaces.cbegin(), interfaceExtendedInterfaces.cend());
             classImplementedInterfaces.insert(interfaceName);
         }

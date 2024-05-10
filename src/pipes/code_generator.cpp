@@ -17,9 +17,11 @@ namespace X::Pipes {
         auto context = std::make_unique<llvm::LLVMContext>();
         llvm::IRBuilder<> builder(*context);
         auto module = std::make_unique<llvm::Module>(sourceName, *context);
-        GC::GC gc;
-        Codegen::Codegen codegen(*context, builder, *module, compilerRuntime, gc);
-        Runtime::Runtime runtime;
+        auto gc = std::make_shared<GC::GC>();
+        auto mangler = std::make_shared<Mangler>();
+        auto arrayRuntime = std::make_unique<Runtime::ArrayRuntime>(*context, *module, mangler);
+        Codegen::Codegen codegen(*context, builder, *module, compilerRuntime, std::move(arrayRuntime), gc, mangler);
+        Runtime::Runtime runtime(mangler);
 
         llvm::InitializeNativeTarget();
         llvm::InitializeNativeTargetAsmPrinter();
@@ -37,19 +39,19 @@ namespace X::Pipes {
         }
 
         auto jitter = throwOnError(llvm::orc::LLJITBuilder().create());
-        jitter->getIRTransformLayer().setTransform(OptimizationTransform());
+        jitter->getIRTransformLayer().setTransform(OptimizationTransform(mangler));
         throwOnError(jitter->addIRModule(llvm::orc::ThreadSafeModule(std::move(module), std::move(context))));
 
         llvm::orc::MangleAndInterner llvmMangle(jitter->getExecutionSession(), jitter->getDataLayout());
         runtime.addDefinitions(jitter->getMainJITDylib(), llvmMangle);
 
         // link gc
-        auto runtimeGCSymbol = throwOnError(jitter->lookup(Mangler::mangleInternalSymbol("gc")));
+        auto runtimeGCSymbol = throwOnError(jitter->lookup(mangler->mangleInternalSymbol("gc")));
         auto runtimeGCPtr = runtimeGCSymbol.toPtr<GC::GC **>();
-        *runtimeGCPtr = &gc; // nolint
+        *runtimeGCPtr = &(*gc); // nolint
 
         // run init
-        auto maybeInitFn = jitter->lookup(Mangler::mangleInternalFunction(Codegen::Codegen::INIT_FN_NAME));
+        auto maybeInitFn = jitter->lookup(mangler->mangleInternalFunction(Codegen::Codegen::INIT_FN_NAME));
         if (maybeInitFn) {
             auto *fn = (*maybeInitFn).toPtr<void()>();
             fn();
@@ -61,7 +63,7 @@ namespace X::Pipes {
         fn();
 
         // we can't run gc in alloc for now because we don't have intermediate roots ("h(f(), g())"),
-        gc.run();
+        gc->run();
 
         return node;
     }
@@ -80,8 +82,6 @@ namespace X::Pipes {
         return std::move(*val);
     }
 
-    OptimizationTransform::OptimizationTransform() {}
-
     llvm::Expected<llvm::orc::ThreadSafeModule> OptimizationTransform::operator()(
             llvm::orc::ThreadSafeModule TSM, llvm::orc::MaterializationResponsibility &R) {
         llvm::LoopAnalysisManager LAM;
@@ -98,7 +98,7 @@ namespace X::Pipes {
         PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
 
         PB.registerPipelineStartEPCallback([&](llvm::ModulePassManager &MPM, llvm::OptimizationLevel Level) {
-            MPM.addPass(llvm::createModuleToFunctionPassAdaptor(GC::XGCLowering()));
+            MPM.addPass(llvm::createModuleToFunctionPassAdaptor(GC::XGCLowering(mangler)));
         });
 
         llvm::ModulePassManager MPM = PB.buildPerModuleDefaultPipeline(llvm::OptimizationLevel::O2);

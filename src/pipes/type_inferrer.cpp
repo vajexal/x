@@ -16,8 +16,8 @@ namespace X::Pipes {
 
         infer(node);
 
-        compilerRuntime.fnTypes = std::move(fnTypes);
-        compilerRuntime.classMethodTypes = std::move(classMethodTypes);
+        compilerRuntime->fnTypes = std::move(fnTypes);
+        compilerRuntime->classMethodTypes = std::move(classMethodTypes);
 
         return node;
     }
@@ -824,8 +824,8 @@ namespace X::Pipes {
     }
 
     bool TypeInferrer::instanceof(const Type &instanceType, const Type &type) const {
-        return compilerRuntime.extendedClasses[instanceType.getClassName()].contains(type.getClassName()) ||
-               compilerRuntime.implementedInterfaces[instanceType.getClassName()].contains(type.getClassName());
+        return compilerRuntime->extendedClasses[instanceType.getClassName()].contains(type.getClassName()) ||
+               compilerRuntime->implementedInterfaces[instanceType.getClassName()].contains(type.getClassName());
     }
 
     bool TypeInferrer::isPrintable(const Type &type) const {

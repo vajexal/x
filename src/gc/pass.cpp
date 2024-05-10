@@ -12,10 +12,10 @@
 namespace X::GC {
     llvm::PreservedAnalyses XGCLowering::run(llvm::Function &F, llvm::FunctionAnalysisManager &FAM) {
         auto M = F.getParent();
-        auto gcPushStackFrameFn = M->getFunction(Mangler::mangleInternalFunction("gcPushStackFrame"));
-        auto gcPopStackFrameFn = M->getFunction(Mangler::mangleInternalFunction("gcPopStackFrame"));
-        auto gcAddRootFn = M->getFunction(Mangler::mangleInternalFunction("gcAddRoot"));
-        auto gcVar = M->getGlobalVariable(Mangler::mangleInternalSymbol("gc"));
+        auto gcPushStackFrameFn = M->getFunction(mangler->mangleInternalFunction("gcPushStackFrame"));
+        auto gcPopStackFrameFn = M->getFunction(mangler->mangleInternalFunction("gcPopStackFrame"));
+        auto gcAddRootFn = M->getFunction(mangler->mangleInternalFunction("gcAddRoot"));
+        auto gcVar = M->getGlobalVariable(mangler->mangleInternalSymbol("gc"));
 
         if (!F.hasGC() || F.getGC() != "x") {
             return llvm::PreservedAnalyses::all();

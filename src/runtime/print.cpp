@@ -1,5 +1,6 @@
 #include "print.h"
 
+#include <cstdarg>
 #include <iostream>
 
 #include "string.h"

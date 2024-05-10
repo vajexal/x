@@ -85,9 +85,10 @@ namespace X::Codegen {
         llvm::LLVMContext &context;
         llvm::IRBuilder<> &builder;
         llvm::Module &module;
-        CompilerRuntime &compilerRuntime;
-        Runtime::ArrayRuntime arrayRuntime;
-        GC::GC &gc;
+        std::shared_ptr<CompilerRuntime> compilerRuntime;
+        std::unique_ptr<Runtime::ArrayRuntime> arrayRuntime;
+        std::shared_ptr<GC::GC> gc;
+        std::shared_ptr<Mangler> mangler;
 
         std::deque<std::unordered_map<std::string, Value>> varScopes;
         std::stack<Loop> loops;
@@ -105,9 +106,14 @@ namespace X::Codegen {
         static inline const std::string MAIN_FN_NAME = "main";
         static inline const std::string INIT_FN_NAME = "init";
 
-        Codegen(llvm::LLVMContext &context, llvm::IRBuilder<> &builder, llvm::Module &module, CompilerRuntime &compilerRuntime, GC::GC &gc) :
-                context(context), builder(builder), module(module), compilerRuntime(compilerRuntime), arrayRuntime(Runtime::ArrayRuntime(context, module)),
-                gc(gc) {}
+        Codegen(llvm::LLVMContext &context,
+                llvm::IRBuilder<> &builder,
+                llvm::Module &module,
+                std::shared_ptr<CompilerRuntime> compilerRuntime,
+                std::unique_ptr<Runtime::ArrayRuntime> arrayRuntime,
+                std::shared_ptr<GC::GC> gc,
+                std::shared_ptr<Mangler> mangler) : context(context), builder(builder), module(module), compilerRuntime(std::move(compilerRuntime)),
+                                                    arrayRuntime(std::move(arrayRuntime)), gc(std::move(gc)), mangler(std::move(mangler)) {}
 
         void genProgram(TopStatementListNode *node);
 

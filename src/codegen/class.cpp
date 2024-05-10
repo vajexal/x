@@ -8,7 +8,7 @@
 namespace X::Codegen {
     llvm::Value *Codegen::gen(ClassNode *node) {
         auto &name = node->getName();
-        const auto &mangledName = Mangler::mangleClass(name);
+        const auto &mangledName = mangler->mangleClass(name);
 
         self = &classes[name];
 
@@ -20,7 +20,7 @@ namespace X::Codegen {
 
             auto fn = method->getFnDef();
             currentFnRetType = method->getFnDef()->getReturnType();
-            const auto &fnName = Mangler::mangleMethod(mangledName, fn->getName());
+            const auto &fnName = mangler->mangleMethod(mangledName, fn->getName());
             genFn(fnName, fn->getArgs(), currentFnRetType, fn->getBody(), method->getIsStatic() ? nullptr : &self->type);
         }
 
@@ -90,7 +90,7 @@ namespace X::Codegen {
 
         initVtable(obj, classDecl);
 
-        auto initFnName = Mangler::mangleHiddenMethod(Mangler::mangleClass(classDecl.name), INIT_FN_NAME);
+        auto initFnName = mangler->mangleHiddenMethod(mangler->mangleClass(classDecl.name), INIT_FN_NAME);
         if (auto initFn = module.getFunction(initFnName)) {
             builder.CreateCall(initFn, {obj});
         }
@@ -206,22 +206,22 @@ namespace X::Codegen {
     GC::Metadata *Codegen::genTypeGCMeta(const Type &type) {
         switch (type.getTypeID()) {
             case Type::TypeID::STRING:
-                return gc.addMeta(GC::NodeType::CLASS, {});
+                return gc->addMeta(GC::NodeType::CLASS, {});
             case Type::TypeID::ARRAY: {
                 GC::PointerList pointerList;
                 auto containedMeta = getTypeGCMeta(*type.getSubtype());
                 if (containedMeta) {
                     pointerList.emplace_back(0, containedMeta);
                 }
-                return gc.addMeta(GC::NodeType::ARRAY, std::move(pointerList));
+                return gc->addMeta(GC::NodeType::ARRAY, std::move(pointerList));
             }
             case Type::TypeID::CLASS: {
                 if (type.getClassName() == Runtime::Range::CLASS_NAME) {
-                    return gc.addMeta(GC::NodeType::CLASS, {});
+                    return gc->addMeta(GC::NodeType::CLASS, {});
                 }
 
                 if (isInterfaceType(type)) {
-                    return gc.addMeta(GC::NodeType::INTERFACE, {});
+                    return gc->addMeta(GC::NodeType::INTERFACE, {});
                 }
 
                 auto &classDecl = getClassDecl(type.getClassName());
@@ -263,9 +263,9 @@ namespace X::Codegen {
     }
 
     llvm::StructType *Codegen::genVtable(ClassNode *classNode, ClassDecl &classDecl) {
-        const auto &classMangledName = Mangler::mangleClass(classNode->getName());
+        const auto &classMangledName = mangler->mangleClass(classNode->getName());
         auto &classMethods = classNode->getMethods();
-        const auto &virtualMethods = compilerRuntime.virtualMethods.at(classNode->getName());
+        const auto &virtualMethods = compilerRuntime->virtualMethods.at(classNode->getName());
         std::vector<llvm::Type *> vtableProps;
         vtableProps.reserve(virtualMethods.size());
         uint64_t vtablePos = 0;
@@ -281,8 +281,8 @@ namespace X::Codegen {
     }
 
     llvm::StructType *Codegen::genVtable(InterfaceNode *node, InterfaceDecl &interfaceDecl) {
-        const auto &interfaceMangledName = Mangler::mangleInterface(node->getName());
-        auto &interfaceMethods = compilerRuntime.interfaceMethods.at(node->getName());
+        const auto &interfaceMangledName = mangler->mangleInterface(node->getName());
+        auto &interfaceMethods = compilerRuntime->interfaceMethods.at(node->getName());
         std::vector<llvm::Type *> vtableProps;
         vtableProps.reserve(interfaceMethods.size());
         uint64_t vtablePos = 0;
@@ -356,7 +356,7 @@ namespace X::Codegen {
     }
 
     llvm::Function *Codegen::getInternalConstructor(const std::string &mangledClassName) const {
-        return module.getFunction(Mangler::mangleInternalMethod(mangledClassName, CONSTRUCTOR_FN_NAME));
+        return module.getFunction(mangler->mangleInternalMethod(mangledClassName, CONSTRUCTOR_FN_NAME));
     }
 
     llvm::Value *Codegen::callMethod(llvm::Value *obj, const Type &objType, const std::string &methodName, const ExprList &args) {
@@ -406,10 +406,10 @@ namespace X::Codegen {
 
     std::tuple<llvm::FunctionCallee, FnType *> Codegen::findMethod(llvm::Value *obj, const Type &objType, const std::string &methodName) {
         if (objType.isOneOf(Type::TypeID::STRING, Type::TypeID::ARRAY)) {
-            const auto &name = Mangler::mangleInternalMethod(getClassName(objType), methodName);
+            const auto &name = mangler->mangleInternalMethod(getClassName(objType), methodName);
             auto fn = module.getFunction(name);
             auto &className = objType.is(Type::TypeID::STRING) ? Runtime::String::CLASS_NAME : Runtime::ArrayRuntime::CLASS_NAME;
-            return {llvm::FunctionCallee(fn->getFunctionType(), fn), &compilerRuntime.classMethodTypes.at(className).at(methodName)};
+            return {llvm::FunctionCallee(fn->getFunctionType(), fn), &compilerRuntime->classMethodTypes.at(className).at(methodName)};
         }
 
         auto interfaceDecl = findInterfaceDecl(objType.getClassName());
@@ -424,7 +424,7 @@ namespace X::Codegen {
                 auto methodType = interfaceDecl->vtableType->getElementType(methodIt->second.vtablePos);
                 auto method = builder.CreateLoad(methodType, methodPtr);
 
-                return {llvm::FunctionCallee(methodIt->second.type, method), &compilerRuntime.classMethodTypes.at(interfaceDecl->name).at(methodName)};
+                return {llvm::FunctionCallee(methodIt->second.type, method), &compilerRuntime->classMethodTypes.at(interfaceDecl->name).at(methodName)};
             }
         }
 
@@ -447,12 +447,12 @@ namespace X::Codegen {
                     auto methodPtr = builder.CreateStructGEP(currentClassDecl->vtableType, vtable, methodIt->second.vtablePos);
                     auto methodType = currentClassDecl->vtableType->getElementType(methodIt->second.vtablePos);
                     auto method = builder.CreateLoad(methodType, methodPtr);
-                    return {llvm::FunctionCallee(methodIt->second.type, method), &compilerRuntime.classMethodTypes.at(currentClassDecl->name).at(methodName)};
+                    return {llvm::FunctionCallee(methodIt->second.type, method), &compilerRuntime->classMethodTypes.at(currentClassDecl->name).at(methodName)};
                 }
 
-                auto fn = module.getFunction(Mangler::mangleMethod(currentClassDecl->llvmType->getName().str(), methodName));
+                auto fn = module.getFunction(mangler->mangleMethod(currentClassDecl->llvmType->getName().str(), methodName));
                 if (fn) {
-                    return {llvm::FunctionCallee(fn->getFunctionType(), fn), &compilerRuntime.classMethodTypes.at(currentClassDecl->name).at(methodName)};
+                    return {llvm::FunctionCallee(fn->getFunctionType(), fn), &compilerRuntime->classMethodTypes.at(currentClassDecl->name).at(methodName)};
                 }
             }
 
@@ -466,7 +466,7 @@ namespace X::Codegen {
         auto currentClassDecl = &classDecl;
         while (currentClassDecl) {
             const auto &className = currentClassDecl->llvmType->getName().str();
-            auto fn = module.getFunction(Mangler::mangleMethod(className, methodName));
+            auto fn = module.getFunction(mangler->mangleMethod(className, methodName));
             if (fn) {
                 return fn;
             }

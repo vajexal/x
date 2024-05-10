@@ -38,7 +38,7 @@ namespace X::Codegen {
             throw CodegenException("called function is not found: " + name);
         }
 
-        const auto &fnType = compilerRuntime.fnTypes.at(name);
+        const auto &fnType = compilerRuntime->fnTypes.at(name);
 
         std::vector<llvm::Value *> llvmArgs;
         llvmArgs.reserve(args.size());

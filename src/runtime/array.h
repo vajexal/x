@@ -15,11 +15,14 @@ namespace X::Runtime {
         llvm::LLVMContext &context;
         llvm::Module &module;
 
+        std::shared_ptr<Mangler> mangler;
+
     public:
         static inline const std::string CLASS_NAME = "Array";
         static inline const int MIN_CAP = 8;
 
-        ArrayRuntime(llvm::LLVMContext &context, llvm::Module &module) : context(context), module(module) {}
+        ArrayRuntime(llvm::LLVMContext &context, llvm::Module &module, std::shared_ptr<Mangler> mangler) :
+                context(context), module(module), mangler(std::move(mangler)) {}
 
         llvm::StructType *add(const Type &type, llvm::Type *llvmType);
 

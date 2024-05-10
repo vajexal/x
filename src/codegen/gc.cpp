@@ -4,8 +4,8 @@
 
 namespace X::Codegen {
     llvm::Value *Codegen::gcAlloc(llvm::Value *size) {
-        auto allocFn = module.getFunction(Mangler::mangleInternalFunction("gcAlloc"));
-        auto gcVar = module.getGlobalVariable(Mangler::mangleInternalSymbol("gc"));
+        auto allocFn = module.getFunction(mangler->mangleInternalFunction("gcAlloc"));
+        auto gcVar = module.getGlobalVariable(mangler->mangleInternalSymbol("gc"));
 
         return builder.CreateCall(allocFn, {gcVar, size});
     }
@@ -25,7 +25,7 @@ namespace X::Codegen {
             return;
         }
 
-        auto gcVar = module.getGlobalVariable(Mangler::mangleInternalSymbol("gc"));
-        builder.CreateCall(module.getFunction(Mangler::mangleInternalFunction("gcAddGlobalRoot")), {gcVar, root, meta});
+        auto gcVar = module.getGlobalVariable(mangler->mangleInternalSymbol("gc"));
+        builder.CreateCall(module.getFunction(mangler->mangleInternalFunction("gcAddGlobalRoot")), {gcVar, root, meta});
     }
 }

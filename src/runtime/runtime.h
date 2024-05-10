@@ -15,7 +15,11 @@
 
 namespace X::Runtime {
     class Runtime {
+        std::shared_ptr<Mangler> mangler;
+
     public:
+        Runtime(std::shared_ptr<Mangler> mangler) : mangler(std::move(mangler)) {}
+
         void addDeclarations(llvm::LLVMContext &context, llvm::IRBuilder<> &builder, llvm::Module &module);
         void addDefinitions(llvm::orc::JITDylib &JD, llvm::orc::MangleAndInterner &llvmMangler);
     };

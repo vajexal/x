@@ -101,7 +101,7 @@ namespace X::Codegen {
         if (lhsType.is(Type::TypeID::STRING) && rhsType.is(Type::TypeID::STRING)) {
             switch (node->getOpType()) {
                 case OpType::PLUS: {
-                    const auto &stringConcatFnName = Mangler::mangleInternalMethod(Runtime::String::CLASS_NAME, "concat");
+                    const auto &stringConcatFnName = mangler->mangleInternalMethod(Runtime::String::CLASS_NAME, "concat");
                     auto stringConcatFn = module.getFunction(stringConcatFnName);
                     return builder.CreateCall(stringConcatFn, {lhs, rhs});
                 }
@@ -196,7 +196,7 @@ namespace X::Codegen {
         auto arr = node->getArr()->gen(*this);
         auto idx = node->getIdx()->gen(*this);
 
-        auto arrGetFn = module.getFunction(Mangler::mangleInternalMethod(Runtime::ArrayRuntime::getClassName(node->getArr()->getType()), "get[]"));
+        auto arrGetFn = module.getFunction(mangler->mangleInternalMethod(Runtime::ArrayRuntime::getClassName(node->getArr()->getType()), "get[]"));
         if (!arrGetFn) {
             throw InvalidArrayAccessException();
         }

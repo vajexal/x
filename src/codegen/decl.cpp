@@ -7,7 +7,7 @@ namespace X::Codegen {
         for (auto interfaceNode: node->getInterfaces()) {
             auto &name = interfaceNode->getName();
             addSymbol(name);
-            const auto &mangledName = Mangler::mangleInterface(name);
+            const auto &mangledName = mangler->mangleInterface(name);
 
             auto interface = llvm::StructType::create(context, mangledName);
 
@@ -28,7 +28,7 @@ namespace X::Codegen {
 
             addSymbol(name);
 
-            auto klass = llvm::StructType::create(context, Mangler::mangleClass(name));
+            auto klass = llvm::StructType::create(context, mangler->mangleClass(name));
 
             classes[name] = {
                     .name = name,
@@ -42,7 +42,7 @@ namespace X::Codegen {
     void Codegen::declProps(TopStatementListNode *node) {
         for (auto klassNode: node->getClasses()) {
             auto &name = klassNode->getName();
-            const auto &mangledName = Mangler::mangleClass(name);
+            const auto &mangledName = mangler->mangleClass(name);
             auto &classDecl = classes[name];
             auto klass = classDecl.llvmType;
             GC::PointerList pointerList;
@@ -60,8 +60,8 @@ namespace X::Codegen {
                 classDecl.needInit = parentClassDecl.needInit;
             }
 
-            auto it = compilerRuntime.virtualMethods.find(name);
-            if (it != compilerRuntime.virtualMethods.cend() && !it->second.empty()) {
+            auto it = compilerRuntime->virtualMethods.find(name);
+            if (it != compilerRuntime->virtualMethods.cend() && !it->second.empty()) {
                 auto vtableType = genVtable(klassNode, classDecl);
                 props.push_back(builder.getPtrTy());
                 propPos++;
@@ -79,7 +79,7 @@ namespace X::Codegen {
                     if (classDecl.staticProps.contains(propName)) {
                         throw PropAlreadyDeclaredException(name, propName);
                     }
-                    const auto &mangledPropName = Mangler::mangleStaticProp(mangledName, propName);
+                    const auto &mangledPropName = mangler->mangleStaticProp(mangledName, propName);
                     auto global = llvm::cast<llvm::GlobalVariable>(module.getOrInsertGlobal(mangledPropName, llvmType));
                     classDecl.staticProps[propName] = {global, type, prop->getAccessModifier()};
                 } else {
@@ -107,7 +107,7 @@ namespace X::Codegen {
                 }
             }
 
-            classDecl.meta = gc.addMeta(GC::NodeType::CLASS, std::move(pointerList));
+            classDecl.meta = gc->addMeta(GC::NodeType::CLASS, std::move(pointerList));
 
             if (classDecl.needInit) {
                 genClassInit(klassNode, classDecl);
@@ -117,7 +117,7 @@ namespace X::Codegen {
 
     void Codegen::declMethods(TopStatementListNode *node) {
         for (auto klass: node->getClasses()) {
-            const auto &mangledName = Mangler::mangleClass(klass->getName());
+            const auto &mangledName = mangler->mangleClass(klass->getName());
             auto classDecl = &classes[klass->getName()];
 
             // default constructor
@@ -133,7 +133,7 @@ namespace X::Codegen {
                 }
 
                 auto fnDef = methodDef->getFnDef();
-                const auto &fnName = Mangler::mangleMethod(mangledName, fnDef->getName());
+                const auto &fnName = mangler->mangleMethod(mangledName, fnDef->getName());
                 auto fnType = genFnType(fnDef->getArgs(), fnDef->getReturnType(), methodDef->getIsStatic() ? nullptr : &classDecl->type);
                 llvm::Function::Create(fnType, llvm::Function::ExternalLinkage, fnName, module);
                 classDecl->methods[methodName] = {methodDef->getAccessModifier(), fnType, false};
@@ -163,7 +163,7 @@ namespace X::Codegen {
         auto initFn = llvm::Function::Create(
                 llvm::FunctionType::get(builder.getVoidTy(), {}, false),
                 llvm::Function::ExternalLinkage,
-                Mangler::mangleInternalFunction(INIT_FN_NAME),
+                mangler->mangleInternalFunction(INIT_FN_NAME),
                 module
         );
         auto bb = llvm::BasicBlock::Create(context, "entry", initFn);
@@ -227,8 +227,8 @@ namespace X::Codegen {
         auto decl = prop->getDecl();
         auto &type = decl->getType();
         auto llvmType = mapType(decl->getType());
-        auto mangledClassName = Mangler::mangleClass(klass->getName());
-        auto mangledPropName = Mangler::mangleStaticProp(mangledClassName, decl->getName());
+        auto mangledClassName = mangler->mangleClass(klass->getName());
+        auto mangledPropName = mangler->mangleStaticProp(mangledClassName, decl->getName());
         auto global = llvm::cast<llvm::GlobalVariable>(module.getOrInsertGlobal(mangledPropName, llvmType));
 
         auto value = decl->getExpr() ?
@@ -246,13 +246,13 @@ namespace X::Codegen {
     }
 
     void Codegen::genClassInit(ClassNode *node, const ClassDecl &classDecl) {
-        auto mangledName = Mangler::mangleClass(classDecl.name);
+        auto mangledName = mangler->mangleClass(classDecl.name);
 
         // create init function
         auto initFn = llvm::Function::Create(
                 llvm::FunctionType::get(builder.getVoidTy(), {builder.getPtrTy()}, false),
                 llvm::Function::ExternalLinkage,
-                Mangler::mangleHiddenMethod(mangledName, INIT_FN_NAME),
+                mangler->mangleHiddenMethod(mangledName, INIT_FN_NAME),
                 module
         );
         builder.SetInsertPoint(llvm::BasicBlock::Create(context, "entry", initFn));
@@ -260,7 +260,7 @@ namespace X::Codegen {
         auto initFnThis = initFn->getArg(0);
 
         if (classDecl.parent) {
-            if (auto parentInitFn = module.getFunction(Mangler::mangleHiddenMethod(Mangler::mangleClass(classDecl.parent->name), INIT_FN_NAME))) {
+            if (auto parentInitFn = module.getFunction(mangler->mangleHiddenMethod(mangler->mangleClass(classDecl.parent->name), INIT_FN_NAME))) {
                 builder.CreateCall(parentInitFn, {initFnThis});
             }
         }

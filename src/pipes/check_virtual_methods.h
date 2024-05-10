@@ -9,11 +9,12 @@
 
 namespace X::Pipes {
     class CheckVirtualMethods : public Pipe {
-        CompilerRuntime &compilerRuntime;
+        std::shared_ptr<CompilerRuntime> compilerRuntime;
+
         std::unordered_map<std::string, ClassNode *> classes;
 
     public:
-        CheckVirtualMethods(CompilerRuntime &compilerRuntime) : compilerRuntime(compilerRuntime) {}
+        CheckVirtualMethods(std::shared_ptr<CompilerRuntime> compilerRuntime) : compilerRuntime(std::move(compilerRuntime)) {}
 
         TopStatementListNode *handle(TopStatementListNode *node) override;
 

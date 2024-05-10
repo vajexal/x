@@ -8,14 +8,14 @@
 
 namespace X::Pipes {
     class CheckInterfaces : public Pipe {
-        CompilerRuntime &compilerRuntime;
+        std::shared_ptr<CompilerRuntime> compilerRuntime;
 
         // class name -> all methods (including parents) {method name -> method def}
         std::unordered_map<std::string, std::unordered_map<std::string, MethodDefNode *>> classMethods;
 
         std::unordered_set<std::string> abstractClasses;
     public:
-        CheckInterfaces(CompilerRuntime &compilerRuntime) : compilerRuntime(compilerRuntime) {}
+        CheckInterfaces(std::shared_ptr<CompilerRuntime> compilerRuntime) : compilerRuntime(std::move(compilerRuntime)) {}
 
         TopStatementListNode *handle(TopStatementListNode *node) override;
 
