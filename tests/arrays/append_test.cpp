@@ -6,7 +6,7 @@ class ArrayAppendTest : public CompilerTest {
 };
 
 TEST_P(ArrayAppendTest, append) {
-    ASSERT_EQ(Runtime::Array::MIN_CAP, 8);
+    ASSERT_EQ(Runtime::ArrayRuntime::MIN_CAP, 8);
     auto [code, expectedOutput] = GetParam();
     checkCode(code, expectedOutput);
 }

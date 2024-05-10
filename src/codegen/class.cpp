@@ -181,7 +181,7 @@ namespace X::Codegen {
             case Type::TypeID::STRING:
                 return Runtime::String::CLASS_NAME;
             case Type::TypeID::ARRAY:
-                return Runtime::Array::getClassName(type);
+                return Runtime::ArrayRuntime::getClassName(type);
             default:
                 throw InvalidTypeException();
         }
@@ -239,7 +239,7 @@ namespace X::Codegen {
             case Type::TypeID::STRING:
                 return Runtime::String::CLASS_NAME;
             case Type::TypeID::ARRAY:
-                return Runtime::Array::CLASS_NAME;
+                return Runtime::ArrayRuntime::CLASS_NAME;
             default:
                 return "";
         }
@@ -408,7 +408,7 @@ namespace X::Codegen {
         if (objType.isOneOf(Type::TypeID::STRING, Type::TypeID::ARRAY)) {
             const auto &name = Mangler::mangleInternalMethod(getClassName(objType), methodName);
             auto fn = module.getFunction(name);
-            auto &className = objType.is(Type::TypeID::STRING) ? Runtime::String::CLASS_NAME : Runtime::Array::CLASS_NAME;
+            auto &className = objType.is(Type::TypeID::STRING) ? Runtime::String::CLASS_NAME : Runtime::ArrayRuntime::CLASS_NAME;
             return {llvm::FunctionCallee(fn->getFunctionType(), fn), &compilerRuntime.classMethodTypes.at(className).at(methodName)};
         }
 

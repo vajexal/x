@@ -9,19 +9,11 @@
 #include "llvm/ExecutionEngine/JITSymbol.h"
 
 #include "gc/gc.h"
-#include "casts.h"
+#include "print.h"
+#include "mangler.h"
 #include "utils.h"
 
 namespace X::Runtime {
-    void println(String *str) {
-        std::cout << str->str << std::endl;
-    }
-
-    void die(const char *s) {
-        std::cout << s << std::endl;
-        std::exit(1);
-    }
-
     /// returns true is stings are equal
     bool compareStrings(String *first, String *second) {
         return first->len == second->len && std::strncmp(first->str, second->str, first->len) == 0;
@@ -55,17 +47,18 @@ namespace X::Runtime {
         llvm::StructType::create(context, {builder.getPtrTy(), builder.getInt64Ty()}, String::CLASS_NAME);
         llvm::StructType::create(context, {builder.getInt64Ty(), builder.getInt64Ty(), builder.getInt64Ty()}, Range::CLASS_NAME);
 
+        // print is special (varg)
+        module.getOrInsertFunction(Mangler::mangleInternalFunction("print"), llvm::FunctionType::get(builder.getVoidTy(), {builder.getInt64Ty()}, true));
+
         // function name, return type, param types
         std::vector<std::tuple<std::string, llvm::Type *, llvm::ArrayRef<llvm::Type *>>> funcs{
                 {Mangler::mangleInternalFunction("die"), builder.getVoidTy(), {builder.getPtrTy()}},
                 {"exit", builder.getVoidTy(), {builder.getInt64Ty()}},
-                {"println", builder.getVoidTy(), {builder.getPtrTy()}},
+
+                // print
+                {Mangler::mangleInternalFunction("printNewline"), builder.getVoidTy(), {}},
 
                 // string
-
-                {Mangler::mangleInternalFunction("castBoolToString"), builder.getPtrTy(), {builder.getInt1Ty()}},
-                {Mangler::mangleInternalFunction("castIntToString"), builder.getPtrTy(), {builder.getInt64Ty()}},
-                {Mangler::mangleInternalFunction("castFloatToString"), builder.getPtrTy(), {builder.getDoubleTy()}},
                 {Mangler::mangleInternalFunction("compareStrings"), builder.getInt1Ty(), {builder.getPtrTy(), builder.getPtrTy()}},
                 {Mangler::mangleInternalMethod(String::CLASS_NAME, CONSTRUCTOR_FN_NAME), builder.getVoidTy(), {builder.getPtrTy(), builder.getPtrTy()}},
                 {Mangler::mangleInternalMethod(String::CLASS_NAME, "concat"), builder.getPtrTy(), {builder.getPtrTy(), builder.getPtrTy()}},
@@ -111,12 +104,12 @@ namespace X::Runtime {
         static std::vector<std::tuple<std::string, void *>> funcs{
                 {Mangler::mangleInternalFunction("die"), reinterpret_cast<void *>(die)},
                 {"exit", reinterpret_cast<void *>(std::exit)},
-                {"println", reinterpret_cast<void *>(println)},
+
+                // print
+                {Mangler::mangleInternalFunction("print"), reinterpret_cast<void *>(print)},
+                {Mangler::mangleInternalFunction("printNewline"), reinterpret_cast<void *>(printNewline)},
 
                 // string
-                {Mangler::mangleInternalFunction("castBoolToString"), reinterpret_cast<void *>(castBoolToString)},
-                {Mangler::mangleInternalFunction("castIntToString"), reinterpret_cast<void *>(castIntToString)},
-                {Mangler::mangleInternalFunction("castFloatToString"), reinterpret_cast<void *>(castFloatToString)},
                 {Mangler::mangleInternalFunction("compareStrings"), reinterpret_cast<void *>(compareStrings)},
                 {Mangler::mangleInternalMethod(String::CLASS_NAME, CONSTRUCTOR_FN_NAME), reinterpret_cast<void *>(String_construct)},
                 {Mangler::mangleInternalMethod(String::CLASS_NAME, "concat"), reinterpret_cast<void *>(String_concat)},

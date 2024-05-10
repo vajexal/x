@@ -35,13 +35,13 @@ namespace X {
         delete subtype;
     }
 
-    Type Type::scalar(Type::TypeID typeID) {
-        if (typeID == TypeID::CLASS || typeID == TypeID::ARRAY || typeID == TypeID::AUTO || typeID == TypeID::SELF) {
+    Type Type::scalar(Type::TypeID typeId) {
+        if (typeId == TypeID::CLASS || typeId == TypeID::ARRAY || typeId == TypeID::AUTO || typeId == TypeID::SELF) {
             throw std::invalid_argument("invalid type for scalar");
         }
 
         Type type;
-        type.id = typeID;
+        type.id = typeId;
 
         return std::move(type);
     }

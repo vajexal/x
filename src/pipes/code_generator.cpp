@@ -19,7 +19,7 @@ namespace X::Pipes {
         auto module = std::make_unique<llvm::Module>(sourceName, *context);
         GC::GC gc;
         Codegen::Codegen codegen(*context, builder, *module, compilerRuntime, gc);
-        Runtime::Runtime runtime{};
+        Runtime::Runtime runtime;
 
         llvm::InitializeNativeTarget();
         llvm::InitializeNativeTargetAsmPrinter();

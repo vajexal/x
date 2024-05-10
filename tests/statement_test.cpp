@@ -17,14 +17,20 @@ TEST_F(StatementTest, decl) {
     println(f)
     println(b)
     println(s)
-    println(a.isEmpty())
+    println(a)
 )code";
 
     checkCode(code, R"output(0
 0
 false
 
-true)output");
+[])output");
+}
+
+TEST_F(StatementTest, printArray) {
+    checkCode(R"code(
+    println([]int{1, 2, 3})
+)code", "[1, 2, 3]");
 }
 
 TEST_F(StatementTest, varAlreadyExists) {

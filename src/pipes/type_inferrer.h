@@ -90,6 +90,7 @@ namespace X::Pipes {
         std::string getObjectClassName(const Type &objType) const;
         bool canCastTo(const Type &type, const Type &expectedType) const;
         bool instanceof(const Type &instanceType, const Type &type) const;
+        bool isPrintable(const Type &type) const;
     };
 
     class TypeInferrerException : public std::exception {

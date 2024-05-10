@@ -196,7 +196,7 @@ namespace X::Codegen {
         auto arr = node->getArr()->gen(*this);
         auto idx = node->getIdx()->gen(*this);
 
-        auto arrGetFn = module.getFunction(Mangler::mangleInternalMethod(Runtime::Array::getClassName(node->getArr()->getType()), "get[]"));
+        auto arrGetFn = module.getFunction(Mangler::mangleInternalMethod(Runtime::ArrayRuntime::getClassName(node->getArr()->getType()), "get[]"));
         if (!arrGetFn) {
             throw InvalidArrayAccessException();
         }

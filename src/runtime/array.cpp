@@ -4,8 +4,29 @@
 #include "utils.h"
 
 namespace X::Runtime {
+    std::string ArrayRuntime::getClassName(const Type &type) {
+        if (!type.is(Type::TypeID::ARRAY)) {
+            throw InvalidArrayTypeException();
+        }
+
+        switch (type.getSubtype()->getTypeID()) {
+            case Type::TypeID::INT:
+                return CLASS_NAME + ".int";
+            case Type::TypeID::FLOAT:
+                return CLASS_NAME + ".float";
+            case Type::TypeID::BOOL:
+                return CLASS_NAME + ".bool";
+            case Type::TypeID::STRING:
+                return CLASS_NAME + ".string";
+            case Type::TypeID::CLASS:
+                return CLASS_NAME + ".pointer";
+            default:
+                throw InvalidArrayTypeException();
+        }
+    }
+
     llvm::StructType *ArrayRuntime::add(const Type &arrType, llvm::Type *elemLlvmType) {
-        const auto &arrayTypeName = Array::getClassName(arrType);
+        const auto &arrayTypeName = getClassName(arrType);
         auto arrLlvmType = llvm::StructType::create(
                 context,
                 // data pointer, length, capacity
@@ -60,7 +81,7 @@ namespace X::Runtime {
         // check cap
         auto setCapBB = llvm::BasicBlock::Create(context, "set_cap");
         auto growCapBB = llvm::BasicBlock::Create(context, "grow_cap");
-        auto minCap = builder.getInt64(Array::MIN_CAP);
+        auto minCap = builder.getInt64(ArrayRuntime::MIN_CAP);
         cond = builder.CreateICmpSLT(len, minCap);
         builder.CreateCondBr(cond, growCapBB, setCapBB);
 
@@ -291,26 +312,5 @@ namespace X::Runtime {
         builder.CreateStore(val, elemPtr);
 
         builder.CreateRetVoid();
-    }
-
-    std::string Array::getClassName(const Type &type) {
-        if (!type.is(Type::TypeID::ARRAY)) {
-            throw InvalidArrayTypeException();
-        }
-
-        switch (type.getSubtype()->getTypeID()) {
-            case Type::TypeID::INT:
-                return CLASS_NAME + ".int";
-            case Type::TypeID::FLOAT:
-                return CLASS_NAME + ".float";
-            case Type::TypeID::BOOL:
-                return CLASS_NAME + ".bool";
-            case Type::TypeID::STRING:
-                return CLASS_NAME + ".string";
-            case Type::TypeID::CLASS:
-                return CLASS_NAME + ".pointer";
-            default:
-                throw InvalidArrayTypeException();
-        }
     }
 }

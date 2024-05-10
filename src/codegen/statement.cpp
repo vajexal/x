@@ -297,10 +297,23 @@ namespace X::Codegen {
             throw CodegenException("println value is empty");
         }
 
-        value = castToString(value, node->getVal()->getType());
+        auto &type = node->getVal()->getType();
+        auto printFn = module.getFunction(Mangler::mangleInternalFunction("print"));
 
-        auto printlnFn = module.getFunction("println");
-        builder.CreateCall(printlnFn, {value});
+        if (type.is(Type::TypeID::ARRAY)) {
+            builder.CreateCall(printFn, {
+                    builder.getInt64(static_cast<uint64_t>(type.getTypeID())),
+                    builder.getInt64(static_cast<uint64_t>(type.getSubtype()->getTypeID())),
+                    value
+            });
+        } else {
+            builder.CreateCall(printFn, {
+                    builder.getInt64(static_cast<uint64_t>(type.getTypeID())),
+                    value
+            });
+        }
+
+        builder.CreateCall(module.getFunction(Mangler::mangleInternalFunction("printNewline")));
 
         return nullptr;
     }
@@ -316,7 +329,7 @@ namespace X::Codegen {
         auto expr = node->getExpr()->gen(*this);
         expr = castTo(expr, node->getExpr()->getType(), *node->getArr()->getType().getSubtype());
 
-        auto arrSetFn = module.getFunction(Mangler::mangleInternalMethod(Runtime::Array::getClassName(node->getArr()->getType()), "set[]"));
+        auto arrSetFn = module.getFunction(Mangler::mangleInternalMethod(Runtime::ArrayRuntime::getClassName(node->getArr()->getType()), "set[]"));
         if (!arrSetFn) {
             throw InvalidArrayAccessException();
         }
@@ -331,7 +344,7 @@ namespace X::Codegen {
         auto expr = node->getExpr()->gen(*this);
         expr = castTo(expr, node->getExpr()->getType(), *node->getArr()->getType().getSubtype());
 
-        auto arrAppendFn = module.getFunction(Mangler::mangleInternalMethod(Runtime::Array::getClassName(node->getArr()->getType()), "append[]"));
+        auto arrAppendFn = module.getFunction(Mangler::mangleInternalMethod(Runtime::ArrayRuntime::getClassName(node->getArr()->getType()), "append[]"));
         if (!arrAppendFn) {
             throw InvalidArrayAccessException();
         }

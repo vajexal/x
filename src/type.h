@@ -59,7 +59,7 @@ namespace X {
 
         Type &operator=(const Type &type);
 
-        static Type scalar(TypeID typeID);
+        static Type scalar(TypeID typeId);
         static Type klass(std::string className);
         static Type array(Type &&subtype);
         static Type voidTy();
@@ -77,8 +77,8 @@ namespace X {
         }
 
         template<typename... Args>
-        bool isOneOf(TypeID typeID, Args... ids) const {
-            return id == typeID || isOneOf(ids...);
+        bool isOneOf(TypeID typeId, Args... ids) const {
+            return id == typeId || isOneOf(ids...);
         }
 
         bool operator==(const Type &other) const;

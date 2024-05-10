@@ -40,10 +40,10 @@ namespace X::Pipes {
                                                                                      Type::scalar(Type::TypeID::STRING)}}},
                                                              });
 
-        classMethodTypes[Runtime::Array::CLASS_NAME].insert({
-                                                                    {"length", {{{}, Type::scalar(Type::TypeID::INT)}}},
-                                                                    {"isEmpty", {{{}, Type::scalar(Type::TypeID::BOOL)}}},
-                                                            });
+        classMethodTypes[Runtime::ArrayRuntime::CLASS_NAME].insert({
+                                                                           {"length", {{{}, Type::scalar(Type::TypeID::INT)}}},
+                                                                           {"isEmpty", {{{}, Type::scalar(Type::TypeID::BOOL)}}},
+                                                                   });
     }
 
     void TypeInferrer::declClasses(TopStatementListNode *node) {
@@ -161,6 +161,11 @@ namespace X::Pipes {
             auto &exprList = std::get<ExprList>(node->getValue());
             if (!exprList.empty()) {
                 auto firstExprType = exprList[0]->infer(*this);
+
+                if (firstExprType.is(Type::TypeID::VOID)) {
+                    throw TypeInferrerException("array must not have void elements");
+                }
+
                 if (!std::ranges::all_of(exprList.begin() + 1, exprList.end(), [&](auto expr) { return expr->infer(*this) == firstExprType; })) {
                     throw TypeInferrerException("all array elements must be the same type");
                 }
@@ -434,7 +439,11 @@ namespace X::Pipes {
     Type TypeInferrer::infer(PrintlnNode *node) {
         auto type = node->getVal()->infer(*this);
 
-        if (type.isOneOf(Type::TypeID::VOID, Type::TypeID::CLASS, Type::TypeID::ARRAY)) {
+        if (type.is(Type::TypeID::ARRAY)) {
+            type = *type.getSubtype();
+        }
+
+        if (!isPrintable(type)) {
             throw InvalidTypeException();
         }
 
@@ -792,7 +801,7 @@ namespace X::Pipes {
             case Type::TypeID::STRING:
                 return Runtime::String::CLASS_NAME;
             case Type::TypeID::ARRAY:
-                return Runtime::Array::CLASS_NAME;
+                return Runtime::ArrayRuntime::CLASS_NAME;
             default:
                 throw InvalidTypeException();
         }
@@ -817,5 +826,9 @@ namespace X::Pipes {
     bool TypeInferrer::instanceof(const Type &instanceType, const Type &type) const {
         return compilerRuntime.extendedClasses[instanceType.getClassName()].contains(type.getClassName()) ||
                compilerRuntime.implementedInterfaces[instanceType.getClassName()].contains(type.getClassName());
+    }
+
+    bool TypeInferrer::isPrintable(const Type &type) const {
+        return type.isOneOf(Type::TypeID::INT, Type::TypeID::FLOAT, Type::TypeID::BOOL, Type::TypeID::STRING);
     }
 }

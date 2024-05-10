@@ -10,4 +10,5 @@ namespace X {
     inline const std::string SELF_KEYWORD = "self";
 
     llvm::ConstantInt *getTypeSize(llvm::Module &module, llvm::Type *type);
+    void die(const char *s);
 }

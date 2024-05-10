@@ -11,4 +11,9 @@ namespace X {
         auto size = typeSize.getFixedValue();
         return llvm::ConstantInt::get(llvm::Type::getInt64Ty(module.getContext()), size);
     }
+
+    void die(const char *s) {
+        std::cout << s << std::endl;
+        std::exit(1);
+    }
 }

@@ -16,9 +16,14 @@ namespace X::Runtime {
         llvm::Module &module;
 
     public:
+        static inline const std::string CLASS_NAME = "Array";
+        static inline const int MIN_CAP = 8;
+
         ArrayRuntime(llvm::LLVMContext &context, llvm::Module &module) : context(context), module(module) {}
 
         llvm::StructType *add(const Type &type, llvm::Type *llvmType);
+
+        static std::string getClassName(const Type &type);
 
     private:
         void addConstructor(llvm::StructType *arrayType, llvm::Type *elemType);
@@ -29,11 +34,11 @@ namespace X::Runtime {
         void addAppend(llvm::StructType *arrayType, llvm::Type *elemType);
     };
 
+    template<typename T>
     struct Array {
-        static inline const std::string CLASS_NAME = "Array";
-        static inline const int MIN_CAP = 8;
-
-        static std::string getClassName(const Type &type);
+        T *data;
+        int64_t len;
+        int64_t cap;
     };
 
     class InvalidArrayTypeException : public std::exception {

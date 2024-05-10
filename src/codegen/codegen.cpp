@@ -185,7 +185,7 @@ namespace X::Codegen {
                 return negate(val);
             }
             case Type::TypeID::ARRAY: {
-                const auto &arrayClassName = Runtime::Array::getClassName(type);
+                const auto &arrayClassName = Runtime::ArrayRuntime::getClassName(type);
                 const auto &arrayIsEmptyFnName = Mangler::mangleInternalMethod(arrayClassName, "isEmpty");
                 auto arrayIsEmptyFn = module.getFunction(arrayIsEmptyFnName);
                 auto val = builder.CreateCall(arrayIsEmptyFn, {value});
@@ -193,27 +193,6 @@ namespace X::Codegen {
             }
             default:
                 throw InvalidTypeException();
-        }
-    }
-
-    llvm::Value *Codegen::castToString(llvm::Value *value, const Type &type) const {
-        switch (type.getTypeID()) {
-            case Type::TypeID::INT: {
-                auto castIntToStringFn = module.getFunction(Mangler::mangleInternalFunction("castIntToString"));
-                return builder.CreateCall(castIntToStringFn, {value});
-            }
-            case Type::TypeID::FLOAT: {
-                auto castFloatToStringFn = module.getFunction(Mangler::mangleInternalFunction("castFloatToString"));
-                return builder.CreateCall(castFloatToStringFn, {value});
-            }
-            case Type::TypeID::BOOL: {
-                auto castBoolToStringFn = module.getFunction(Mangler::mangleInternalFunction("castBoolToString"));
-                return builder.CreateCall(castBoolToStringFn, {value});
-            }
-            case Type::TypeID::STRING:
-                return value;
-            default:
-                throw CodegenException("can't cast to string");
         }
     }
 
@@ -284,7 +263,7 @@ namespace X::Codegen {
             throw CodegenException("multidimensional arrays are not supported");
         }
 
-        const auto &arrayClassName = Runtime::Array::getClassName(arrType);
+        const auto &arrayClassName = Runtime::ArrayRuntime::getClassName(arrType);
         auto arrayType = llvm::StructType::getTypeByName(context, arrayClassName);
         if (!arrayType) {
             // gen array subtype
@@ -294,7 +273,7 @@ namespace X::Codegen {
     }
 
     void Codegen::fillArray(llvm::Value *arr, const Type &type, const std::vector<llvm::Value *> &values) {
-        const auto &arrayClassName = Runtime::Array::getClassName(type);
+        const auto &arrayClassName = Runtime::ArrayRuntime::getClassName(type);
         auto arrSetFn = module.getFunction(Mangler::mangleInternalMethod(arrayClassName, "set[]"));
         if (!arrSetFn) {
             throw InvalidArrayAccessException();

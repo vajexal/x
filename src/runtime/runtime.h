@@ -12,7 +12,6 @@
 #include "runtime/string.h"
 #include "runtime/array.h"
 #include "runtime/range.h"
-#include "mangler.h"
 
 namespace X::Runtime {
     class Runtime {

@@ -188,7 +188,6 @@ namespace X::Codegen {
         std::tuple<llvm::Value *, Type, llvm::Value *, Type> upcast(llvm::Value *a, Type aType, llvm::Value *b, Type bType) const;
         std::tuple<llvm::Value *, Type, llvm::Value *, Type> forceUpcast(llvm::Value *a, Type aType, llvm::Value *b, Type bType) const;
         llvm::Value *downcastToBool(llvm::Value *value, const Type &type) const;
-        llvm::Value *castToString(llvm::Value *value, const Type &type) const;
         bool instanceof(const Type &instanceType, const Type &type) const;
         llvm::Value *castTo(llvm::Value *value, const Type &type, const Type &expectedType);
         llvm::Value *instantiateInterface(llvm::Value *value, const Type &type, const InterfaceDecl &interfaceDecl);
