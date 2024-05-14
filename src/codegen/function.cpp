@@ -10,9 +10,11 @@ namespace X::Codegen {
     }
 
     llvm::Value *Codegen::gen(FnDefNode *node) {
-        currentFnRetType = node->getReturnType();
+        auto fnDecl = node->getDecl();
 
-        genFn(node->getName(), node->getArgs(), node->getReturnType(), node->getBody());
+        currentFnRetType = fnDecl->getReturnType();
+
+        genFn(fnDecl->getName(), fnDecl->getArgs(), fnDecl->getReturnType(), node->getBody());
 
         return nullptr;
     }
@@ -121,11 +123,13 @@ namespace X::Codegen {
     }
 
     void Codegen::checkMainFn(FnDefNode *node) const {
-        if (!node->getArgs().empty()) {
+        auto fnDecl = node->getDecl();
+
+        if (!fnDecl->getArgs().empty()) {
             throw CodegenException("main must take no arguments");
         }
 
-        if (!node->getReturnType().is(Type::TypeID::VOID)) {
+        if (!fnDecl->getReturnType().is(Type::TypeID::VOID)) {
             throw CodegenException("main must return void");
         }
     }

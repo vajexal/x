@@ -140,11 +140,7 @@ namespace X::Pipes {
     }
 
     void PrintAst::printNode(FnDefNode *node, int level) {
-        std::cout << "fn " << node->getName() << " -> " << node->getReturnType() << std::endl;
-
-        for (auto &arg: node->getArgs()) {
-            arg->print(*this, level + 1);
-        }
+        node->getDecl()->print(*this);
         node->getBody()->print(*this, level + 1);
     }
 

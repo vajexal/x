@@ -312,12 +312,12 @@ RANGE '(' expr ')' { $$ = new RangeNode($3); }
 | RANGE '(' expr ',' expr ',' expr ')' { $$ = new RangeNode($3, $5, $7); }
 ;
 
-fn_def:
-FN IDENTIFIER '(' decl_arg_list ')' return_type statement_block { $$ = new FnDefNode(std::move($2), std::move($4), std::move($6), $7); }
-;
-
 fn_decl:
 FN IDENTIFIER '(' decl_arg_list ')' return_type { $$ = new FnDeclNode(std::move($2), std::move($4), std::move($6)); }
+;
+
+fn_def:
+fn_decl statement_block { $$ = new FnDefNode($1, $2); }
 ;
 
 decl_arg_list:

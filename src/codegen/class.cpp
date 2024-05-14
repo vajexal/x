@@ -18,10 +18,10 @@ namespace X::Codegen {
                 throw MethodAlreadyDeclaredException(name, methodName);
             }
 
-            auto fn = method->getFnDef();
-            currentFnRetType = method->getFnDef()->getReturnType();
-            const auto &fnName = mangler->mangleMethod(mangledName, fn->getName());
-            genFn(fnName, fn->getArgs(), currentFnRetType, fn->getBody(), method->getIsStatic() ? nullptr : &self->type);
+            auto fnDecl = method->getFnDef()->getDecl();
+            currentFnRetType = fnDecl->getReturnType();
+            const auto &fnName = mangler->mangleMethod(mangledName, fnDecl->getName());
+            genFn(fnName, fnDecl->getArgs(), currentFnRetType, method->getFnDef()->getBody(), method->getIsStatic() ? nullptr : &self->type);
         }
 
         self = nullptr;
@@ -272,7 +272,8 @@ namespace X::Codegen {
 
         for (auto &methodName: virtualMethods) {
             auto methodDef = classMethods.at(methodName);
-            auto fnType = genFnType(methodDef->getFnDef()->getArgs(), methodDef->getFnDef()->getReturnType(), &classDecl.type);
+            auto fnDecl = methodDef->getFnDef()->getDecl();
+            auto fnType = genFnType(fnDecl->getArgs(), fnDecl->getReturnType(), &classDecl.type);
             vtableProps.push_back(builder.getPtrTy());
             classDecl.methods[methodName] = {methodDef->getAccessModifier(), fnType, true, vtablePos++};
         }

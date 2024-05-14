@@ -52,7 +52,7 @@ namespace X::Pipes {
 
             if (*methodDef->second != *methodDecl) {
                 throw CheckAbstractClassesException(fmt::format("declaration of {}::{} must be compatible with abstract class {}",
-                                                                className, methodDef->second->getFnDef()->getName(), parentClassName));
+                                                                className, methodDef->second->getFnDef()->getDecl()->getName(), parentClassName));
             }
         }
     }

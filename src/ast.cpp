@@ -47,21 +47,7 @@ namespace X {
     }
 
     bool FnDefNode::operator==(const FnDefNode &other) const {
-        if (name != other.name || returnType != other.returnType) {
-            return false;
-        }
-
-        if (args.size() != other.args.size()) {
-            return false;
-        }
-
-        for (auto i = 0; i < args.size(); i++) {
-            if (*args[i] != *other.args[i]) {
-                return false;
-            }
-        }
-
-        return true;
+        return *decl == *other.decl;
     }
 
     bool FnDefNode::operator!=(const FnDefNode &other) const {
@@ -84,32 +70,16 @@ namespace X {
         return !(*this == other);
     }
 
-    bool MethodDefNode::operator==(const MethodDeclNode &decl) const {
-        if (decl.getAccessModifier() != getAccessModifier()) {
+    bool MethodDefNode::operator==(const MethodDeclNode &other) const {
+        if (getAccessModifier() != other.getAccessModifier()) {
             return false;
         }
 
-        if (decl.getIsStatic() != getIsStatic()) {
+        if (getIsStatic() != other.getIsStatic()) {
             return false;
         }
 
-        auto fnDecl = decl.getFnDecl();
-
-        if (fnDecl->getReturnType() != fnDef->getReturnType()) {
-            return false;
-        }
-
-        if (fnDecl->getArgs().size() != fnDef->getArgs().size()) {
-            return false;
-        }
-
-        for (auto i = 0; i < fnDecl->getArgs().size(); i++) {
-            if (*fnDecl->getArgs()[i] != *fnDef->getArgs()[i]) {
-                return false;
-            }
-        }
-
-        return true;
+        return *fnDef->getDecl() == *other.getFnDecl();
     }
 
     bool MethodDefNode::operator!=(const MethodDeclNode &decl) const {
@@ -152,22 +122,32 @@ namespace X {
     ClassNode::ClassNode(std::string name, StatementListNode *body, std::string parent, std::vector<std::string> interfaces, bool abstract) :
             Node(NodeKind::Class), name(std::move(name)), body(body), parent(std::move(parent)), interfaces(std::move(interfaces)), abstract(abstract) {
         for (auto child: body->getChildren()) {
-            if (auto propDeclNode = llvm::dyn_cast<PropDeclNode>(child)) {
-                props.push_back(propDeclNode);
-            } else if (auto methodDefNode = llvm::dyn_cast<MethodDefNode>(child)) {
-                auto methodName = methodDefNode->getFnDef()->getName();
-                auto [_, inserted] = methods.insert({methodName, methodDefNode});
-                if (!inserted) {
-                    throw MethodAlreadyDeclaredException(this->name, methodName);
-                }
-            } else if (auto methodDeclNode = llvm::dyn_cast<MethodDeclNode>(child)) {
-                if (methodDeclNode->getIsAbstract()) {
-                    auto methodName = methodDeclNode->getFnDecl()->getName();
-                    auto [_, inserted] = abstractMethods.insert({methodName, methodDeclNode});
+            switch (child->getKind()) {
+                case NodeKind::PropDecl:
+                    props.push_back(llvm::cast<PropDeclNode>(child));
+                    break;
+                case NodeKind::MethodDef: {
+                    auto methodDefNode = llvm::cast<MethodDefNode>(child);
+                    auto methodName = methodDefNode->getFnDef()->getDecl()->getName();
+                    auto [_, inserted] = methods.insert({methodName, methodDefNode});
                     if (!inserted) {
                         throw MethodAlreadyDeclaredException(this->name, methodName);
                     }
+                    break;
                 }
+                case NodeKind::MethodDecl: {
+                    auto methodDeclNode = llvm::cast<MethodDeclNode>(child);
+                    if (methodDeclNode->getIsAbstract()) {
+                        auto methodName = methodDeclNode->getFnDecl()->getName();
+                        auto [_, inserted] = abstractMethods.insert({methodName, methodDeclNode});
+                        if (!inserted) {
+                            throw MethodAlreadyDeclaredException(this->name, methodName);
+                        }
+                    }
+                    break;
+                }
+                default:
+                    break;
             }
         }
     }

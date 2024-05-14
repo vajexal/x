@@ -106,7 +106,7 @@ namespace X::Pipes {
                     if (*methodIt->second != *methodDecl) {
                         throw CheckInterfacesException(
                                 fmt::format("declaration of {}::{} must be compatible with interface {}", name,
-                                            methodIt->second->getFnDef()->getName(), interfaceName));
+                                            methodIt->second->getFnDef()->getDecl()->getName(), interfaceName));
                     }
                 }
             }

@@ -132,9 +132,9 @@ namespace X::Codegen {
                     checkConstructor(methodDef, klass->getName());
                 }
 
-                auto fnDef = methodDef->getFnDef();
-                const auto &fnName = mangler->mangleMethod(mangledName, fnDef->getName());
-                auto fnType = genFnType(fnDef->getArgs(), fnDef->getReturnType(), methodDef->getIsStatic() ? nullptr : &classDecl->type);
+                auto fnDecl = methodDef->getFnDef()->getDecl();
+                const auto &fnName = mangler->mangleMethod(mangledName, fnDecl->getName());
+                auto fnType = genFnType(fnDecl->getArgs(), fnDecl->getReturnType(), methodDef->getIsStatic() ? nullptr : &classDecl->type);
                 llvm::Function::Create(fnType, llvm::Function::ExternalLinkage, fnName, module);
                 classDecl->methods[methodName] = {methodDef->getAccessModifier(), fnType, false};
             }
@@ -143,7 +143,8 @@ namespace X::Codegen {
 
     void Codegen::declFuncs(TopStatementListNode *node) {
         for (auto fnDef: node->getFuncs()) {
-            auto &name = fnDef->getName();
+            auto fnDecl = fnDef->getDecl();
+            auto &name = fnDecl->getName();
 
             if (module.getFunction(name)) {
                 throw FnAlreadyDeclaredException(name);
@@ -153,7 +154,7 @@ namespace X::Codegen {
                 checkMainFn(fnDef);
             }
 
-            auto fnType = genFnType(fnDef->getArgs(), fnDef->getReturnType());
+            auto fnType = genFnType(fnDecl->getArgs(), fnDecl->getReturnType());
             llvm::Function::Create(fnType, llvm::Function::ExternalLinkage, name, module);
         }
     }
@@ -288,7 +289,7 @@ namespace X::Codegen {
         if (node->getAccessModifier() != AccessModifier::PUBLIC) {
             throw CodegenException(fmt::format("{}::{} must be public", className, CONSTRUCTOR_FN_NAME));
         }
-        if (!node->getFnDef()->getReturnType().is(Type::TypeID::VOID)) {
+        if (!node->getFnDef()->getDecl()->getReturnType().is(Type::TypeID::VOID)) {
             throw CodegenException(fmt::format("{}::{} must return void", className, CONSTRUCTOR_FN_NAME));
         }
     }

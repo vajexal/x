@@ -464,20 +464,13 @@ namespace X {
     };
 
     class FnDefNode : public Node {
-        std::string name;
-        std::vector<ArgNode *> args;
-        Type returnType; // todo FnDeclNode
+        FnDeclNode *decl;
         StatementListNode *body;
 
     public:
-        FnDefNode(std::string name, std::vector<ArgNode *> args, Type returnType, StatementListNode *body) :
-                Node(NodeKind::FnDef), name(std::move(name)), args(std::move(args)), returnType(std::move(returnType)), body(body) {}
-
+        FnDefNode(FnDeclNode *decl, StatementListNode *body) : Node(NodeKind::FnDef), decl(decl), body(body) {}
         ~FnDefNode() {
-            for (auto arg: args) {
-                delete arg;
-            }
-
+            delete decl;
             delete body;
         }
 
@@ -485,10 +478,7 @@ namespace X {
         llvm::Value *gen(Codegen::Codegen &codegen) override;
         Type infer(Pipes::TypeInferrer &typeInferrer) override;
 
-        const std::string &getName() const { return name; }
-        const std::vector<ArgNode *> &getArgs() const { return args; }
-        const Type &getReturnType() const { return returnType; }
-        void setReturnType(const Type &type) { returnType = type; }
+        FnDeclNode *getDecl() const { return decl; }
         StatementListNode *getBody() const { return body; }
 
         bool operator==(const FnDefNode &other) const;
