@@ -251,7 +251,7 @@ fn main() void {
         std::make_pair(
                 R"code(
 fn main() void {
-    []int a = []int{1, 2, 3}
+    []int a = [1, 2, 3]
     a[1] = "hello"
 }
 )code",

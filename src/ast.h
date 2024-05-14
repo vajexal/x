@@ -117,19 +117,19 @@ namespace X {
     public:
         ExprNode(NodeKind kind) : Node(kind) {}
 
-        // maybe need to rename to something like getExprType (to avoid collision with other nodes with getType method)
         const Type &getType() const { return type; }
         void setType(const Type &typ) { type = typ; }
     };
 
     class ScalarNode : public ExprNode {
-        Type type;
         ScalarValue value;
 
     public:
-        ScalarNode(Type type, ScalarValue value) : ExprNode(NodeKind::Scalar), type(std::move(type)), value(std::move(value)) {}
+        ScalarNode(Type type, ScalarValue value) : ExprNode(NodeKind::Scalar), value(std::move(value)) {
+            ExprNode::setType(type);
+        }
         ~ScalarNode() {
-            if (type.is(Type::TypeID::ARRAY)) {
+            if (getType().is(Type::TypeID::ARRAY)) {
                 for (auto expr: std::get<ExprList>(value)) {
                     delete expr;
                 }
@@ -139,8 +139,6 @@ namespace X {
         void print(Pipes::PrintAst &astPrinter, int level = 0) override;
         llvm::Value *gen(Codegen::Codegen &codegen) override;
         Type infer(Pipes::TypeInferrer &typeInferrer) override;
-
-        const Type &getType() const { return type; }
         const ScalarValue &getValue() const { return value; }
 
         static bool classof(const Node *node) {

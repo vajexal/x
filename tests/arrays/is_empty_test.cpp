@@ -11,13 +11,13 @@ TEST_P(ArrayIsEmptyTest, isEmpty) {
 INSTANTIATE_TEST_SUITE_P(Code, ArrayIsEmptyTest, testing::Values(
         std::make_pair(
                 R"code(
-    []int a = []int{}
+    []int a
     println(a.isEmpty())
 )code",
                 "true"),
         std::make_pair(
                 R"code(
-    []int a = []int{1, 2, 3}
+    []int a = [1, 2, 3]
     println(a.isEmpty())
 )code",
                 "false")

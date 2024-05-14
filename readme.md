@@ -62,7 +62,7 @@ fn types() void {
 
     // arrays
     // we can declare array literal using curly braces
-    []int a = []int{1, 2, 3}
+    []int a = [1, 2, 3]
 
     // retrieve array length
     println(a.length()) // 3
@@ -78,7 +78,7 @@ fn types() void {
     println(a.length()) // 4
 
     // we can create array of arbitrary types
-    []Foo arr = []Foo{new Foo(), new Foo()}
+    []Foo arr = [new Foo(), new Foo()]
 }
 
 auto PI = 3.14 // globals
@@ -128,7 +128,7 @@ fn flow() void {
         println("string is not empty")
     }
 
-    auto a = []int{1, 2, 3}
+    auto a = [1, 2, 3]
     if a {
         println("array is not empty")
     }
@@ -140,7 +140,7 @@ fn flow() void {
         println(val)
     }
 
-    // it's possible to specify index name. Index modification won't affect iteration
+    // it's possible to specify index name. Index modification won't affect iteration.
     // Will print 0, 1, 2
     for i, val in a {
         println(i)

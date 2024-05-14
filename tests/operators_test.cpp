@@ -34,7 +34,7 @@ true)output"),
                 "no"),
         std::make_pair(
                 R"code(
-    if []int{1, 2, 3} {
+    if [1, 2, 3] {
         println("yes")
     } else {
         println("no")

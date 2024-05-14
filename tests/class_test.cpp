@@ -125,7 +125,7 @@ class Greeter {
 }
 
 fn foo() Greeter {
-    return new Greeter([]string{"Ron", "Billy"})
+    return new Greeter(["Ron", "Billy"])
 }
 
 fn main() void {

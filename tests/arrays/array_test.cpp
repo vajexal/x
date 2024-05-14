@@ -5,7 +5,7 @@ class ArrayTest : public CompilerTest {
 
 TEST_F(ArrayTest, general) {
     auto code = R"code(
-    []int a = []int{1, 2, 3}
+    []int a = [1, 2, 3]
 
     a[1] = 10
 
@@ -25,7 +25,7 @@ class Foo {
 }
 
 fn main() void {
-    []Foo a = []Foo{new Foo(123)}
+    []Foo a = [new Foo(123)]
 
     println(a[0].val)
 }
@@ -37,7 +37,7 @@ TEST_F(ArrayTest, allElementsHaveSameType) {
     try {
         compiler.compile(R"code(
 fn main() void {
-    auto a = []int{1, "foo", false}
+    auto a = [1, "foo", false]
 }
 )code");
     } catch (const std::exception &e) {

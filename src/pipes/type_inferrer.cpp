@@ -159,17 +159,17 @@ namespace X::Pipes {
         // check all elements have the same type
         if (node->getType().is(Type::TypeID::ARRAY)) {
             auto &exprList = std::get<ExprList>(node->getValue());
-            if (!exprList.empty()) {
-                auto firstExprType = exprList[0]->infer(*this);
+            auto firstExprType = exprList[0]->infer(*this);
 
-                if (firstExprType.is(Type::TypeID::VOID)) {
-                    throw TypeInferrerException("array must not have void elements");
-                }
-
-                if (!std::ranges::all_of(exprList.begin() + 1, exprList.end(), [&](auto expr) { return expr->infer(*this) == firstExprType; })) {
-                    throw TypeInferrerException("all array elements must be the same type");
-                }
+            if (firstExprType.is(Type::TypeID::VOID)) {
+                throw TypeInferrerException("array must not have void elements");
             }
+
+            if (!std::ranges::all_of(exprList.begin() + 1, exprList.end(), [&](auto expr) { return expr->infer(*this) == firstExprType; })) {
+                throw TypeInferrerException("all array elements must be the same type");
+            }
+
+            return Type::array(std::move(firstExprType));
         }
 
         return node->getType();

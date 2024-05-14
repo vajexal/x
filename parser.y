@@ -262,7 +262,7 @@ INT { $$ = new ScalarNode(std::move(Type::scalar(Type::TypeID::INT)), $1); }
 | FLOAT { $$ = new ScalarNode(std::move(Type::scalar(Type::TypeID::FLOAT)), $1); }
 | BOOL { $$ = new ScalarNode(std::move(Type::scalar(Type::TypeID::BOOL)), $1); }
 | STRING { $$ = new ScalarNode(std::move(Type::scalar(Type::TypeID::STRING)), std::move($1)); }
-| array_type '{' expr_list '}' { $$ = new ScalarNode(std::move($1), std::move($3)); }
+| '[' non_empty_expr_list ']' { $$ = new ScalarNode(Type::array(Type::autoTy()), std::move($2)); }
 ;
 
 expr_list:
