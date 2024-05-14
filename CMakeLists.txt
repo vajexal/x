@@ -61,17 +61,17 @@ set(X_LIBS LLVM fmt::fmt)
 
 add_custom_command(
         OUTPUT lexer.cpp
-        COMMAND re2c ${CMAKE_CURRENT_SOURCE_DIR}/lexer.l -o lexer.cpp -ci -W
-        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lexer.l
+        COMMAND re2c ${CMAKE_CURRENT_SOURCE_DIR}/src/lexer.l -o lexer.cpp -ci -W
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/lexer.l
 )
 
 add_custom_command(
         OUTPUT parser.tab.cc parser.tab.hh location.hh
-        COMMAND bison -d ${CMAKE_CURRENT_SOURCE_DIR}/parser.y -W
-        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/parser.y
+        COMMAND bison -d ${CMAKE_CURRENT_SOURCE_DIR}/src/parser.y -W
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/parser.y
 )
 
-add_executable(x main.cpp ${X_SOURCES})
+add_executable(x src/main.cpp ${X_SOURCES})
 
 target_link_libraries(x ${X_LIBS})
 
