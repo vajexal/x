@@ -45,7 +45,6 @@ namespace X::Runtime {
 
     void Runtime::addDeclarations(llvm::LLVMContext &context, llvm::IRBuilder<> &builder, llvm::Module &module) {
         llvm::StructType::create(context, {builder.getPtrTy(), builder.getInt64Ty()}, String::CLASS_NAME);
-        llvm::StructType::create(context, {builder.getInt64Ty(), builder.getInt64Ty(), builder.getInt64Ty()}, Range::CLASS_NAME);
 
         // print is special (varg)
         module.getOrInsertFunction(mangler->mangleInternalFunction("print"), llvm::FunctionType::get(builder.getVoidTy(), {builder.getInt64Ty()}, true));
@@ -74,12 +73,6 @@ namespace X::Runtime {
                 {mangler->mangleInternalMethod(String::CLASS_NAME, "substring"), builder.getPtrTy(),
                  {builder.getPtrTy(), builder.getInt64Ty(), builder.getInt64Ty()}},
                 {mangler->mangleInternalFunction("createEmptyString"), builder.getPtrTy(), {}},
-
-                // range
-                {mangler->mangleInternalMethod(Range::CLASS_NAME, "create"), builder.getPtrTy(),
-                 {builder.getInt64Ty(), builder.getInt64Ty(), builder.getInt64Ty()}},
-                {mangler->mangleInternalMethod(Range::CLASS_NAME, "length"), builder.getInt64Ty(), {builder.getPtrTy()}},
-                {mangler->mangleInternalMethod(Range::CLASS_NAME, "get[]"), builder.getInt64Ty(), {builder.getPtrTy(), builder.getInt64Ty()}},
 
                 // gc
                 {mangler->mangleInternalFunction("gcAlloc"), builder.getPtrTy(), {builder.getPtrTy(), builder.getInt64Ty()}},
@@ -124,10 +117,6 @@ namespace X::Runtime {
                 {mangler->mangleInternalMethod(String::CLASS_NAME, "endsWith"), reinterpret_cast<void *>(String_endsWith)},
                 {mangler->mangleInternalMethod(String::CLASS_NAME, "substring"), reinterpret_cast<void *>(String_substring)},
                 {mangler->mangleInternalFunction("createEmptyString"), reinterpret_cast<void *>(createEmptyString)},
-
-                // range
-                {mangler->mangleInternalMethod(Range::CLASS_NAME, "length"), reinterpret_cast<void *>(Range_length)},
-                {mangler->mangleInternalMethod(Range::CLASS_NAME, "get[]"), reinterpret_cast<void *>(Range_get)},
 
                 // gc
                 {mangler->mangleInternalFunction("gcAlloc"), reinterpret_cast<void *>(gc_alloc)},

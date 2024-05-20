@@ -216,10 +216,6 @@ namespace X::Codegen {
                 return gc->addMeta(GC::NodeType::ARRAY, std::move(pointerList));
             }
             case Type::TypeID::CLASS: {
-                if (type.getClassName() == Runtime::Range::CLASS_NAME) {
-                    return gc->addMeta(GC::NodeType::CLASS, {});
-                }
-
                 if (isInterfaceType(type)) {
                     return gc->addMeta(GC::NodeType::INTERFACE, {});
                 }

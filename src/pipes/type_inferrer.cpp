@@ -328,8 +328,7 @@ namespace X::Pipes {
         auto exprType = node->getExpr()->infer(*this);
 
         // for expression must be array or range
-        if (!exprType.is(Type::TypeID::ARRAY) &&
-            !(exprType.is(Type::TypeID::CLASS) && exprType.getClassName() == Runtime::Range::CLASS_NAME)) {
+        if (!exprType.is(Type::TypeID::ARRAY)) {
             throw TypeInferrerException("for expression must be array or range");
         }
 
@@ -364,7 +363,7 @@ namespace X::Pipes {
             throw TypeInferrerException("range step argument must be int");
         }
 
-        return Type::klass(Runtime::Range::CLASS_NAME);
+        return Type::array(Type::scalar(Type::TypeID::INT));
     }
 
     Type TypeInferrer::infer(BreakNode *node) {

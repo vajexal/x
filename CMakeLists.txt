@@ -43,7 +43,6 @@ set(X_SOURCES lexer.cpp
         src/runtime/runtime.cpp
         src/runtime/string.cpp
         src/runtime/array.cpp
-        src/runtime/range.cpp
         src/runtime/print.cpp
         src/compiler.cpp
         src/gc/gc.cpp

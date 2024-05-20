@@ -128,6 +128,12 @@ INSTANTIATE_TEST_SUITE_P(Code, ForTest, testing::Values(
 -4)output"),
         std::make_pair(
                 R"code(
+    for i in range(5, -5, 3) {
+        println(i)
+    }
+)code", ""),
+        std::make_pair(
+                R"code(
     for i in range(0, 30, 5) {
         println(i)
     }
