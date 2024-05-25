@@ -8,6 +8,7 @@
 #include "pipes/check_abstract_classes.h"
 #include "pipes/check_virtual_methods.h"
 #include "pipes/type_inferrer.h"
+#include "pipes/const_string_folding.h"
 #include "pipes/code_generator.h"
 
 namespace X {
@@ -21,6 +22,7 @@ namespace X {
                 .pipe(Pipes::CheckAbstractClasses())
                 .pipe(Pipes::CheckVirtualMethods(compilerRuntime))
                 .pipe(Pipes::TypeInferrer(compilerRuntime))
+                .pipe(Pipes::ConstStringFolding())
                 .pipe(Pipes::CodeGenerator(compilerRuntime, sourceName));
 
         return 0;

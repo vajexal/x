@@ -10,16 +10,16 @@ namespace X::Pipes {
     void PrintAst::printNode(StatementListNode *node, int level) {
         std::cout << "statement list\n";
 
-        for (auto child: node->getChildren()) {
+        for (auto child: node->children) {
             child->print(*this, level + 1);
         }
     }
 
     void PrintAst::printNode(ScalarNode *node, int level) {
         std::cout << "scalar(";
-        auto value = node->getValue();
+        auto value = node->value;
 
-        switch (node->getType().getTypeID()) {
+        switch (node->type.getTypeID()) {
             case Type::TypeID::INT:
                 std::cout << std::get<int64_t>(value);
                 break;
@@ -47,75 +47,75 @@ namespace X::Pipes {
     }
 
     void PrintAst::printNode(UnaryNode *node, int level) {
-        std::cout << node->getOpType() << std::endl;
+        std::cout << node->opType << std::endl;
 
-        node->getExpr()->print(*this, level + 1);
+        node->expr->print(*this, level + 1);
     }
 
     void PrintAst::printNode(BinaryNode *node, int level) {
-        std::cout << node->getOpType() << std::endl;
+        std::cout << node->opType << std::endl;
 
-        node->getLhs()->print(*this, level + 1);
-        node->getRhs()->print(*this, level + 1);
+        node->lhs->print(*this, level + 1);
+        node->rhs->print(*this, level + 1);
     }
 
     void PrintAst::printNode(DeclNode *node, int level) {
-        std::cout << node->getType() << ' ' << node->getName() << " = " << std::endl;
+        std::cout << node->type << ' ' << node->name << " = " << std::endl;
 
-        if (node->getExpr()) {
-            node->getExpr()->print(*this, level + 1);
+        if (node->expr) {
+            node->expr->print(*this, level + 1);
         }
     }
 
     void PrintAst::printNode(AssignNode *node, int level) {
-        std::cout << node->getName() << " =" << std::endl;
+        std::cout << node->name << " =" << std::endl;
 
-        node->getExpr()->print(*this, level + 1);
+        node->expr->print(*this, level + 1);
     }
 
     void PrintAst::printNode(VarNode *node, int level) {
-        std::cout << "var " << node->getName() << std::endl;
+        std::cout << "var " << node->name << std::endl;
     }
 
     void PrintAst::printNode(IfNode *node, int level) {
         std::cout << "if" << std::endl;
 
-        node->getCond()->print(*this, level + 1);
-        node->getThenNode()->print(*this, level + 1);
-        if (node->getElseNode()) {
-            node->getElseNode()->print(*this, level + 1);
+        node->cond->print(*this, level + 1);
+        node->thenNode->print(*this, level + 1);
+        if (node->elseNode) {
+            node->elseNode->print(*this, level + 1);
         }
     }
 
     void PrintAst::printNode(WhileNode *node, int level) {
         std::cout << "while" << std::endl;
 
-        node->getCond()->print(*this, level + 1);
-        node->getBody()->print(*this, level + 1);
+        node->cond->print(*this, level + 1);
+        node->body->print(*this, level + 1);
     }
 
     void PrintAst::printNode(ForNode *node, int level) {
         std::cout << "for ";
 
-        if (node->hasIdx()) {
-            std::cout << node->getIdx() << ", ";
+        if (node->idx) {
+            std::cout << node->idx.value() << ", ";
         }
 
-        std::cout << node->getVal() << " in" << std::endl;
+        std::cout << node->val << " in" << std::endl;
 
-        node->getExpr()->print(*this, level + 1);
-        node->getBody()->print(*this, level + 1);
+        node->expr->print(*this, level + 1);
+        node->body->print(*this, level + 1);
     }
 
     void PrintAst::printNode(RangeNode *node, int level) {
         std::cout << "range";
 
-        if (node->getStart()) {
-            node->getStart()->print(*this, level + 1);
+        if (node->start) {
+            node->start->print(*this, level + 1);
         }
-        node->getStop()->print(*this, level + 1);
-        if (node->getStep()) {
-            node->getStep()->print(*this, level + 1);
+        node->stop->print(*this, level + 1);
+        if (node->step) {
+            node->step->print(*this, level + 1);
         }
     }
 
@@ -128,26 +128,26 @@ namespace X::Pipes {
     }
 
     void PrintAst::printNode(ArgNode *node, int level) {
-        std::cout << "arg " << node->getType() << ' ' << node->getName() << std::endl;
+        std::cout << "arg " << node->type << ' ' << node->name << std::endl;
     }
 
     void PrintAst::printNode(FnDeclNode *node, int level) {
-        std::cout << "fn " << node->getName() << " -> " << node->getReturnType() << std::endl;
+        std::cout << "fn " << node->name << " -> " << node->returnType << std::endl;
 
-        for (auto &arg: node->getArgs()) {
+        for (auto &arg: node->args) {
             arg->print(*this, level + 1);
         }
     }
 
     void PrintAst::printNode(FnDefNode *node, int level) {
-        node->getDecl()->print(*this);
-        node->getBody()->print(*this, level + 1);
+        node->decl->print(*this);
+        node->body->print(*this, level + 1);
     }
 
     void PrintAst::printNode(FnCallNode *node, int level) {
-        std::cout << "fn call " << node->getName() << std::endl;
+        std::cout << "fn call " << node->name << std::endl;
 
-        for (auto &arg: node->getArgs()) {
+        for (auto &arg: node->args) {
             arg->print(*this, level + 1);
         }
     }
@@ -155,36 +155,36 @@ namespace X::Pipes {
     void PrintAst::printNode(ReturnNode *node, int level) {
         std::cout << "return" << std::endl;
 
-        if (node->getVal()) {
-            node->getVal()->print(*this, level + 1);
+        if (node->val) {
+            node->val->print(*this, level + 1);
         }
     }
 
     void PrintAst::printNode(PrintlnNode *node, int level) {
         std::cout << "println" << std::endl;
 
-        node->getVal()->print(*this, level + 1);
+        node->val->print(*this, level + 1);
     }
 
     void PrintAst::printNode(CommentNode *node, int level) {
-        std::cout << "//" << node->getComment() << std::endl;
+        std::cout << "//" << node->comment << std::endl;
     }
 
     void PrintAst::printNode(ClassNode *node, int level) {
-        if (node->isAbstract()) {
+        if (node->abstract) {
             std::cout << "abstract ";
         }
 
-        std::cout << "class " << node->getName();
+        std::cout << "class " << node->name;
 
         if (node->hasParent()) {
-            std::cout << " extends " << node->getParent();
+            std::cout << " extends " << node->parent;
         }
 
-        if (!node->getInterfaces().empty()) {
+        if (!node->interfaces.empty()) {
             std::cout << " implements ";
 
-            const auto &interfaces = node->getInterfaces();
+            const auto &interfaces = node->interfaces;
             for (auto it = interfaces.cbegin(); it != interfaces.cend(); it++) {
                 if (it != interfaces.cbegin()) {
                     std::cout << ", ";
@@ -195,99 +195,99 @@ namespace X::Pipes {
 
         std::cout << std::endl;
 
-        node->getBody()->print(*this, level + 1);
+        node->body->print(*this, level + 1);
     }
 
     void PrintAst::printNode(PropDeclNode *node, int level) {
-        std::cout << node->getAccessModifier() << ' ';
+        std::cout << node->accessModifier << ' ';
 
-        if (node->getIsStatic()) {
+        if (node->isStatic) {
             std::cout << "static ";
         }
 
-        node->getDecl()->print(*this, level);
+        node->decl->print(*this, level);
     }
 
     void PrintAst::printNode(MethodDefNode *node, int level) {
-        std::cout << node->getAccessModifier() << ' ';
+        std::cout << node->accessModifier << ' ';
 
-        if (node->getIsStatic()) {
+        if (node->isStatic) {
             std::cout << "static ";
         }
 
-        node->getFnDef()->print(*this, level);
+        node->fnDef->print(*this, level);
     }
 
     void PrintAst::printNode(FetchPropNode *node, int level) {
-        std::cout << '.' << node->getName() << std::endl;
+        std::cout << '.' << node->name << std::endl;
 
-        node->getObj()->print(*this, level + 1);
+        node->obj->print(*this, level + 1);
     }
 
     void PrintAst::printNode(FetchStaticPropNode *node, int level) {
-        std::cout << node->getClassName() << "::" << node->getPropName() << std::endl;
+        std::cout << node->className << "::" << node->propName << std::endl;
     }
 
     void PrintAst::printNode(MethodCallNode *node, int level) {
-        std::cout << '.' << node->getName() << "()" << std::endl;
+        std::cout << '.' << node->name << "()" << std::endl;
 
-        node->getObj()->print(*this, level + 1);
+        node->obj->print(*this, level + 1);
 
-        for (auto &arg: node->getArgs()) {
+        for (auto &arg: node->args) {
             arg->print(*this, level + 1);
         }
     }
 
     void PrintAst::printNode(StaticMethodCallNode *node, int level) {
-        std::cout << node->getClassName() << "::" << node->getMethodName() << "()" << std::endl;
+        std::cout << node->className << "::" << node->methodName << "()" << std::endl;
 
-        for (auto &arg: node->getArgs()) {
+        for (auto &arg: node->args) {
             arg->print(*this, level + 1);
         }
     }
 
     void PrintAst::printNode(AssignPropNode *node, int level) {
-        std::cout << '.' << node->getName() << " =" << std::endl;
+        std::cout << '.' << node->name << " =" << std::endl;
 
-        node->getObj()->print(*this, level + 1);
-        node->getExpr()->print(*this, level + 1);
+        node->obj->print(*this, level + 1);
+        node->expr->print(*this, level + 1);
     }
 
     void PrintAst::printNode(AssignStaticPropNode *node, int level) {
-        std::cout << node->getClassName() << "::" << node->getPropName() << " =" << std::endl;
+        std::cout << node->className << "::" << node->propName << " =" << std::endl;
 
-        node->getExpr()->print(*this, level + 1);
+        node->expr->print(*this, level + 1);
     }
 
     void PrintAst::printNode(NewNode *node, int level) {
-        std::cout << "new " << node->getName() << std::endl;
+        std::cout << "new " << node->name << std::endl;
 
-        for (auto &arg: node->getArgs()) {
+        for (auto &arg: node->args) {
             arg->print(*this, level + 1);
         }
     }
 
     void PrintAst::printNode(MethodDeclNode *node, int level) {
-        if (node->getIsAbstract()) {
+        if (node->isAbstract) {
             std::cout << "abstract ";
         }
 
-        std::cout << node->getAccessModifier() << ' ';
+        std::cout << node->accessModifier << ' ';
 
-        if (node->getIsStatic()) {
+        if (node->isStatic) {
             std::cout << "static ";
         }
 
-        node->getFnDecl()->print(*this, level);
+        node->fnDecl->print(*this, level);
     }
 
     void PrintAst::printNode(InterfaceNode *node, int level) {
-        std::cout << "interface " << node->getName();
+        std::cout << "interface " << node->name;
 
         if (node->hasParents()) {
             std::cout << " extends ";
 
-            auto &interfaces = node->getParents();
+            auto &interfaces = node->parents;
             for (auto it = interfaces.cbegin(); it != interfaces.cend(); it++) {
                 if (it != interfaces.cbegin()) {
                     std::cout << ", ";
@@ -298,28 +298,28 @@ namespace X::Pipes {
 
         std::cout << std::endl;
 
-        node->getBody()->print(*this, level);
+        node->body->print(*this, level);
     }
 
     void PrintAst::printNode(FetchArrNode *node, int level) {
         std::cout << "[]" << std::endl;
 
-        node->getArr()->print(*this, level + 1);
-        node->getIdx()->print(*this, level + 1);
+        node->arr->print(*this, level + 1);
+        node->idx->print(*this, level + 1);
     }
 
     void PrintAst::printNode(AssignArrNode *node, int level) {
         std::cout << "[] = " << std::endl;
 
-        node->getArr()->print(*this, level + 1);
-        node->getIdx()->print(*this, level + 1);
-        node->getExpr()->print(*this, level + 1);
+        node->arr->print(*this, level + 1);
+        node->idx->print(*this, level + 1);
+        node->expr->print(*this, level + 1);
     }
 
     void PrintAst::printNode(AppendArrNode *node, int level) {
         std::cout << "[] = " << std::endl;
 
-        node->getArr()->print(*this, level + 1);
-        node->getExpr()->print(*this, level + 1);
+        node->arr->print(*this, level + 1);
+        node->expr->print(*this, level + 1);
     }
 }

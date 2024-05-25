@@ -6,7 +6,7 @@
 
 namespace X::Pipes {
     TopStatementListNode *CheckAbstractClasses::handle(TopStatementListNode *node) {
-        for (auto klass: node->getClasses()) {
+        for (auto klass: node->classes) {
             checkClass(klass);
         }
 
@@ -14,15 +14,15 @@ namespace X::Pipes {
     }
 
     void CheckAbstractClasses::checkClass(ClassNode *node) {
-        auto &className = node->getName();
-        auto &parentClassName = node->getParent();
-        auto &abstractMethods = node->getAbstractMethods();
+        auto &className = node->name;
+        auto &parentClassName = node->parent;
+        auto &abstractMethods = node->abstractMethods;
 
-        if (!abstractMethods.empty() && !node->isAbstract()) {
+        if (!abstractMethods.empty() && !node->abstract) {
             throw CheckAbstractClassesException(fmt::format("class {} must be declared abstract", className));
         }
 
-        if (node->isAbstract()) {
+        if (node->abstract) {
             if (classAbstractMethods.contains(className)) {
                 throw CheckAbstractClassesException(fmt::format("class {} already exists", className));
             }
@@ -42,7 +42,7 @@ namespace X::Pipes {
             return;
         }
 
-        auto classMethods = node->getMethods();
+        auto classMethods = node->methods;
         for (auto &[methodName, methodDecl]: classAbstractMethods[parentClassName]) {
             auto methodDef = classMethods.find(methodName);
 
@@ -52,7 +52,7 @@ namespace X::Pipes {
 
             if (*methodDef->second != *methodDecl) {
                 throw CheckAbstractClassesException(fmt::format("declaration of {}::{} must be compatible with abstract class {}",
-                                                                className, methodDef->second->getFnDef()->getDecl()->getName(), parentClassName));
+                                                                className, methodDef->second->fnDef->decl->name, parentClassName));
             }
         }
     }

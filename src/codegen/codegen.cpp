@@ -22,7 +22,7 @@ namespace X::Codegen {
     }
 
     llvm::Value *Codegen::gen(StatementListNode *node) {
-        for (auto child: node->getChildren()) {
+        for (auto child: node->children) {
             child->gen(*this);
 
             if (child->isTerminate()) {
@@ -34,7 +34,7 @@ namespace X::Codegen {
     }
 
     llvm::Value *Codegen::gen(TopStatementListNode *node) {
-        for (auto child: node->getChildren()) {
+        for (auto child: node->children) {
             if (llvm::isa<DeclNode>(child)) {
                 continue; // we already declared globals
             }

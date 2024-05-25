@@ -71,15 +71,15 @@ namespace X {
     }
 
     bool MethodDefNode::operator==(const MethodDeclNode &other) const {
-        if (getAccessModifier() != other.getAccessModifier()) {
+        if (accessModifier != other.accessModifier) {
             return false;
         }
 
-        if (getIsStatic() != other.getIsStatic()) {
+        if (isStatic != other.isStatic) {
             return false;
         }
 
-        return *fnDef->getDecl() == *other.getFnDecl();
+        return *fnDef->decl == *other.fnDecl;
     }
 
     bool MethodDefNode::operator!=(const MethodDeclNode &decl) const {
@@ -121,14 +121,14 @@ namespace X {
 
     ClassNode::ClassNode(std::string name, StatementListNode *body, std::string parent, std::vector<std::string> interfaces, bool abstract) :
             Node(NodeKind::Class), name(std::move(name)), body(body), parent(std::move(parent)), interfaces(std::move(interfaces)), abstract(abstract) {
-        for (auto child: body->getChildren()) {
+        for (auto child: body->children) {
             switch (child->getKind()) {
                 case NodeKind::PropDecl:
                     props.push_back(llvm::cast<PropDeclNode>(child));
                     break;
                 case NodeKind::MethodDef: {
                     auto methodDefNode = llvm::cast<MethodDefNode>(child);
-                    auto methodName = methodDefNode->getFnDef()->getDecl()->getName();
+                    auto methodName = methodDefNode->fnDef->decl->name;
                     auto [_, inserted] = methods.insert({methodName, methodDefNode});
                     if (!inserted) {
                         throw MethodAlreadyDeclaredException(this->name, methodName);
@@ -137,8 +137,8 @@ namespace X {
                 }
                 case NodeKind::MethodDecl: {
                     auto methodDeclNode = llvm::cast<MethodDeclNode>(child);
-                    if (methodDeclNode->getIsAbstract()) {
-                        auto methodName = methodDeclNode->getFnDecl()->getName();
+                    if (methodDeclNode->isAbstract) {
+                        auto methodName = methodDeclNode->fnDecl->name;
                         auto [_, inserted] = abstractMethods.insert({methodName, methodDeclNode});
                         if (!inserted) {
                             throw MethodAlreadyDeclaredException(this->name, methodName);
@@ -154,9 +154,9 @@ namespace X {
 
     InterfaceNode::InterfaceNode(std::string name, std::vector<std::string> parents, StatementListNode *body) :
             Node(NodeKind::Interface), name(std::move(name)), parents(std::move(parents)), body(body) {
-        for (auto child: body->getChildren()) {
+        for (auto child: body->children) {
             if (auto methodDeclNode = llvm::dyn_cast<MethodDeclNode>(child)) {
-                auto methodName = methodDeclNode->getFnDecl()->getName();
+                auto methodName = methodDeclNode->fnDecl->name;
                 auto [_, inserted] = methods.insert({methodName, methodDeclNode});
                 if (!inserted) {
                     throw MethodAlreadyDeclaredException(this->name, methodName);
@@ -237,75 +237,39 @@ namespace X {
     llvm::Value *AssignArrNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
     llvm::Value *AppendArrNode::gen(Codegen::Codegen &codegen) { return codegen.gen(this); }
 
-    Type ScalarNode::infer(Pipes::TypeInferrer &typeInferrer) {
-        setType(typeInferrer.infer(this));
-        return getType();
-    }
+    Type ScalarNode::infer(Pipes::TypeInferrer &typeInferrer) { return type = typeInferrer.infer(this); }
     Type StatementListNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
-    Type UnaryNode::infer(Pipes::TypeInferrer &typeInferrer) {
-        setType(typeInferrer.infer(this));
-        return getType();
-    }
-    Type BinaryNode::infer(Pipes::TypeInferrer &typeInferrer) {
-        setType(typeInferrer.infer(this));
-        return getType();
-    }
+    Type UnaryNode::infer(Pipes::TypeInferrer &typeInferrer) { return type = typeInferrer.infer(this); }
+    Type BinaryNode::infer(Pipes::TypeInferrer &typeInferrer) { return type = typeInferrer.infer(this); }
     Type DeclNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
     Type AssignNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
-    Type VarNode::infer(Pipes::TypeInferrer &typeInferrer) {
-        setType(typeInferrer.infer(this));
-        return getType();
-    }
+    Type VarNode::infer(Pipes::TypeInferrer &typeInferrer) { return type = typeInferrer.infer(this); }
     Type IfNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
     Type WhileNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
     Type ForNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
-    Type RangeNode::infer(Pipes::TypeInferrer &typeInferrer) {
-        setType(typeInferrer.infer(this));
-        return getType();
-    }
+    Type RangeNode::infer(Pipes::TypeInferrer &typeInferrer) { return type = typeInferrer.infer(this); }
     Type BreakNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
     Type ContinueNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
     Type ArgNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
     Type FnDeclNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
     Type FnDefNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
-    Type FnCallNode::infer(Pipes::TypeInferrer &typeInferrer) {
-        setType(typeInferrer.infer(this));
-        return getType();
-    }
+    Type FnCallNode::infer(Pipes::TypeInferrer &typeInferrer) { return type = typeInferrer.infer(this); }
     Type ReturnNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
     Type PrintlnNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
     Type CommentNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
     Type ClassNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
     Type PropDeclNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
     Type MethodDefNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
-    Type FetchPropNode::infer(Pipes::TypeInferrer &typeInferrer) {
-        setType(typeInferrer.infer(this));
-        return getType();
-    }
-    Type FetchStaticPropNode::infer(Pipes::TypeInferrer &typeInferrer) {
-        setType(typeInferrer.infer(this));
-        return getType();
-    }
-    Type MethodCallNode::infer(Pipes::TypeInferrer &typeInferrer) {
-        setType(typeInferrer.infer(this));
-        return getType();
-    }
-    Type StaticMethodCallNode::infer(Pipes::TypeInferrer &typeInferrer) {
-        setType(typeInferrer.infer(this));
-        return getType();
-    }
+    Type FetchPropNode::infer(Pipes::TypeInferrer &typeInferrer) { return type = typeInferrer.infer(this); }
+    Type FetchStaticPropNode::infer(Pipes::TypeInferrer &typeInferrer) { return type = typeInferrer.infer(this); }
+    Type MethodCallNode::infer(Pipes::TypeInferrer &typeInferrer) { return type = typeInferrer.infer(this); }
+    Type StaticMethodCallNode::infer(Pipes::TypeInferrer &typeInferrer) { return type = typeInferrer.infer(this); }
     Type AssignPropNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
     Type AssignStaticPropNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
-    Type NewNode::infer(Pipes::TypeInferrer &typeInferrer) {
-        setType(typeInferrer.infer(this));
-        return getType();
-    }
+    Type NewNode::infer(Pipes::TypeInferrer &typeInferrer) { return type = typeInferrer.infer(this); }
     Type MethodDeclNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
     Type InterfaceNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
-    Type FetchArrNode::infer(Pipes::TypeInferrer &typeInferrer) {
-        setType(typeInferrer.infer(this));
-        return getType();
-    }
+    Type FetchArrNode::infer(Pipes::TypeInferrer &typeInferrer) { return type = typeInferrer.infer(this); }
     Type AssignArrNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
     Type AppendArrNode::infer(Pipes::TypeInferrer &typeInferrer) { return typeInferrer.infer(this); }
 }

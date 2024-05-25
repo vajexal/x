@@ -4,24 +4,24 @@
 
 namespace X::Codegen {
     llvm::Value *Codegen::gen(FnDeclNode *node) {
-        genFn(node->getName(), node->getArgs(), node->getReturnType(), nullptr);
+        genFn(node->name, node->args, node->returnType, nullptr);
 
         return nullptr;
     }
 
     llvm::Value *Codegen::gen(FnDefNode *node) {
-        auto fnDecl = node->getDecl();
+        auto fnDecl = node->decl;
 
-        currentFnRetType = fnDecl->getReturnType();
+        currentFnRetType = fnDecl->returnType;
 
-        genFn(fnDecl->getName(), fnDecl->getArgs(), fnDecl->getReturnType(), node->getBody());
+        genFn(fnDecl->name, fnDecl->args, fnDecl->returnType, node->body);
 
         return nullptr;
     }
 
     llvm::Value *Codegen::gen(FnCallNode *node) {
-        auto &name = node->getName();
-        auto &args = node->getArgs();
+        auto &name = node->name;
+        auto &args = node->args;
 
         if (that) {
             try {
@@ -46,7 +46,7 @@ namespace X::Codegen {
         llvmArgs.reserve(args.size());
         for (auto i = 0; i < args.size(); i++) {
             auto val = args[i]->gen(*this);
-            val = castTo(val, args[i]->getType(), fnType.args[i]);
+            val = castTo(val, args[i]->type, fnType.args[i]);
             llvmArgs.push_back(val);
         }
 
@@ -68,7 +68,7 @@ namespace X::Codegen {
             fn->getArg(0)->setName(THIS_KEYWORD);
         }
         for (auto i = 0; i < args.size(); i++) {
-            fn->getArg(i + paramsOffset)->setName(args[i]->getName());
+            fn->getArg(i + paramsOffset)->setName(args[i]->name);
         }
 
         if (!body) {
@@ -87,8 +87,8 @@ namespace X::Codegen {
 
         for (auto i = 0; i < args.size(); i++) {
             auto llvmArg = fn->getArg(i + paramsOffset);
-            auto &argName = args[i]->getName();
-            auto &argType = args[i]->getType();
+            auto &argName = args[i]->name;
+            auto &argType = args[i]->type;
 
             auto alloca = createAlloca(llvmArg->getType(), argName);
             builder.CreateStore(llvmArg, alloca);
@@ -115,7 +115,7 @@ namespace X::Codegen {
             paramTypes.push_back(builder.getPtrTy());
         }
         for (auto arg: args) {
-            paramTypes.push_back(mapType(arg->getType()));
+            paramTypes.push_back(mapType(arg->type));
         }
 
         auto retType = mapType(returnType);
@@ -123,13 +123,13 @@ namespace X::Codegen {
     }
 
     void Codegen::checkMainFn(FnDefNode *node) const {
-        auto fnDecl = node->getDecl();
+        auto fnDecl = node->decl;
 
-        if (!fnDecl->getArgs().empty()) {
+        if (!fnDecl->args.empty()) {
             throw CodegenException("main must take no arguments");
         }
 
-        if (!fnDecl->getReturnType().is(Type::TypeID::VOID)) {
+        if (!fnDecl->returnType.is(Type::TypeID::VOID)) {
             throw CodegenException("main must return void");
         }
     }

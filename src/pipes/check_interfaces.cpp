@@ -6,11 +6,11 @@
 
 namespace X::Pipes {
     TopStatementListNode *CheckInterfaces::handle(TopStatementListNode *node) {
-        for (auto interface: node->getInterfaces()) {
+        for (auto interface: node->interfaces) {
             addInterface(interface);
         }
 
-        for (auto klass: node->getClasses()) {
+        for (auto klass: node->classes) {
             checkClass(klass);
         }
 
@@ -18,7 +18,7 @@ namespace X::Pipes {
     }
 
     void CheckInterfaces::addInterface(InterfaceNode *node) {
-        auto &name = node->getName();
+        auto &name = node->name;
 
         if (compilerRuntime->interfaceMethods.contains(name)) {
             throw CheckInterfacesException(fmt::format("interface {} already declared", name));
@@ -28,7 +28,7 @@ namespace X::Pipes {
         compilerRuntime->interfaceMethods[name] = {};
 
         if (node->hasParents()) {
-            for (auto &parent: node->getParents()) {
+            for (auto &parent: node->parents) {
                 if (!compilerRuntime->interfaceMethods.contains(parent)) {
                     throw CheckInterfacesException(fmt::format("interface {} not found", parent));
                 }
@@ -45,15 +45,15 @@ namespace X::Pipes {
             }
         }
 
-        for (auto &[methodName, methodDecl]: node->getMethods()) {
+        for (auto &[methodName, methodDecl]: node->methods) {
             addMethodToInterface(name, methodDecl);
         }
     }
 
     void CheckInterfaces::addMethodToInterface(const std::string &interfaceName, MethodDeclNode *node) {
-        auto &methodName = node->getFnDecl()->getName();
+        auto &methodName = node->fnDecl->name;
 
-        if (node->getAccessModifier() != AccessModifier::PUBLIC) {
+        if (node->accessModifier != AccessModifier::PUBLIC) {
             throw CheckInterfacesException(fmt::format("interface method {}::{} must be public", interfaceName, methodName));
         }
 
@@ -67,14 +67,14 @@ namespace X::Pipes {
     }
 
     void CheckInterfaces::checkClass(ClassNode *node) {
-        auto &name = node->getName();
-        classMethods[name] = node->getMethods();
+        auto &name = node->name;
+        classMethods[name] = node->methods;
         auto &klassMethods = classMethods[name];
         auto &classImplementedInterfaces = compilerRuntime->implementedInterfaces[name];
-        std::unordered_set<std::string> interfacesToImplement(node->getInterfaces().cbegin(), node->getInterfaces().cend());
+        std::unordered_set<std::string> interfacesToImplement(node->interfaces.cbegin(), node->interfaces.cend());
 
         if (node->hasParent()) {
-            auto &parentName = node->getParent();
+            auto &parentName = node->parent;
             auto &parentClassMethods = classMethods[parentName];
             klassMethods.insert(parentClassMethods.cbegin(), parentClassMethods.cend());
             auto &parentImplementedInterfaces = compilerRuntime->implementedInterfaces[parentName];
@@ -85,7 +85,7 @@ namespace X::Pipes {
             }
         }
 
-        if (node->isAbstract()) {
+        if (node->abstract) {
             abstractClasses.insert(name);
         }
 
@@ -96,7 +96,7 @@ namespace X::Pipes {
             }
 
             // abstract classes don't need to implement interfaces
-            if (!node->isAbstract()) {
+            if (!node->abstract) {
                 for (auto &[methodName, methodDecl]: methods->second) {
                     auto methodIt = klassMethods.find(methodName);
                     if (methodIt == klassMethods.cend()) {
@@ -106,7 +106,7 @@ namespace X::Pipes {
                     if (*methodIt->second != *methodDecl) {
                         throw CheckInterfacesException(
                                 fmt::format("declaration of {}::{} must be compatible with interface {}", name,
-                                            methodIt->second->getFnDef()->getDecl()->getName(), interfaceName));
+                                            methodIt->second->fnDef->decl->name, interfaceName));
                     }
                 }
             }

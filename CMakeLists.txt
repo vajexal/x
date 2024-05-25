@@ -54,6 +54,7 @@ set(X_SOURCES lexer.cpp
         src/pipes/check_abstract_classes.cpp
         src/pipes/check_virtual_methods.cpp
         src/pipes/type_inferrer.cpp
+        src/pipes/const_string_folding.cpp
         src/pipes/code_generator.cpp)
 
 set(X_LIBS LLVM fmt::fmt)

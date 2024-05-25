@@ -7,8 +7,8 @@
 
 namespace X::Codegen {
     llvm::Value *Codegen::gen(ScalarNode *node) {
-        auto &type = node->getType();
-        auto value = node->getValue();
+        auto &type = node->type;
+        auto value = node->value;
 
         switch (type.getTypeID()) {
             case Type::TypeID::INT:
@@ -43,8 +43,8 @@ namespace X::Codegen {
     }
 
     llvm::Value *Codegen::gen(UnaryNode *node) {
-        auto opType = node->getOpType();
-        auto expr = node->getExpr()->gen(*this);
+        auto opType = node->opType;
+        auto expr = node->expr->gen(*this);
 
         switch (opType) {
             case OpType::PRE_INC:
@@ -52,7 +52,7 @@ namespace X::Codegen {
             case OpType::POST_INC:
             case OpType::POST_DEC: {
                 llvm::Value *value;
-                switch (node->getExpr()->getType().getTypeID()) {
+                switch (node->expr->type.getTypeID()) {
                     case Type::TypeID::INT:
                         value = opType == OpType::PRE_INC || opType == OpType::POST_INC ?
                                 builder.CreateAdd(expr, builder.getInt64(1)) :
@@ -67,14 +67,14 @@ namespace X::Codegen {
                         throw InvalidTypeException();
                 }
 
-                auto name = llvm::dyn_cast<VarNode>(node->getExpr())->getName();
+                auto name = llvm::dyn_cast<VarNode>(node->expr)->name;
                 auto [type, var] = getVar(name);
                 builder.CreateStore(value, var);
 
                 return opType == OpType::PRE_INC || opType == OpType::PRE_DEC ? value : expr;
             }
             case OpType::NOT:
-                expr = downcastToBool(expr, node->getExpr()->getType());
+                expr = downcastToBool(expr, node->expr->type);
                 return negate(expr);
             default:
                 throw InvalidOpTypeException();
@@ -83,23 +83,26 @@ namespace X::Codegen {
 
     llvm::Value *Codegen::gen(BinaryNode *node) {
         // logical "and" and "or" are special because of lazy evaluation
-        if (node->getOpType() == OpType::AND) {
-            return genLogicalAnd(node);
-        } else if (node->getOpType() == OpType::OR) {
-            return genLogicalOr(node);
+        switch (node->opType) {
+            case OpType::AND:
+                return genLogicalAnd(node);
+            case OpType::OR:
+                return genLogicalOr(node);
+            default:
+                break;
         }
 
-        auto lhs = node->getLhs()->gen(*this);
-        auto lhsType = node->getLhs()->getType();
-        auto rhs = node->getRhs()->gen(*this);
-        auto rhsType = node->getRhs()->getType();
+        auto lhs = node->lhs->gen(*this);
+        auto lhsType = node->lhs->type;
+        auto rhs = node->rhs->gen(*this);
+        auto rhsType = node->rhs->type;
 
         if (!lhs || !rhs) {
             throw BinaryArgIsEmptyException();
         }
 
         if (lhsType.is(Type::TypeID::STRING) && rhsType.is(Type::TypeID::STRING)) {
-            switch (node->getOpType()) {
+            switch (node->opType) {
                 case OpType::PLUS: {
                     const auto &stringConcatFnName = mangler->mangleInternalMethod(Runtime::String::CLASS_NAME, "concat");
                     auto stringConcatFn = module.getFunction(stringConcatFnName);
@@ -114,7 +117,7 @@ namespace X::Codegen {
             }
         }
 
-        if (node->getOpType() == OpType::DIV || node->getOpType() == OpType::POW) {
+        if (node->opType == OpType::DIV || node->opType == OpType::POW) {
             std::tie(lhs, lhsType, rhs, rhsType) = forceUpcast(lhs, std::move(lhsType), rhs, std::move(rhsType));
         } else {
             std::tie(lhs, lhsType, rhs, rhsType) = upcast(lhs, std::move(lhsType), rhs, std::move(rhsType));
@@ -122,7 +125,7 @@ namespace X::Codegen {
 
         switch (lhsType.getTypeID()) {
             case Type::TypeID::INT: {
-                switch (node->getOpType()) {
+                switch (node->opType) {
                     case OpType::PLUS:
                         return builder.CreateAdd(lhs, rhs);
                     case OpType::MINUS:
@@ -148,7 +151,7 @@ namespace X::Codegen {
                 }
             }
             case Type::TypeID::FLOAT: {
-                switch (node->getOpType()) {
+                switch (node->opType) {
                     case OpType::PLUS:
                         return builder.CreateFAdd(lhs, rhs);
                     case OpType::MINUS:
@@ -183,20 +186,19 @@ namespace X::Codegen {
     }
 
     llvm::Value *Codegen::gen(VarNode *node) {
-        auto name = node->getName();
-        if (name == THIS_KEYWORD && that) {
+        if (node->name == THIS_KEYWORD && that) {
             return that->value;
         }
 
-        auto [type, var] = getVar(name);
-        return builder.CreateLoad(mapType(type), var, name);
+        auto [type, var] = getVar(node->name);
+        return builder.CreateLoad(mapType(type), var, node->name);
     }
 
     llvm::Value *Codegen::gen(FetchArrNode *node) {
-        auto arr = node->getArr()->gen(*this);
-        auto idx = node->getIdx()->gen(*this);
+        auto arr = node->arr->gen(*this);
+        auto idx = node->idx->gen(*this);
 
-        auto arrGetFn = module.getFunction(mangler->mangleInternalMethod(Runtime::ArrayRuntime::getClassName(node->getArr()->getType()), "get[]"));
+        auto arrGetFn = module.getFunction(mangler->mangleInternalMethod(Runtime::ArrayRuntime::getClassName(node->arr->type), "get[]"));
         if (!arrGetFn) {
             throw InvalidArrayAccessException();
         }
@@ -209,21 +211,21 @@ namespace X::Codegen {
         auto thenBB = llvm::BasicBlock::Create(context);
         auto mergeBB = llvm::BasicBlock::Create(context);
 
-        auto lhs = node->getLhs()->gen(*this);
+        auto lhs = node->lhs->gen(*this);
         if (!lhs) {
             throw BinaryArgIsEmptyException();
         }
-        lhs = downcastToBool(lhs, node->getLhs()->getType());
+        lhs = downcastToBool(lhs, node->lhs->type);
         builder.CreateCondBr(lhs, thenBB, mergeBB);
         auto lhsBB = builder.GetInsertBlock();
 
         parentFunction->insert(parentFunction->end(), thenBB);
         builder.SetInsertPoint(thenBB);
-        auto rhs = node->getRhs()->gen(*this);
+        auto rhs = node->rhs->gen(*this);
         if (!rhs) {
             throw BinaryArgIsEmptyException();
         }
-        rhs = downcastToBool(rhs, node->getRhs()->getType());
+        rhs = downcastToBool(rhs, node->rhs->type);
         builder.CreateBr(mergeBB);
         auto rhsBB = builder.GetInsertBlock();
 
@@ -240,21 +242,21 @@ namespace X::Codegen {
         auto elseBB = llvm::BasicBlock::Create(context);
         auto mergeBB = llvm::BasicBlock::Create(context);
 
-        auto lhs = node->getLhs()->gen(*this);
+        auto lhs = node->lhs->gen(*this);
         if (!lhs) {
             throw BinaryArgIsEmptyException();
         }
-        lhs = downcastToBool(lhs, node->getLhs()->getType());
+        lhs = downcastToBool(lhs, node->lhs->type);
         builder.CreateCondBr(lhs, mergeBB, elseBB);
         auto lhsBB = builder.GetInsertBlock();
 
         parentFunction->insert(parentFunction->end(), elseBB);
         builder.SetInsertPoint(elseBB);
-        auto rhs = node->getRhs()->gen(*this);
+        auto rhs = node->rhs->gen(*this);
         if (!rhs) {
             throw BinaryArgIsEmptyException();
         }
-        rhs = downcastToBool(rhs, node->getRhs()->getType());
+        rhs = downcastToBool(rhs, node->rhs->type);
         builder.CreateBr(mergeBB);
         auto rhsBB = builder.GetInsertBlock();
 

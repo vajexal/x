@@ -6,7 +6,7 @@
 
 namespace X::Pipes {
     TopStatementListNode *CheckVirtualMethods::handle(TopStatementListNode *node) {
-        for (auto klass: node->getClasses()) {
+        for (auto klass: node->classes) {
             checkClass(klass);
         }
 
@@ -14,7 +14,7 @@ namespace X::Pipes {
     }
 
     void CheckVirtualMethods::checkClass(ClassNode *node) {
-        auto &name = node->getName();
+        auto &name = node->name;
 
         classes[name] = node;
 
@@ -22,7 +22,7 @@ namespace X::Pipes {
             return;
         }
 
-        auto &parent = node->getParent();
+        auto &parent = node->parent;
 
         // cache extended classes
         auto &extendedClasses = compilerRuntime->extendedClasses[name];
@@ -30,11 +30,11 @@ namespace X::Pipes {
         extendedClasses.insert(parentExtendedClasses.cbegin(), parentExtendedClasses.cend());
         extendedClasses.insert(parent);
 
-        auto classMethods = node->getMethods();
+        auto classMethods = node->methods;
         auto currentClass = getClass(parent);
         while (currentClass) {
-            for (auto &[methodName, methodDef]: currentClass->getMethods()) {
-                if (methodDef->getIsStatic() || methodName == CONSTRUCTOR_FN_NAME) {
+            for (auto &[methodName, methodDef]: currentClass->methods) {
+                if (methodDef->isStatic || methodName == CONSTRUCTOR_FN_NAME) {
                     continue;
                 }
 
@@ -45,17 +45,17 @@ namespace X::Pipes {
 
                 if (*methodDef != *classMethod->second) {
                     throw CheckVirtualMethodsException(fmt::format("declaration of {}::{} must be compatible with {}::{}",
-                                                                   name, methodName, currentClass->getName(), methodName));
+                                                                   name, methodName, currentClass->name, methodName));
                 }
 
-                compilerRuntime->virtualMethods[currentClass->getName()].insert(methodName);
+                compilerRuntime->virtualMethods[currentClass->name].insert(methodName);
             }
 
             if (!currentClass->hasParent()) {
                 break;
             }
 
-            currentClass = getClass(currentClass->getParent());
+            currentClass = getClass(currentClass->parent);
         }
     }
 

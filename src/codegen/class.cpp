@@ -7,21 +7,21 @@
 
 namespace X::Codegen {
     llvm::Value *Codegen::gen(ClassNode *node) {
-        auto &name = node->getName();
+        auto &name = node->name;
         const auto &mangledName = mangler->mangleClass(name);
 
         self = &classes[name];
 
-        auto &abstractMethods = node->getAbstractMethods();
-        for (auto &[methodName, method]: node->getMethods()) {
+        auto &abstractMethods = node->abstractMethods;
+        for (auto &[methodName, method]: node->methods) {
             if (abstractMethods.contains(methodName)) {
                 throw MethodAlreadyDeclaredException(name, methodName);
             }
 
-            auto fnDecl = method->getFnDef()->getDecl();
-            currentFnRetType = fnDecl->getReturnType();
-            const auto &fnName = mangler->mangleMethod(mangledName, fnDecl->getName());
-            genFn(fnName, fnDecl->getArgs(), currentFnRetType, method->getFnDef()->getBody(), method->getIsStatic() ? nullptr : &self->type);
+            auto fnDecl = method->fnDef->decl;
+            currentFnRetType = fnDecl->returnType;
+            const auto &fnName = mangler->mangleMethod(mangledName, fnDecl->name);
+            genFn(fnName, fnDecl->args, currentFnRetType, method->fnDef->body, method->isStatic ? nullptr : &self->type);
         }
 
         self = nullptr;
@@ -30,60 +30,60 @@ namespace X::Codegen {
     }
 
     llvm::Value *Codegen::gen(FetchPropNode *node) {
-        auto obj = node->getObj()->gen(*this);
-        auto &propName = node->getName();
-        auto [type, ptr] = getProp(obj, node->getObj()->getType(), propName);
+        auto obj = node->obj->gen(*this);
+        auto &propName = node->name;
+        auto [type, ptr] = getProp(obj, node->obj->type, propName);
         return builder.CreateLoad(mapType(type), ptr, propName);
     }
 
     llvm::Value *Codegen::gen(FetchStaticPropNode *node) {
-        auto [type, ptr] = getStaticProp(node->getClassName(), node->getPropName());
-        return builder.CreateLoad(mapType(type), ptr, node->getPropName());
+        auto [type, ptr] = getStaticProp(node->className, node->propName);
+        return builder.CreateLoad(mapType(type), ptr, node->propName);
     }
 
     llvm::Value *Codegen::gen(MethodCallNode *node) {
-        auto obj = node->getObj()->gen(*this);
-        auto &methodName = node->getName();
+        auto obj = node->obj->gen(*this);
+        auto &methodName = node->name;
 
         if (methodName == CONSTRUCTOR_FN_NAME) {
-            throw MethodNotFoundException(getClassName(node->getObj()->getType()), methodName);
+            throw MethodNotFoundException(getClassName(node->obj->type), methodName);
         }
 
-        return callMethod(obj, node->getObj()->getType(), methodName, node->getArgs());
+        return callMethod(obj, node->obj->type, methodName, node->args);
     }
 
     llvm::Value *Codegen::gen(StaticMethodCallNode *node) {
-        return callStaticMethod(node->getClassName(), node->getMethodName(), node->getArgs());
+        return callStaticMethod(node->className, node->methodName, node->args);
     }
 
     llvm::Value *Codegen::gen(AssignPropNode *node) {
-        if (!isObject(node->getObj()->getType())) {
+        if (!isObject(node->obj->type)) {
             throw InvalidObjectAccessException();
         }
-        auto obj = node->getObj()->gen(*this);
-        auto value = node->getExpr()->gen(*this);
-        auto [type, ptr] = getProp(obj, node->getObj()->getType(), node->getName());
+        auto obj = node->obj->gen(*this);
+        auto value = node->expr->gen(*this);
+        auto [type, ptr] = getProp(obj, node->obj->type, node->name);
 
-        value = castTo(value, node->getExpr()->getType(), type);
+        value = castTo(value, node->expr->type, type);
         builder.CreateStore(value, ptr);
 
         return nullptr;
     }
 
     llvm::Value *Codegen::gen(AssignStaticPropNode *node) {
-        auto value = node->getExpr()->gen(*this);
-        auto [type, ptr] = getStaticProp(node->getClassName(), node->getPropName());
+        auto value = node->expr->gen(*this);
+        auto [type, ptr] = getStaticProp(node->className, node->propName);
 
-        value = castTo(value, node->getExpr()->getType(), type);
+        value = castTo(value, node->expr->type, type);
         builder.CreateStore(value, ptr);
 
         return nullptr;
     }
 
     llvm::Value *Codegen::gen(NewNode *node) {
-        auto &classDecl = getClassDecl(node->getName());
+        auto &classDecl = getClassDecl(node->name);
         if (classDecl.isAbstract) {
-            throw CodegenException("cannot instantiate abstract class " + node->getName());
+            throw CodegenException("cannot instantiate abstract class " + node->name);
         }
 
         auto obj = newObj(classDecl.llvmType);
@@ -96,9 +96,9 @@ namespace X::Codegen {
         }
 
         try {
-            callMethod(obj, classDecl.type, CONSTRUCTOR_FN_NAME, node->getArgs());
+            callMethod(obj, classDecl.type, CONSTRUCTOR_FN_NAME, node->args);
         } catch (const MethodNotFoundException &e) {
-            if (!node->getArgs().empty()) {
+            if (!node->args.empty()) {
                 throw CodegenException("constructor args mismatch");
             }
         }
@@ -107,7 +107,7 @@ namespace X::Codegen {
     }
 
     llvm::Value *Codegen::gen(InterfaceNode *node) {
-        auto &interfaceDecl = interfaces[node->getName()];
+        auto &interfaceDecl = interfaces[node->name];
 
         interfaceDecl.vtableType = genVtable(node, interfaceDecl);
         // {vtable, obj ptr, gc meta}
@@ -259,35 +259,35 @@ namespace X::Codegen {
     }
 
     llvm::StructType *Codegen::genVtable(ClassNode *classNode, ClassDecl &classDecl) {
-        const auto &classMangledName = mangler->mangleClass(classNode->getName());
-        auto &classMethods = classNode->getMethods();
-        const auto &virtualMethods = compilerRuntime->virtualMethods.at(classNode->getName());
+        const auto &classMangledName = mangler->mangleClass(classNode->name);
+        auto &classMethods = classNode->methods;
+        const auto &virtualMethods = compilerRuntime->virtualMethods.at(classNode->name);
         std::vector<llvm::Type *> vtableProps;
         vtableProps.reserve(virtualMethods.size());
         uint64_t vtablePos = 0;
 
         for (auto &methodName: virtualMethods) {
             auto methodDef = classMethods.at(methodName);
-            auto fnDecl = methodDef->getFnDef()->getDecl();
-            auto fnType = genFnType(fnDecl->getArgs(), fnDecl->getReturnType(), &classDecl.type);
+            auto fnDecl = methodDef->fnDef->decl;
+            auto fnType = genFnType(fnDecl->args, fnDecl->returnType, &classDecl.type);
             vtableProps.push_back(builder.getPtrTy());
-            classDecl.methods[methodName] = {methodDef->getAccessModifier(), fnType, true, vtablePos++};
+            classDecl.methods[methodName] = {methodDef->accessModifier, fnType, true, vtablePos++};
         }
 
         return llvm::StructType::create(context, vtableProps, "vtable." + classMangledName);
     }
 
     llvm::StructType *Codegen::genVtable(InterfaceNode *node, InterfaceDecl &interfaceDecl) {
-        const auto &interfaceMangledName = mangler->mangleInterface(node->getName());
-        auto &interfaceMethods = compilerRuntime->interfaceMethods.at(node->getName());
+        const auto &interfaceMangledName = mangler->mangleInterface(node->name);
+        auto &interfaceMethods = compilerRuntime->interfaceMethods.at(node->name);
         std::vector<llvm::Type *> vtableProps;
         vtableProps.reserve(interfaceMethods.size());
         uint64_t vtablePos = 0;
 
         for (auto &[methodName, methodDecl]: interfaceMethods) {
-            auto fnType = genFnType(methodDecl->getFnDecl()->getArgs(), methodDecl->getFnDecl()->getReturnType(), &interfaceDecl.type);
+            auto fnType = genFnType(methodDecl->fnDecl->args, methodDecl->fnDecl->returnType, &interfaceDecl.type);
             vtableProps.push_back(builder.getPtrTy());
-            interfaceDecl.methods[methodName] = {methodDecl->getAccessModifier(), fnType, true, vtablePos++};
+            interfaceDecl.methods[methodName] = {methodDecl->accessModifier, fnType, true, vtablePos++};
         }
 
         return llvm::StructType::create(context, vtableProps, "vtable." + interfaceMangledName);
@@ -376,7 +376,7 @@ namespace X::Codegen {
         llvmArgs.push_back(obj);
         for (auto i = 0; i < args.size(); i++) {
             auto val = args[i]->gen(*this);
-            val = castTo(val, args[i]->getType(), fnType->args[i]);
+            val = castTo(val, args[i]->type, fnType->args[i]);
             llvmArgs.push_back(val);
         }
 
@@ -394,7 +394,7 @@ namespace X::Codegen {
         llvmArgs.reserve(args.size());
         for (auto i = 0; i < args.size(); i++) {
             auto val = args[i]->gen(*this);
-            val = castTo(val, args[i]->getType(), fnType->args[i]);
+            val = castTo(val, args[i]->type, fnType->args[i]);
             llvmArgs.push_back(val);
         }
 

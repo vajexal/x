@@ -376,7 +376,7 @@ COMMENT { $$ = new CommentNode(std::move($1)); }
 | prop_decl { $$ = $1; }
 | method_def { $$ = $1; }
 /* todo move ABSTRACT to method_decl, check here that we add only abstract method and check that interface method decl isn't abstract */
-| ABSTRACT method_decl { $2->setAbstract(); $$ = $2; }
+| ABSTRACT method_decl { $2->isAbstract = true; $$ = $2; }
 ;
 
 prop_decl:
