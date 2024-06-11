@@ -1,7 +1,7 @@
 #include "type.h"
 
 namespace X {
-    Type::Type(const Type &type) : id(type.id) {
+    Type::Type(const Type &type) : id(type.id), constant(type.constant) {
         if (type.className) {
             className = type.className.value();
         }
@@ -11,14 +11,16 @@ namespace X {
         }
     }
 
-    Type::Type(Type &&type) : id(type.id), className(std::move(type.className)), subtype(type.subtype) {
+    Type::Type(Type &&type) : id(type.id), className(std::move(type.className)), subtype(type.subtype), constant(type.constant) {
         type.id = TypeID::VOID;
         type.className = std::nullopt;
         type.subtype = nullptr;
+        type.constant = false;
     }
 
     Type &Type::operator=(const Type &type) {
         id = type.id;
+        constant = type.constant;
 
         if (type.className) {
             className = type.className.value();
@@ -120,6 +122,10 @@ namespace X {
     }
 
     std::ostream &operator<<(std::ostream &out, const Type &type) {
+        if (type.isConst()) {
+            out << "const ";
+        }
+
         switch (type.getTypeID()) {
             case Type::TypeID::INT:
                 return out << "int";

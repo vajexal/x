@@ -280,8 +280,13 @@ namespace X::Pipes {
     }
 
     Type TypeInferrer::infer(AssignNode *node) {
-        auto exprType = node->expr->infer(*this);
         auto varType = getVarType(node->name);
+
+        if (varType.isConst()) {
+            throw ModifyConstException();
+        }
+
+        auto exprType = node->expr->infer(*this);
 
         if (!canCastTo(exprType, varType)) {
             throw InvalidTypeException();
@@ -609,6 +614,10 @@ namespace X::Pipes {
             throw InvalidTypeException();
         }
 
+        if (arrType.isConst()) {
+            throw ModifyConstException();
+        }
+
         auto idxType = node->idx->infer(*this);
         if (!idxType.is(Type::TypeID::INT)) {
             throw InvalidTypeException();
@@ -626,6 +635,10 @@ namespace X::Pipes {
         auto arrType = node->arr->infer(*this);
         if (!arrType.is(Type::TypeID::ARRAY)) {
             throw InvalidTypeException();
+        }
+
+        if (arrType.isConst()) {
+            throw ModifyConstException();
         }
 
         auto exprType = node->expr->infer(*this);
@@ -678,6 +691,10 @@ namespace X::Pipes {
             auto exprType = node->expr->infer(*this);
 
             checkLvalueTypeIsValid(exprType);
+
+            if (type.isConst()) {
+                exprType.makeConst();
+            }
 
             node->type = exprType;
 

@@ -30,6 +30,4 @@ jobs:
 
       - name: Run tests
         working-directory: build
-        run: ctest
-        env:
-          CTEST_OUTPUT_ON_FAILURE: True
+        run: ctest --output-on-failure

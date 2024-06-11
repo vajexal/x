@@ -107,4 +107,9 @@ namespace X::Pipes {
     public:
         InvalidTypeException() : TypeInferrerException("invalid type") {}
     };
+
+    class ModifyConstException : public TypeInferrerException {
+    public:
+        ModifyConstException() : TypeInferrerException("can't modify const") {}
+    };
 }

@@ -1,6 +1,7 @@
 #include "compiler_test_helper.h"
 
 #include "codegen/codegen.h"
+#include "pipes/type_inferrer.h"
 
 class StatementTest : public CompilerTest {
 };
@@ -75,3 +76,58 @@ fn main() void {
 }
 )code", "3");
 }
+
+TEST_F(StatementTest, consts) {
+    checkProgram(R"code(
+const auto x = 10
+
+fn main() void {
+    const int y = 20
+
+    println(x + y)
+}
+)code", "30");
+}
+
+TEST_P(StatementTest, modifyConst) {
+    auto [code, exceptionMessage] = GetParam();
+
+    try {
+        compiler.compile(code);
+        FAIL() << "expected ModifyConstException";
+    } catch (const Pipes::ModifyConstException &e) {
+        ASSERT_EQ(e.what(), exceptionMessage);
+    }
+}
+
+INSTANTIATE_TEST_SUITE_P(Code, StatementTest, testing::Values(
+        std::make_pair(
+                R"code(
+const auto x = 10
+
+fn main() void {
+    x = 20
+}
+)code", "can't modify const"),
+        std::make_pair(
+                R"code(
+fn main() void {
+    const int x = 10
+    x = 20
+}
+)code", "can't modify const"),
+        std::make_pair(
+                R"code(
+fn main() void {
+    const auto a = [1, 2, 3]
+    a[] = 4
+}
+)code", "can't modify const"),
+        std::make_pair(
+                R"code(
+fn main() void {
+    const auto a = [1, 2, 3]
+    a[1] = 4
+}
+)code", "can't modify const")
+));

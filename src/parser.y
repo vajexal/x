@@ -40,8 +40,8 @@
 %token STRING_TYPE "string"
 %token VOID_TYPE "void"
 %token AUTO_TYPE "auto"
+%token CONST "const"
 %token FN "fn"
-%token VAR "var"
 %token <std::string> IDENTIFIER
 %token CASE "case"
 %token DEFAULT "default"
@@ -95,6 +95,7 @@
 %nterm <Type> array_type
 %nterm <Type> return_type
 %nterm <DeclNode *> var_decl
+%nterm <DeclNode *> id_decl
 %nterm <VarNode *> identifier
 %nterm <std::string> static_identifier
 %nterm <ScalarNode *> scalar
@@ -243,6 +244,11 @@ type { $$ = std::move($1); }
 ;
 
 var_decl:
+CONST id_decl { $2->type.makeConst(); $$ = $2; }
+| id_decl { $$ = $1; }
+;
+
+id_decl:
 type IDENTIFIER '=' expr { $$ = new DeclNode(std::move($1), std::move($2), $4); }
 | AUTO_TYPE IDENTIFIER '=' expr { $$ = new DeclNode(Type::autoTy(), std::move($2), $4); }
 | type IDENTIFIER { $$ = new DeclNode(std::move($1), std::move($2)); }
@@ -380,7 +386,7 @@ COMMENT { $$ = new CommentNode(std::move($1)); }
 ;
 
 prop_decl:
-access_modifier optional_static var_decl { $$ = new PropDeclNode($3, $1, $2); }
+access_modifier optional_static id_decl { $$ = new PropDeclNode($3, $1, $2); }
 ;
 
 method_def:

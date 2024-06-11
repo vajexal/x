@@ -48,6 +48,7 @@ namespace X {
         TypeID id;
         std::optional<std::string> className;
         Type *subtype = nullptr;
+        bool constant = false;
 
         Type(TypeID id) : id(id) {}
 
@@ -69,6 +70,8 @@ namespace X {
         TypeID getTypeID() const { return id; }
         const std::string &getClassName() const { return className.value(); }
         Type *getSubtype() const { return subtype; }
+        void makeConst() { constant = true; }
+        bool isConst() const { return constant; }
 
         bool is(TypeID typeId) const { return id == typeId; }
 

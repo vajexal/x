@@ -32,10 +32,10 @@ yy::parser::symbol_type yylex(Driver &driver) {
       "string" { return yy::parser::make_STRING_TYPE(driver.location); }
       "void" { return yy::parser::make_VOID_TYPE(driver.location); }
       "auto" { return yy::parser::make_AUTO_TYPE(driver.location); }
+      "const" { return yy::parser::make_CONST(driver.location); }
       "false" { return yy::parser::make_BOOL(false, driver.location); }
       "true" { return yy::parser::make_BOOL(true, driver.location); }
       "fn" { return yy::parser::make_FN(driver.location); }
-      "var" { return yy::parser::make_VAR(driver.location); }
       "case" { return yy::parser::make_CASE(driver.location); }
       "default" { return yy::parser::make_DEFAULT(driver.location); }
       "if" { return yy::parser::make_IF(driver.location); }

@@ -81,7 +81,8 @@ fn types() void {
     []Foo arr = [new Foo(), new Foo()]
 }
 
-auto PI = 3.14 // globals
+auto qux = 123 // globals
+const auto PI = 3.14 // consts
 
 fn flow() void {
     // will print "then"
